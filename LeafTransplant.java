@@ -40,6 +40,7 @@ interface CPPUtil {
     public static final String kStructDecl = "StructureDeclaration";
     public static final String kStructDeclList = "StructureDeclarationList";
     public static final String kTypedef = "TypedefSpecifier";
+	
 
 }
 
@@ -57,6 +58,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     String className;
     GNode classImplementation;
     GNode expressionStatement;
+	GNode newClassExpression;
 
 
     GNode thisClassDataLayoutStructDeclList; 
@@ -525,7 +527,38 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		
 		visit(n);
 	    }// End visitCall Expression
-
+		
+		public void visitNewClassExpression(GNode n) {
+			// Set a global variable for tree traversal: 
+			newClassExpression = n;
+			visit(n);
+	    }
+		
+		public void visitThrowStatement(GNode n) {
+		//	n.getNode(0).getNode(2).set(0, "Bastard" );
+			System.out.println( " GAVAT " + n.getNode(0).getNode(2).get(0));
+			
+			
+		//	
+			
+			    GNode eben = GNode.create("Pust");
+			   // eben.add(0, GNode.create( "gavat" ).add(0, "ananin") );
+			    // Add all arguments to System.out.println
+			//    for(int i = 0; i < n.getNode(3).size(); i++) {
+//					// removed addindex 1
+//					eben.add(n.getNode(3).get(i) ); 
+//			    }
+//			    
+//			    // removed add index 2
+//			    eben.add(GNode.create( kPrimID ).add(0, "std::endl") );
+//			    
+//			    n.getNode(0).getNode(2).set(2, eben);
+			
+			
+			
+			
+		}
+		
 
 	    public void visitFieldDeclaration(GNode n) {
 		// Translate Arrays - ned to get Type
@@ -550,6 +583,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    if (o instanceof Node) dispatch((GNode)o);
 		}
 	    }
+		
 	    
 	}.dispatch(n);//end Visitor
 	
