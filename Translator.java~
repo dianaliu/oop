@@ -1,0 +1,174 @@
+/*
+ * xtc - The eXTensible Compiler
+ * Copyright (C) 2011 Robert Grimm
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,
+ * USA.
+ */
+package xtc.oop;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Reader;
+
+import java.util.Set;
+import java.util.Iterator;
+
+import java.lang.Object;
+import java.lang.String;
+
+import xtc.parser.ParseException;
+import xtc.parser.Result;
+
+import xtc.tree.Attribute;
+import xtc.tree.GNode;
+import xtc.tree.Location;
+import xtc.tree.Node;
+import xtc.tree.Visitor;
+
+import xtc.lang.JavaFiveParser;
+
+/**
+ * A translator from (a subset of) Java to (a subset of) C++.
+ *
+ * @author Robert Grimm
+ * @version $Revision$
+ */
+public class Translator extends xtc.util.Tool {
+
+    static String fileString = "-----";
+
+
+  /** Create a new translator. */
+  public Translator() {
+    // Nothing to do.
+  }
+
+  public String getName() {
+    return "OOP HW1 - Find where static scope is entered";
+  }
+
+  public String getCopy() {
+    return "Diana Liu";
+  }
+
+  public void init() {
+    super.init();
+
+    runtime.
+	bool("printJavaAST", "printJavaAST", false, "Print Java AST.").
+	bool("scope", "scope", false, "Show scope");
+  }
+
+  public Node parse(Reader in, File file) throws IOException, ParseException {
+    JavaFiveParser parser =
+      new JavaFiveParser(in, file.toString(), (int)file.length());
+    Result result = parser.pCompilationUnit(0);
+    return (Node)parser.value(result);
+  }
+
+  public void process(Node node) {
+    if (runtime.test("printJavaAST")) {
+      runtime.console().format(node).pln().flush();
+    }
+
+    if (runtime.test("scope")) {
+      new Visitor() {
+
+	  public void visitCompilationUnit(GNode n) {
+		      visit(n);
+	  }
+	 	 
+  	  public void visit(Node n) {
+	      String s = n.getName();
+	      
+	      if(n.contains((Object)"static")) 
+		  System.out.println("Enter scope at  " + n.getLocation().toString() + "\t<static>");
+		   
+	      if("Block".equals(s) ||
+		 "ForStatement".equals(s) ||
+		 "ReturnStatement".equals(s) ||
+		 "AdditiveExpression".equals(s) ||
+		 "ExpressionStatement".equals(s) 
+		 ){
+		  System.out.println("Enter scope at " + 
+				     n.getLocation().toString() + 
+				     "\t<" + s + ">");
+		  fileString += n.getName().toString();
+	      }//end if block, etc.
+	      
+	      for (Object o : n) { 
+		  if (o instanceof Node){
+		      
+		      dispatch((Node)o); 
+		      
+		  }
+		  else if (o instanceof String ){ 
+
+		      if(
+			     "ClassDeclaration".equals(n.getName()) ||
+			     "MethodDeclaration".equals(n.getName()) ||
+			     "ClassBody".equals(n.getName()) ||
+			     "ConstructorDeclaration".equals(s) 			
+							   ) {
+			      System.out.println("Enter scope at " + 
+						 n.getLocation().toString() + 
+						 "\t<" + n.getName() + " " +  
+						 (String)o +  ">");
+
+			      fileString += n.getName().toString();
+		      }//end if
+
+		  }//end else if
+
+	      
+	      } //end for Object
+
+	   
+	}//end visit
+
+      }.dispatch(node);
+
+      }//end if -scope
+
+
+    try {
+
+	System.out.println("What should be written to file: " + fileString);
+
+	FileWriter fw = new FileWriter("out.txt");
+	BufferedWriter out = new BufferedWriter(fw);
+	out.write(fileString);
+	out.close();
+
+    } catch (Exception e) {
+	System.out.println("File Error: " + e.getMessage());
+    }
+
+
+
+  } //end process
+
+  /**
+   * Run the translator with the specified command line arguments.
+   *
+   * @param args The command line arguments.
+   */
+  public static void main(String[] args) {
+    new Translator().run(args);
+  }
+
+}
