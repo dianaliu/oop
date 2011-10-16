@@ -41,88 +41,89 @@ import xtc.lang.CPrinter;
 
 
 public class Translator extends xtc.util.Tool {
-	
-	/** Create a new translator. */
-	public Translator() {
-		// Nothing to do.
+    
+    /** Create a new translator. */
+    public Translator() {
+	    // Nothing to do.
 	}
-	
-	public String getName() {
-		return "Java to C++ Translator";
+    
+    public String getName() {
+	    return "Java to C++ Translator";
 	}
-	
-	public String getCopy() {
-		return "Group";
+    
+    public String getCopy() {
+	    return "Diana, Hernel, Kirim, & Robert";
 	}
-	
-	public void init() {
-		super.init();
+    
+    public void init() {
+	    super.init();
 		runtime.
-		bool("printAST", "printAST", false, "Print Java AST.").
-		bool("countMethods", "countMethods", false, "Count all Java methods.").
-		bool("traceScopeHierarchy", "traceScopeHierarchy", false, "Print a trace of the scope hierarchy.").
-		bool("toList", "toList", false, "Convert AST Tree to list and print.").
-		bool("backToJava", "backToJava", false, "Convert Java AST to Java code.").
-		bool("backToC", "backToC", false, "Convert C AST to C code.").
-		bool("test", "test", false, "Test.");
+		    bool("printAST", "printAST", false, "Print Java AST.").
+		    bool("backToJava", "backToJava", false, "Print Java AST to Java code.").
+		    bool("backToC", "backToC", false, "Print C AST to C code.").
+		    bool("test", "test", false, "Run our translator project");
 	}
-	
-	public Node parse(Reader in, File file) throws IOException, ParseException {
-		JavaFiveParser parser =
-		new JavaFiveParser(in, file.toString(), (int)file.length());
+    
+    public Node parse(Reader in, File file) throws IOException, ParseException {
+	    JavaFiveParser parser =
+		    new JavaFiveParser(in, file.toString(), (int)file.length());
 		Result result = parser.pCompilationUnit(0);
 		return (Node)parser.value(result);
 	}  
-	
-	//Parse C++ file
+    
+    //Parse C file
 	/*    public Node parse(Reader in, File file) throws IOException, ParseException {
-	 CParser parser =
+	      CParser parser =
 	 new CParser(in, file.toString(), (int)file.length());
 	 Result result = parser.pTranslationUnit(0);
 	 return (Node)parser.value(result);
 	 }   */
-	
-	public void process(Node node) {
-		if (runtime.test("printAST")) {
-			runtime.console().format(node).pln().flush();
+    
+    public void process(Node node) {
+	    if (runtime.test("printAST")) {
+		    runtime.console().format(node).pln().flush();
 		}
 		
 		if( runtime.test("backToJava") ) {
-			new JavaPrinter( runtime.console() ).dispatch(node);
+		    new JavaPrinter( runtime.console() ).dispatch(node);
 			runtime.console().flush();
 		}  
 		
 		if( runtime.test("backToC") ) {
-			new CPrinter( runtime.console() ).dispatch(node);
+		    new CPrinter( runtime.console() ).dispatch(node);
 			runtime.console().flush();
 		}
 		
 		//overwrites info in nodes
-		//make >> output.txt writes terminal output to file
+		//NOTE: make >> output.txt writes terminal output to file
 		if( runtime.test("test") ) {
-			AnalyzeVisitor myVisitor = new AnalyzeVisitor();
-			myVisitor.dispatch(node);
-			new Visitor() {
-				public void visit(Node n){
-					System.out.println( n.getName() + " " + ((GNode)n).getProperty("VTable") );
-					for( Object o : n) {
-						if (o instanceof Node) dispatch((Node)o);
-					}
-				}
-			}.dispatch(myVisitor.getVtableTree());
-			runtime.console().format(myVisitor.getVtableTree()).pln().flush();
+		    
+		    //Create Class Hierarchy tree
+		    ClassParser  cp  = new ClassParser();
+		    cp.dispatch(node);
+		    new Visitor() {
+			public void visit(Node n){
+			    System.out.println( n.getName() + " " + ((GNode)n).getProperty("VTable") );
+			    for( Object o : n) {
+				if (o instanceof Node) dispatch((Node)o);
+			    }
+			}
+		    }.dispatch(cp.getClassTree());
+
+		    //print class hierarchy tree
+		    runtime.console().format(cp.getClassTree()).pln().flush();
 		}
 		
 	}
-	
-	
-	/**
-	 * Run the translator with the specified command line arguments.
-	 *
-	 * @param args The command line arguments.
-	 */
-	public static void main(String[] args) {
-		new Translator().run(args);
-	}
-	
+    
+    
+    /**
+     * Run the translator with the specified command line arguments.
+     *
+     * @param args The command line arguments.
+     */
+    public static void main(String[] args) {
+	new Translator().run(args);
+    }
+    
 }
