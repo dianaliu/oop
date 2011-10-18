@@ -17,7 +17,8 @@ PACKAGE_LOC = xtc/oop
 
 SOURCE = \
 	Translator.java \
-	ClassParser.java
+	ClassLayoutParser.java
+	
 	
 
 JNI_SOURCE =
