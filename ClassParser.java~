@@ -7,11 +7,11 @@ import xtc.tree.Visitor;
 public class ClassParser extends Visitor {
     // Constructs a Class Hierarchy tree
 
-    // Root of classTree is Object
-    GNode classTree; 
+    // Root of vtableTree is Object
+    GNode vtableTree; 
     GNode currentNode;
     
-    public ClassParser() {
+    public AnalyzeVisitor() {
 	setupTree();
     }
     
@@ -23,7 +23,7 @@ public class ClassParser extends Visitor {
 
 	// Index 3 of ClassDeclaration is Implements
 	// If implements == null, it implements Object which is root node
-	if( n.get(3) == null ) classTree.add(currentNode);
+	if( n.get(3) == null ) vtableTree.add(currentNode);
 	else {
 	    // Find the class it extends, so we can add as child to it
 	    // FIX: Is this the only way to traverse tree?
@@ -72,24 +72,24 @@ public class ClassParser extends Visitor {
 		    // i.e. parent class always exists
 		    return null; 
 		}
-	    }.dispatch(classTree));
+	    }.dispatch(vtableTree));
     }
     
     public void setupTree() {
 
 	// Initialize with types Grimm created in java_lang.h 
-	classTree = GNode.create("Object");
+	vtableTree = GNode.create("Object");
 	GNode stringNode = GNode.create("String");
 	GNode classNode = GNode.create("Class");
 	GNode arrayNode = GNode.create("Array");
-	classTree.add(stringNode);
-	classTree.add(classNode);
-	classTree.add(arrayNode);
+	vtableTree.add(stringNode);
+	vtableTree.add(classNode);
+	vtableTree.add(arrayNode);
 	currentNode = null;
     }
     
-    public GNode getClassTree() {
-	return classTree;
+    public GNode getVtableTree() {
+	return vtableTree;
     }
     
 }
