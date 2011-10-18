@@ -68,8 +68,8 @@ public class Translator extends xtc.util.Tool {
 		runtime.
 		    bool("printAST", "printAST", false, "Print Java AST.").
 		    bool("backToC", "backToC", false, "Print C AST to C code.").
-		    bool("vtable", "vtable", false, 
-			 "Create data structures for vtable and data layout");
+		    bool("vtable", "vtable", false, "Create data structures for vtable and data layout").
+			bool("translateToCPP", "translateToCPP", false, "Testing out cppprinter.");
 	}
     
     public Node parse(Reader in, File file) throws IOException, ParseException {
@@ -90,37 +90,43 @@ public class Translator extends xtc.util.Tool {
 	    }
 	    
 	    if(runtime.test("vtable")) {
+			
+			final ClassLayoutParser clp = new ClassLayoutParser(node);
+			
+			new Visitor() {
+				// When we encounter a class in the AST, send it to 
+				// ClassLayoutParser 
+				public void visitClassDeclaration(GNode n) {
+					clp.addClass(n);
+					visit(n);
+				} // end visitClassDeclaration
+				
+				public void visit(Node n) {
+					for( Object o : n) {
+						if (o instanceof Node) dispatch((Node)o);
+					}
+				}
+			}.dispatch(node);
+			runtime.console().format(clp.getClassTree()).pln().flush();
+			runtime.console().pln("------------");
+			//		     runtime.console().format(clp.getDataLayoutTree("Object")).pln().flush();
+	    } // end transform	
 		
-		final ClassLayoutParser clp = new ClassLayoutParser(node);
-		
-		new Visitor() {
-		    
-		    // When we encounter a class in the AST, send it to 
-		    // ClassLayoutParser 
-		    public void visitClassDeclaration(GNode n) {
-			clp.addClass(n);
-			visit(n);
-			    
-		    } // end visitClassDeclaration
-		    
-		    
-		    public void visit(Node n) {
-			for( Object o : n) {
-			    if (o instanceof Node) dispatch((Node)o);
-			}
-		    }
-		    
-		}.dispatch(node);
-		
-		
-		runtime.console().format(clp.getClassTree()).pln().flush();
-		runtime.console().pln("------------");
-		//		     runtime.console().format(clp.getDataLayoutTree("Object")).pln().flush();
-		
-		
-		
-		
-	    } // end transform		      
+		if( runtime.test("translateToCPP") ) {
+			new Visitor() {
+				public void visit(Node n) {
+					for( Object o : n ) if( o instanceof Node ) dispatch((Node)o);
+				}
+				
+				public void visitClassDeclaration(GNode n) {
+					n.set(5, GNode.ensureVariable(GNode.cast(n.getNode(5)))); //make sure the class body is variable
+					n.getNode(5).add(0, GNode.create("VirtualTableDeclaration")); //insert a vtabledecl node
+					visit(n);
+				}
+			}.dispatch(node);
+			new CPPPrinter( runtime.console() ).dispatch(node);
+			runtime.console().flush();
+		}
     } // end process
     
     
