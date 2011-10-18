@@ -18,13 +18,10 @@
  */
 package xtc.oop;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.Reader;
-
 import xtc.parser.ParseException;
 import xtc.parser.Result;
 
+import xtc.tree.Attribute;
 import xtc.tree.GNode;
 import xtc.tree.Node;
 import xtc.tree.Visitor;
@@ -37,12 +34,19 @@ import xtc.lang.JavaPrinter;
 import xtc.lang.CParser;
 import xtc.lang.CPrinter;
 
-//import xtc.oop.AnalyzeVisitor;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Reader;
+
+import java.util.ArrayList;
+
 
 
 public class Translator extends xtc.util.Tool {
-    
-    /** Create a new translator. */
+
+     /** Create a new translator. */
     public Translator() {
 	    // Nothing to do.
 	}
@@ -54,14 +58,20 @@ public class Translator extends xtc.util.Tool {
     public String getCopy() {
 	    return "Diana, Hernel, Kirim, & Robert";
 	}
+
+    public String getVersion() {
+	return "0.1";
+    }
     
     public void init() {
 	    super.init();
 		runtime.
 		    bool("printAST", "printAST", false, "Print Java AST.").
-		    bool("backToJava", "backToJava", false, "Print Java AST to Java code.").
+		    bool("backToJava", "backToJava", false, 
+			 "Print Java AST to Java code.").
 		    bool("backToC", "backToC", false, "Print C AST to C code.").
-		    bool("test", "test", false, "Run our translator project");
+		    bool("test", "test", false, "Run our translator project").
+		    bool("transform", "transform", false, "Transforming nodes");
 	}
     
     public Node parse(Reader in, File file) throws IOException, ParseException {
@@ -98,12 +108,15 @@ public class Translator extends xtc.util.Tool {
 		//NOTE: make >> output.txt writes terminal output to file
 		if( runtime.test("test") ) {
 		    
-		    //Create Class Hierarchy tree
+		    //Returns Class Hiearchy Tree
 		    ClassParser  cp  = new ClassParser();
 		    cp.dispatch(node);
 		    new Visitor() {
-			public void visit(Node n){
-			    System.out.println( n.getName() + " " + ((GNode)n).getProperty("VTable") );
+			public void visit(Node n) {
+			    if (n.hasProperty("Methods")) {
+			
+			    }
+		       			    
 			    for( Object o : n) {
 				if (o instanceof Node) dispatch((Node)o);
 			    }
@@ -112,11 +125,44 @@ public class Translator extends xtc.util.Tool {
 
 		    //print class hierarchy tree
 		    runtime.console().format(cp.getClassTree()).pln().flush();
-		}
+		} // end test
 		
-	}
-    
-    
+		if(runtime.test("transform")) {
+		    
+		    final ClassLayoutParser clp = new ClassLayoutParser(node);
+
+		    new Visitor() {
+			
+			// When we encounter a class in the AST, send it to 
+			// ClassLayoutParser 
+			public void visitClassDeclaration(GNode n) {
+			    clp.addClass(n);
+			    visit(n);
+			    
+			} // end visitClassDeclaration
+			
+
+			public void visit(Node n) {
+			    for( Object o : n) {
+				if (o instanceof Node) dispatch((Node)o);
+			    }
+			}
+			
+		    }.dispatch(node);
+		    
+		    
+		     runtime.console().format(clp.getClassTree()).pln().flush();
+		     runtime.console().pln("------------");
+		     //		     runtime.console().format(clp.getDataLayoutTree("Object")).pln().flush();
+		     
+		     
+		     
+
+		} // end transform		      
+    } // end process
+ 
+
+			
     /**
      * Run the translator with the specified command line arguments.
      *
