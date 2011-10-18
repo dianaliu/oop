@@ -67,11 +67,9 @@ public class Translator extends xtc.util.Tool {
 	    super.init();
 		runtime.
 		    bool("printAST", "printAST", false, "Print Java AST.").
-		    bool("backToJava", "backToJava", false, 
-			 "Print Java AST to Java code.").
 		    bool("backToC", "backToC", false, "Print C AST to C code.").
-		    bool("test", "test", false, "Run our translator project").
-		    bool("transform", "transform", false, "Transforming nodes");
+		    bool("vtable", "vtable", false, 
+			 "Create data structures for vtable and data layout");
 	}
     
     public Node parse(Reader in, File file) throws IOException, ParseException {
@@ -81,87 +79,51 @@ public class Translator extends xtc.util.Tool {
 		return (Node)parser.value(result);
 	}  
     
-    //Parse C file
-	/*    public Node parse(Reader in, File file) throws IOException, ParseException {
-	      CParser parser =
-	 new CParser(in, file.toString(), (int)file.length());
-	 Result result = parser.pTranslationUnit(0);
-	 return (Node)parser.value(result);
-	 }   */
-    
     public void process(Node node) {
 	    if (runtime.test("printAST")) {
 		    runtime.console().format(node).pln().flush();
 		}
+	
+	    if( runtime.test("backToC") ) {
+		new CPrinter( runtime.console() ).dispatch(node);
+		runtime.console().flush();
+	    }
+	    
+	    if(runtime.test("vtable")) {
 		
-		if( runtime.test("backToJava") ) {
-		    new JavaPrinter( runtime.console() ).dispatch(node);
-			runtime.console().flush();
-		}  
+		final ClassLayoutParser clp = new ClassLayoutParser(node);
 		
-		if( runtime.test("backToC") ) {
-		    new CPrinter( runtime.console() ).dispatch(node);
-			runtime.console().flush();
-		}
-		
-		//overwrites info in nodes
-		//NOTE: make >> output.txt writes terminal output to file
-		if( runtime.test("test") ) {
+		new Visitor() {
 		    
-		    //Returns Class Hiearchy Tree
-		    ClassParser  cp  = new ClassParser();
-		    cp.dispatch(node);
-		    new Visitor() {
-			public void visit(Node n) {
-			    if (n.hasProperty("Methods")) {
-			
-			    }
-		       			    
-			    for( Object o : n) {
-				if (o instanceof Node) dispatch((Node)o);
-			    }
-			}
-		    }.dispatch(cp.getClassTree());
-
-		    //print class hierarchy tree
-		    runtime.console().format(cp.getClassTree()).pln().flush();
-		} // end test
-		
-		if(runtime.test("transform")) {
-		    
-		    final ClassLayoutParser clp = new ClassLayoutParser(node);
-
-		    new Visitor() {
-			
-			// When we encounter a class in the AST, send it to 
-			// ClassLayoutParser 
-			public void visitClassDeclaration(GNode n) {
-			    clp.addClass(n);
-			    visit(n);
+		    // When we encounter a class in the AST, send it to 
+		    // ClassLayoutParser 
+		    public void visitClassDeclaration(GNode n) {
+			clp.addClass(n);
+			visit(n);
 			    
-			} // end visitClassDeclaration
-			
-
-			public void visit(Node n) {
-			    for( Object o : n) {
-				if (o instanceof Node) dispatch((Node)o);
-			    }
+		    } // end visitClassDeclaration
+		    
+		    
+		    public void visit(Node n) {
+			for( Object o : n) {
+			    if (o instanceof Node) dispatch((Node)o);
 			}
-			
-		    }.dispatch(node);
+		    }
 		    
-		    
-		     runtime.console().format(clp.getClassTree()).pln().flush();
-		     runtime.console().pln("------------");
-		     //		     runtime.console().format(clp.getDataLayoutTree("Object")).pln().flush();
-		     
-		     
-		     
-
-		} // end transform		      
+		}.dispatch(node);
+		
+		
+		runtime.console().format(clp.getClassTree()).pln().flush();
+		runtime.console().pln("------------");
+		//		     runtime.console().format(clp.getDataLayoutTree("Object")).pln().flush();
+		
+		
+		
+		
+	    } // end transform		      
     } // end process
- 
-
+    
+    
 			
     /**
      * Run the translator with the specified command line arguments.
