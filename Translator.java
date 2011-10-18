@@ -113,18 +113,23 @@ public class Translator extends xtc.util.Tool {
 	    } // end transform	
 		
 		if( runtime.test("translateToCPP") ) {
+			//This simple visitor is just used to place a dummy vtable declaration node into each classes class body
+			//for testing purposes.  It also tests and implements mutability of the AST tree.
 			new Visitor() {
 				public void visit(Node n) {
 					for( Object o : n ) if( o instanceof Node ) dispatch((Node)o);
 				}
 				
 				public void visitClassDeclaration(GNode n) {
-					n.set(5, GNode.ensureVariable(GNode.cast(n.getNode(5)))); //make sure the class body is variable
-					n.getNode(5).add(0, GNode.create("VirtualTableDeclaration")); //insert a vtabledecl node
+					n.set(5, GNode.ensureVariable(GNode.cast(n.getNode(5)))); //make sure the class body is mutable (num of nodes can be changed).  If not, it is made mutable.
+					n.getNode(5).add(0, GNode.create("VirtualTableDeclaration")); //insert a vtabledecl node, currently has no functionality, just for testing
 					visit(n);
 				}
 			}.dispatch(node);
-			new CPPPrinter( runtime.console() ).dispatch(node);
+			
+			//The real CPPPrinter, initalized and dispatched...
+			new CPPPrinter( runtime.console() ).dispatch(node); 
+			
 			runtime.console().flush();
 		}
     } // end process
