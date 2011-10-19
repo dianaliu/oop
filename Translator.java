@@ -131,7 +131,7 @@ public class Translator extends xtc.util.Tool {
 			
 			//The real CPPPrinter, initalized and dispatched...
 			new CPPPrinter( runtime.console() ).dispatch(node); 
-			
+		}	
 			
 		
 		if( runtime.test("translateToCPP") ) {
@@ -146,7 +146,7 @@ public class Translator extends xtc.util.Tool {
 				5. send a structurally sound 'C++' AST to CPPPrinter
 				6. handle the output (to files, I assume)
 			 */
-			
+		
 		}
     } // end process
     
