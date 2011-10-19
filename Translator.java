@@ -18,15 +18,10 @@
  */
 package xtc.oop;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.Reader;
-import java.io.FileReader;
-
-
 import xtc.parser.ParseException;
 import xtc.parser.Result;
 
+import xtc.tree.Attribute;
 import xtc.tree.GNode;
 import xtc.tree.Node;
 import xtc.tree.Visitor;
@@ -39,66 +34,61 @@ import xtc.lang.JavaPrinter;
 import xtc.lang.CParser;
 import xtc.lang.CPrinter;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.Reader;
+
+import java.util.ArrayList;
+
+
+
 public class Translator extends xtc.util.Tool {
 	
 	/** Create a new translator. */
-	public Translator() {
+    public Translator() {
+	    // Nothing to do.
+	}
+    
+    public String getName() {
+	    return "Java to C++ Translator";
+	}
+    
+    public String getCopy() {
+	    return "Diana, Hernel, Kirim, & Robert";
 	}
 	
-	public String getName() {
-		return "Java to C++ Translator";
-	}
-	
-	public String getCopy() {
-		return "Group";
-	}
-	
-	public void init() {
-		super.init();
+    public String getVersion() {
+		return "0.1";
+    }
+    
+    public void init() {
+	    super.init();  
 		runtime.
-		bool("getNode", "getNode", false, "Get the tree root node.").
 		bool("printAST", "printAST", false, "Print Java AST.").
-		bool("backToJava", "backToJava", false, "Convert Java AST to Java code.").
-		bool("backToC", "backToC", false, "Convert C AST to C code.").
-		bool("test", "test", false, "Test.").
-		bool("dependencytest", "dependencytest", false, "Dep Test.");
+		bool("testDependencies", "testDependencies", false, "Test dependency resolution.").
+		bool("testVtable", "testVtable", false, "Test the creation of data structures for vtable and data layout").
+		bool("testCPPPrinter", "testCPPPrinter", false, "Test the functionality of the CPPPrinter class").
+		bool("translateToCPP", "translateToCPP", false, "Translate Java code to C++ without inheritance.");
 	}
-	
-	public Node parse(Reader in, File file) throws IOException, ParseException {
-		JavaFiveParser parser =
-			new JavaFiveParser(in, file.toString(), (int)file.length());
+    
+    public Node parse(Reader in, File file) throws IOException, ParseException {
+	    JavaFiveParser parser =
+		new JavaFiveParser(in, file.toString(), (int)file.length());
 		Result result = parser.pCompilationUnit(0);
 		return (Node)parser.value(result);
 	}  
-	
-	//Parse C++ file
-	/*    public Node parse(Reader in, File file) throws IOException, ParseException {
-	 CParser parser =
-	 new CParser(in, file.toString(), (int)file.length());
-	 Result result = parser.pTranslationUnit(0);
-	 return (Node)parser.value(result);
-	 }   */
-	
-	public void process(Node node) {
-		if (runtime.test("printAST")) {
-			runtime.console().format(node).pln().flush();
+    
+    public void process(Node node) {
+	    if (runtime.test("printAST")) {
+		    runtime.console().format(node).pln().flush();
 		}
 		
-		if( runtime.test("backToJava") ) {
-			new JavaPrinter( runtime.console() ).dispatch(node);
-			runtime.console().flush();
-		}  
-		
-		if( runtime.test("backToC") ) {
-			new CPrinter( runtime.console() ).dispatch(node);
-			runtime.console().flush();
-		}
-		
-		//Java to C++ translator prototype
-		//make >> output.txt writes terminal output to file
-		if( runtime.test("dependencytest") ) {
+	    if( runtime.test("testDependencies") ) {
 			Node depTree;
-		
+			
 			//
 			//Print out the current working directory - helps with file I/O
 			//
@@ -134,43 +124,99 @@ public class Translator extends xtc.util.Tool {
 			} 
 			
 			runtime.console().pln().format(depTree).pln().flush();
-				
+			
 			
 			//
 			//Begin analyzing the AST to create the VTable
 			//
-/* 			System.out.println("\n-----------------------------");
-			System.out.println("Analyzing Virtual Table Stage");
-			System.out.println("-----------------------------");
-			
-			AnalyzeVisitor myVisitor = new AnalyzeVisitor();
-			myVisitor.dispatch(node);
-			new Visitor() {
-				public void visit(Node n){
-					System.out.println( n.getName() + " " + ((GNode)n).getProperty("VTable") );
-					for( Object o : n) {
-						if (o instanceof Node) dispatch((Node)o);
-					}
-				}
-			}.dispatch(myVisitor.getVtableTree());
-			runtime.console().format(myVisitor.getVtableTree()).pln().flush();  
-*/
+			/* 			System.out.println("\n-----------------------------");
+			 System.out.println("Analyzing Virtual Table Stage");
+			 System.out.println("-----------------------------");
+			 
+			 AnalyzeVisitor myVisitor = new AnalyzeVisitor();
+			 myVisitor.dispatch(node);
+			 new Visitor() {
+			 public void visit(Node n){
+			 System.out.println( n.getName() + " " + ((GNode)n).getProperty("VTable") );
+			 for( Object o : n) {
+			 if (o instanceof Node) dispatch((Node)o);
+			 }
+			 }
+			 }.dispatch(myVisitor.getVtableTree());
+			 runtime.console().format(myVisitor.getVtableTree()).pln().flush();  
+			 */
 			
 			//Translate to C++ - to do
 			//Print out C++ code - to do
 		}
+	    
+	    if(runtime.test("testVtable")) {
+			
+			final ClassLayoutParser clp = new ClassLayoutParser(node);
+			
+			new Visitor() {
+				// When we encounter a class in the AST, send it to 
+				// ClassLayoutParser 
+				public void visitClassDeclaration(GNode n) {
+					clp.addClass(n);
+					visit(n);
+				} // end visitClassDeclaration
+				
+				public void visit(Node n) {
+					for( Object o : n) {
+						if (o instanceof Node) dispatch((Node)o);
+					}
+				}
+			}.dispatch(node);
+			runtime.console().format(clp.getClassTree()).pln().flush();
+			runtime.console().pln("------------");
+			//		     runtime.console().format(clp.getDataLayoutTree("Object")).pln().flush();
+	    }// end transform	
 		
+		if( runtime.test("testCPPPrinter") ) {
+			//This simple visitor is just used to place a dummy vtable declaration node into each classes class body
+			//for testing purposes.  It also tests and implements mutability of the AST tree.
+			new Visitor() {
+				public void visit(Node n) {
+					for( Object o : n ) if( o instanceof Node ) dispatch((Node)o);
+				}
+				
+				public void visitClassDeclaration(GNode n) {
+					n.set(5, GNode.ensureVariable(GNode.cast(n.getNode(5)))); //make sure the class body is mutable (num of nodes can be changed).  If not, it is made mutable.
+					n.getNode(5).add(0, GNode.create("VirtualTableDeclaration")); //insert a vtabledecl node, currently has no functionality, just for testing
+					visit(n);
+				}
+			}.dispatch(node);
+			
+			//The real CPPPrinter, initalized and dispatched...
+			new CPPPrinter( runtime.console() ).dispatch(node); 
+		}	
+			
 		
-	}
+		if( runtime.test("translateToCPP") ) {
+			// Where the MAGIC happens!
+			
+			/*
+				Rough idea of what should go here:
+				1. dependencyResolver dispatch on node -> adding all dependencies for imports
+				2. makeVtablesAndDataLayout for node and return the tree with a new importDeclaration node or null
+				3. if a new import node is returned, goto step 1.   (this means that more dependencies are needed)
+				4. more tree analysis to format properly for cppprinter?
+				5. send a structurally sound 'C++' AST to CPPPrinter
+				6. handle the output (to files, I assume)
+			 */
+		}
+    } // end process
+    
+    
 	
-	
-	/**
-	 * Run the translator with the specified command line arguments.
-	 *
-	 * @param args The command line arguments
-	 */
-	public static void main(String[] args) throws IOException , ParseException {
+    /**
+     * Run the translator with the specified command line arguments.
+     *
+     * @param args The command line arguments.
+     */
+    public static void main(String[] args) {
 		new Translator().run(args);
-	}
-	
+    }
+    
 }
