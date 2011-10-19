@@ -45,8 +45,8 @@ import java.util.ArrayList;
 
 
 public class Translator extends xtc.util.Tool {
-
-     /** Create a new translator. */
+	
+	/** Create a new translator. */
     public Translator() {
 	    // Nothing to do.
 	}
@@ -58,23 +58,24 @@ public class Translator extends xtc.util.Tool {
     public String getCopy() {
 	    return "Diana, Hernel, Kirim, & Robert";
 	}
-
+	
     public String getVersion() {
-	return "0.1";
+		return "0.1";
     }
     
     public void init() {
-	    super.init();
+	    super.init();  
 		runtime.
-		    bool("printAST", "printAST", false, "Print Java AST.").
-		    bool("backToC", "backToC", false, "Print C AST to C code.").
-		    bool("vtable", "vtable", false, "Create data structures for vtable and data layout").
-			bool("translateToCPP", "translateToCPP", false, "Testing out cppprinter.");
+		bool("printAST", "printAST", false, "Print Java AST.").
+		bool("testDependencies", "testDependencies", false, "Test dependency resolution.").
+		bool("testVtable", "testVtable", false, "Test the creation of data structures for vtable and data layout").
+		bool("testCPPPrinter", "testCPPPrinter", false, "Test the functionality of the CPPPrinter class").
+		bool("translateToCPP", "translateToCPP", false, "Translate Java code to C++ without inheritance.");
 	}
     
     public Node parse(Reader in, File file) throws IOException, ParseException {
 	    JavaFiveParser parser =
-		    new JavaFiveParser(in, file.toString(), (int)file.length());
+		new JavaFiveParser(in, file.toString(), (int)file.length());
 		Result result = parser.pCompilationUnit(0);
 		return (Node)parser.value(result);
 	}  
@@ -83,13 +84,14 @@ public class Translator extends xtc.util.Tool {
 	    if (runtime.test("printAST")) {
 		    runtime.console().format(node).pln().flush();
 		}
-	
-	    if( runtime.test("backToC") ) {
-		new CPrinter( runtime.console() ).dispatch(node);
-		runtime.console().flush();
+		
+	    if( runtime.test("testDependencies") ) {
+			/*
+					INSERT CODE TO TEST DEPENDENCY RESOLUTION
+			 */
 	    }
 	    
-	    if(runtime.test("vtable")) {
+	    if(runtime.test("testVtable")) {
 			
 			final ClassLayoutParser clp = new ClassLayoutParser(node);
 			
@@ -110,9 +112,9 @@ public class Translator extends xtc.util.Tool {
 			runtime.console().format(clp.getClassTree()).pln().flush();
 			runtime.console().pln("------------");
 			//		     runtime.console().format(clp.getDataLayoutTree("Object")).pln().flush();
-	    } // end transform	
+	    }// end transform	
 		
-		if( runtime.test("translateToCPP") ) {
+		if( runtime.test("testCPPPrinter") ) {
 			//This simple visitor is just used to place a dummy vtable declaration node into each classes class body
 			//for testing purposes.  It also tests and implements mutability of the AST tree.
 			new Visitor() {
@@ -130,19 +132,33 @@ public class Translator extends xtc.util.Tool {
 			//The real CPPPrinter, initalized and dispatched...
 			new CPPPrinter( runtime.console() ).dispatch(node); 
 			
-			runtime.console().flush();
+			
+		
+		if( runtime.test("translateToCPP") ) {
+			// Where the MAGIC happens!
+			
+			/*
+				Rough idea of what should go here:
+				1. dependencyResolver dispatch on node
+				2. makeVtablesAndDataLayout for node and return a new formed import node or null
+				3. if a new import node is returned, add to tree and goto step 1.   (this means that more dependencies are needed)
+				4. more tree analysis to format properly for cppprinter?
+				5. send a structurally sound 'C++' AST to CPPPrinter
+				6. handle the output (to files, I assume)
+			 */
+			
 		}
     } // end process
     
     
-			
+	
     /**
      * Run the translator with the specified command line arguments.
      *
      * @param args The command line arguments.
      */
     public static void main(String[] args) {
-	new Translator().run(args);
+		new Translator().run(args);
     }
     
 }
