@@ -2,4 +2,14 @@
 *.java~
 *.DS_STORE
 *.gitignore~
-README~
+.#DataLayout.java
+*~
+
+
+
+# OS generated files #
+######################
+.DS_Store*
+ehthumbs.db
+Icon?
+Thumbs.db
