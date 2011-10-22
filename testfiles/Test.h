@@ -33,9 +33,9 @@ struct __Test_VT {
 	__Object_VT()
 	: __isa(__Test::__class()),
 	hashCode(&__Object::hashCode),
-	equals(&__Object::equals),
-	getClass(&__Object::getClass),
-	toString(&__Object::toString),
+	equals(&__Test ::equals),
+	getClass(&__Test::getClass),
+	toString(&__Test::toString),
 	meth1(&__Test::meth1),
 	meth2(&__Test::meth2),
 	meth3(&__Test::meth3) {
