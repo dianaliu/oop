@@ -16,207 +16,276 @@ import java.util.ArrayList;
 public class ClassLayoutParser extends Visitor {
 
     
-    public static final boolean DEBUG = false;
+    // TODO: Modify isa to be a pointer.  This way, only need findClass method
 
-    Node astTree;
-    GNode classTree;
 
-    GNode dataLayoutTree;
+    public static final boolean DEBUG = true;
+
+    GNode astTree; // Original JavaAST
+
+    GNode classTree; // Hold basic class hierarchy
+
+    GNode dataLayoutTree; // 
     GNode vTableTree;
 
     String className;
     ArrayList methods;
 
 
-    // Creates a helper class hierarchy tree.
-  
-    // Each ast class node has property = ptr to corresponding class node 
-    // in class hierarchy tree.
-    
-    // Each class node in the class hierarchy tree is know as the "data layout"
-    // for that class.
-    // Each class node has property = isa
-    // Each class node has n children for it's methods
-
-    // Each method node has children representing it's metadata
-    // method.getNode(0) = 
-    
-
-    // data property pointing to it's data layout tree
-    // Each class node has children representing it's methods
-    // Each data layout node has a pointer to it's vtable tree
-    // 
+    // Creates a helper class hierarchy tree containing vtable structure
     // @param n node for a class declaration
 
     public ClassLayoutParser(Node ast) {
-	// TODO: How to modify original java ast tree
-	astTree = ast;
 
+	astTree = (GNode)ast; // Original JavaAST, just in case
 	initGrimmClassTree();
-	initGrimmDataLayout();
 
-	// TODO: Implement Field declarations
 	// TODO: Getter methods for everything
 
     }
 
 
-    public void addClass(GNode n) {
+    // Returns node from classTree if you know it's name
+    // @param sc name of Class you want
+    public Node getClass(String sc) {
+	// return class node from classTree
 
-	String className = n.get(1).toString();
+	final String s = sc;
 
+	Node foundClass = (Node)(new Visitor() {
 
-	if(!(n.get(1).toString()).equals("Object") ||
-	   !(n.get(1).toString()).equals("String") ||
-	   !(n.get(1).toString()).equals("Array") ||
-	   !(n.get(1).toString()).equals("Integer") ) {
-	    
-	    // If not Grimm defined class, create it.
-	    GNode newClass = GNode.create(className);
+		public Node visit(Node n) {
+	
+		    if(n.hasProperty("name")) {
 
+			if( n.getStringProperty("name").equals(s) )
+			    return n;
+			
+			for( Object o : n) {
+			    if (o instanceof Node) {
+				Node returnValue = (Node)dispatch((Node)o);
+				if( returnValue != null ) return returnValue;
+			    }
+			}
+			return null;
+			
+		    } 
 
-	    // n.get(3) = implements
-	    // Doesn't implement anything, direct child of Object
-	    if(n.get(3) == null) {
-		classTree.addNode(newClass);
-		// create Data Layout for newly appended Class Node
-		generateDataLayout(classTree.getNode(classTree.size() - 1));
+		    else if(n.hasProperty("vtable")) {
+			// ignore vtable nodes
+			return null;
+		    }
+		    
+		    return classTree; //NEVER RETURN THIS PLEASE!
 
-		if(DEBUG) System.out.println("+Sub of Object: " + className);
-	    }
-	    else {
-		
-		// FIXME: null ptr exception. getParentClass is defective.
-		//		System.out.println("Parent of " + className + 
-		// " is " + getParentClass(className).getName() );
+		} // end visit()
+	    }.dispatch(classTree));
 
-	    } // end else
-	}
+	return foundClass;
+
+    }
+
+    public String getName(Node n) {
+	return n.getStringProperty("name");
+
     }
 
 
-    // Creates DataLayout and isa relationships for newly added classes
-    // @param n new class node
-    public void generateDataLayout (Node n) {
+    // Adds classes in proper location in classTree
+    // @param n ClassDeclaration node of AST Tree
+    public void addClass(GNode n) {
 
-	GNode dl = GNode.create(n.getName());
-	dl.setProperty("isa", getParentClass(n.getName()).getName());
+	String className = n.get(1).toString();
+	GNode newChildNode = GNode.create("ClassDeclaration");
+	newChildNode.setProperty("name", className);
+	Node parent;
+	
+	if(n.get(3) != null) {
+	    // Extends  something
+	    
+	    // adding vtable at index 0 messed this up
+	    parent = 
+		getClass( n.getNode(3).getNode(0).getNode(0).get(0).toString() );
+	    
+	    parent.addNode(newChildNode); // append new classes
+	    
+	    System.out.println("+Sub of " + getName( parent ) + ": "
+			       + getName(newChildNode));
+	}
+	else {
+	    // Doesn't extend, add to root (Object)
+	    classTree.addNode(newChildNode);
+	    parent = classTree;
+	    
+	    if(DEBUG) System.out.println("+Sub of Object: " + getName(newChildNode));
+	}
+	
+	
+	
+	// Part 2!
+	createVTable( n, newChildNode, parent );
+	
+    }
 
-	// add method nodes w/corresponding 4 children
-	// FIXME: use astTree
+    // Adds VTable substructure to nodes in classTree
+    // @param n Java AST ClassDeclaration node
+    // @param childNode classTree node
+    public void createVTable(Node n, Node child, Node parent) {
 
-	new Visitor() {
+	// when adding methods, check parent first
+	// if parent has by same index, point to it
 
+	ArrayList vTable = new ArrayList();
+	// isa returns parent node
+	// All classes have Object's getClass - returns "name" property
+	vTable.add(0, parent); // isa
+
+	addParentMethods(parent, child); // copy parents vtable entries over
+	// hopping to grimm objects to make sure they have vtables now!
+
+	// default add pointers to all of parent methods
+       	// get methods from AST Tree,
+	// if overridden, replace ptr to parent with self's implementation
+
+	// when parent name == self.name that's when we reached top level class
+	
+	/** ADD CODE **/
+
+
+
+	// make vtable node and set property
+	// has shitty name "MethodDeclaration"
+	// FIXME: How do we create our own node types/visitors
+	Node vTableNode = GNode.create("MethodDeclaration");
+	vTableNode.setProperty("vtable", vTable);
+
+
+    }
+
+    public void addParentMethods(Node parent, Node child) {
+	// go to parent in classTree
+	// set pointers to it's vtable from index 1 - n in child's vtable
+    }
+   
+
+    // Init tree w/Grimm defined classes
+    // Nodes have "name" property and vtable children
+    public void initGrimmClassTree() {
+
+	// FIXME: Don't hardcode Grimm objects
+	// FIXME: has shitty name "MethodDeclaration".
+	// How do we create our own node types/visitors
+
+	GNode objectNode = GNode.create("ClassDeclaration");
+	objectNode.setProperty("name", "Object");
+	
+	GNode stringNode = GNode.create("ClassDeclaration");
+	stringNode.setProperty("name", "String");
+
+	GNode classNode = GNode.create("ClassDeclaration");
+	classNode.setProperty("name", "Class");
+
+	GNode arrayNode = GNode.create("ClassDeclaration");
+	arrayNode.setProperty("name", "Array");
+ 
+	GNode integerNode = GNode.create("ClassDeclaration");
+	integerNode.setProperty("name", "Integer");
+
+
+	classTree = objectNode;
+	classTree.add(0, stringNode);
+	classTree.add(1, classNode);
+	classTree.add(2, arrayNode);
+	classTree.add(3, integerNode);
+
+	if(DEBUG) System.out.println("Init Grimm Class Tree");
+
+	// Part 2!
+	
+	initGrimmVTables();
+    }
+
+    public void initGrimmVTables() {
+	// FIXME: Making them type "MethodDeclaration" doesn't even give us 
+	// the corresponding visitor method! Cheated!  
+	// FIXME: vtables are type "MethodDeclaration" nodes
+	// shitty name, how do we create new types/visitors?
+
+	GNode objectVT = GNode.create("MethodDeclaration");
+
+	ArrayList objectVTArray = new ArrayList();
+	objectVTArray.add(0, "Object"); // Object's parent is Object or null?
+	// FIXME: Needs to point to actual method
+	// Perhaps create separate GrimmClassTree?
+	// FIXME: For new classes,point to method declaration node in AST
+	objectVTArray.add(1, "hashCode");
+	objectVTArray.add(2, "equals");
+	objectVTArray.add(3, "getClass"); // returns "name" property
+	objectVTArray.add(4, "toString");
+
+	objectVT.setProperty("vtable", objectVTArray);
+
+	// ALWAYS add vtable at index 0 because we append new classes
+	classTree.add(0, objectVT);
+
+	if(DEBUG) printVTable(classTree);
+	
+	//	addGrimmMethod();
+
+    }
+
+    // Prints out vtable given a class Node
+    //@param n class node
+    // FIXME: How do we get the vtable node?  ALWAYS INSERT AT ZERO.
+    public void printVTable(Node n) {
+	ArrayList al = (ArrayList) n.getNode(0).getProperty("vtable");
+
+	System.out.println("========= VTable " + " for class " + 
+			   n.getProperty("name") + " ==========");
+
+	for(int i = 0; i < al.size(); i++)
+	    System.out.println(i + "\t" + al.get(i).toString());
+
+    }
+
+
+
+
+    public void pClassTree() {
+
+	System.out.println("========= Class Tree ============");
+	new Visitor () {
 	    public void visit(Node n) {
 		for( Object o : n) {
 		    if (o instanceof Node) dispatch((Node)o);
 		}
-	    }
-	    
-	    public void visitMethodDeclaration(Node n) {
 
-		// FIXME: Never accessed
-		// QUERY: for modifier(s) and parameter(s) can we visitModifiers
-		// and visitFormalParameters?
-		// add to dl
-		System.out.println("method name = " + n.get(3));
-		System.out.println("modifier(s) = ");
-		System.out.println("return type = " + n.getNode(2).getNode(0).getNode(0));
-		System.out.println("parameter(s) = ");
+		if(n.hasProperty("name")) {
+		    System.out.println( "\tNode is " + n.getProperty("name") );
+		    if( n.hasProperty("vtable") )
+			System.out.print(" and has a vtable");
+		}
+
+		if(n.hasProperty("vtable")) {
+		    
+		}
+
+	    }
+
+	    public void visitClassDeclaration(Node n) {
+		// er, why is this never visited?
+		System.out.println("AT A NODE OF TYPE CLASSDECLARATION");
 		visit(n);
 	    }
-	    
-	}.dispatch(astTree);
 
 
-	// get ast node of the class and find each MethodDeclaration Node
-	// index 0.0.x = string modifier(s)
-	// index 2.0.0 = return type
-	// index 3 = name of method
-	// index 4.0-x.0.0.0 = parameter type aka qualIden
+	    public void visitMethodDeclaration(Node n) {
 
-	n.setProperty("dataLayout", dl);
-
-	if(DEBUG) System.out.println("Generated data layout for " + n.getName());
-
-    }
-
-
-    // Init tree w/Grimm defined classes
-    // Class Tree nodes have "dataLayout" property
-    public void initGrimmClassTree() {
-
-	// FIXME: Have only hardcoded object
-
-	// Class nodes have methods as children.  
-	// Methods have their info as children
-	classTree = GNode.create("Object"); // shallow copy
-	classTree.addNode(GNode.create("String")); // 0 
-	classTree.addNode(GNode.create("Class")); // 1
-	classTree.addNode(GNode.create("Array")); // 2
-
-	if(DEBUG) System.out.println("Init Grimm Class Tree");
-    }
-
-    // Init trees  w/Grimm defined data layouts
-    // Data Layout root node has "isa" property
-    public void initGrimmDataLayout() {
-
-	// FIXME: Have only hardcoded object
-
-	// Structure of Data Layout :
-	// Class Name w/isa property >
-	// 
-	// Methods 0 - X >
-	// 0.method name 1. modifier 2. return type 3. parameter(s)
-
-	GNode objectData = GNode.create("Object");
-
-	// VTable contains same information as Data Layout, except:
-	// 1. Formatted differently
-	// 2. has isa field
-       	objectData.setProperty( "isa", getParentClass("Object").getName() );
-
-	// static int32_t hashCode(Object);
-	objectData.addNode(GNode.create("Method0"));
-	objectData.getNode(0).addNode(GNode.create("hashCode")); // method name
-	objectData.getNode(0).addNode(GNode.create("static"));  // modifier
-	objectData.getNode(0).addNode(GNode.create("int32_t")); // return type
-	objectData.getNode(0).addNode(GNode.create("Object"));  // param
-
-	// static bool equals(Object, Object);
-	objectData.addNode(GNode.create("Method1"));
-	objectData.getNode(1).addNode(GNode.create("equals")); // method name
-	objectData.getNode(1).addNode(GNode.create("static"));  // modifier
-	objectData.getNode(1).addNode(GNode.create("bool")); // return type
-	objectData.getNode(1).addNode(GNode.create("Object, Object"));  // param
-
-	// static Class getClass(Object)
-	objectData.addNode(GNode.create("Method2"));
-	objectData.getNode(2).addNode(GNode.create("getClass")); // method name
-	objectData.getNode(2).addNode(GNode.create("static"));  // modifier
-	objectData.getNode(2).addNode(GNode.create("Class")); // return type
-	objectData.getNode(2).addNode(GNode.create("Object"));  // param
-
-	// static String toString(Object)
-	objectData.addNode(GNode.create("Method3"));
-	objectData.getNode(3).addNode(GNode.create("toString")); // method name
-	objectData.getNode(3).addNode(GNode.create("static"));  // modifier
-	objectData.getNode(3).addNode(GNode.create("String")); // return type
-	objectData.getNode(3).addNode(GNode.create("Object"));  // param
-
-
-	// Set Object's data layout
-       	classTree.setProperty("dataLayout", objectData );
-
-
-	if(DEBUG) System.out.println("Init Grimm data layouts");
-
-    }
-
-    public GNode getClass (final String className) {
-	// returning bad value just to compile
-	return classTree;
+		visit(n);
+	    }
+	 
+ 
+	}.dispatch(classTree);
     }
 
     public GNode getParentClass(final String className) {
