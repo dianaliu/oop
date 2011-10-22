@@ -5,9 +5,12 @@ import xtc.tree.Node;
 import xtc.tree.Visitor;
 
 interface CPPUtil {
-	//Node types:
-	public static final String kRoot = "TranslationUnit";
+	//Group defined GNode types:
 	public static final String kHeadDec = "HeaderDeclaration";
+	public static final String kImplDec = "ImplementationDeclaration";
+	
+	//Preexisting GNode types:
+	public static final String kRoot = "TranslationUnit";
 	public static final String kStruct = "StructureTypeDefinition";
 	public static final String kStructDeclList = "StructureDeclarationList";
 	public static final String kStructDecl = "StructureDeclaration";
@@ -28,7 +31,9 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	GNode classHierarchy;
 	GNode translatedTree;
 	
+	String thisClassName;
 	GNode thisClassVTableStructDeclList;
+	GNode thisClassImplementation;
     
     public LeafTransplant(GNode classTree, GNode javaAST) { 
 		this.translatedTree = GNode.create(kRoot);
@@ -44,7 +49,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		return (GNode)GNode.create( kPrimID ).add(contents);
 	}
 	
-	GNode buildHeaderForClass(String className) {
+	GNode buildHeaderForClass() {
+		String className = thisClassName;
 		GNode objectTree = GNode.create(kHeadDec); //defines a header declaration node, which has been arbitrarly invented
 		{
 			GNode typedefDecl = GNode.create(kDecl); //typedef __Object* Object;
@@ -113,6 +119,20 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		return objectTree;
 	}
 	
+	public GNode buildImplementationForClass() {
+		GNode mainTree = GNode.create(kImplDec);
+		mainTree.setProperty("className", thisClassName);
+		return mainTree;
+	}
+	
+	public void addToVTable(GNode n) {
+		thisClassVTableStructDeclList.add(0, createPrimaryIdentifier( "__" + thisClassName + "::" + (String)n.get(3) ));
+	}
+	
+	public void addMethodImplementation(GNode n) {
+		
+	}
+	
 	public void translateJavaToCPP() { dispatch(originalTree); }
     
     public GNode getTranslatedTree() { return translatedTree; }
@@ -124,12 +144,15 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	}
 	
 	public void visitClassDeclaration(GNode n) {
-		translatedTree.add(buildHeaderForClass( n.get(1).toString() ));
+		thisClassName = n.get(1).toString();
+		translatedTree.add(buildImplementationForClass());
+		translatedTree.add(buildHeaderForClass());
 		visit(n);
 	}
 	
 	public void visitMethodDeclaration(GNode n) {
-		thisClassVTableStructDeclList.add(0, createPrimaryIdentifier( (String)n.get(3) ));
+		addToVTable(n);
+		addMethodImplementation(n);
 		visit(n);
 	}
 }
