@@ -69,7 +69,7 @@ public class Translator extends xtc.util.Tool {
 		runtime.
 		bool("printAST", "printAST", false, "Print Java AST.").
 		bool("testDependencies", "testDependencies", false, "Test dependency resolution.").
-		bool("testVtable", "testVtable", false, "Test the creation of data structures for vtable and data layout").
+		bool("vtable", "vtable", false, "Test the creation of data structures for vtable and data layout").
 		bool("testCPPPrinter", "testCPPPrinter", false, "Test the functionality of the CPPPrinter class").
 		bool("translateToCPP", "translateToCPP", false, "Translate Java code to C++ without inheritance.");
 	}
@@ -150,44 +150,59 @@ public class Translator extends xtc.util.Tool {
 			//Print out C++ code - to do
 		}
 	    
-	    if(runtime.test("testVtable")) {
+
+
+
+
+	    if(runtime.test("vtable")) {
 			
-			final ClassLayoutParser clp = new ClassLayoutParser(node);
-			
-			new Visitor() {
-				// When we encounter a class in the AST, send it to 
-				// ClassLayoutParser 
-				public void visitClassDeclaration(GNode n) {
-					clp.addClass(n);
-					visit(n);
-				} // end visitClassDeclaration
-				
-				public void visit(Node n) {
-					for( Object o : n) {
-						if (o instanceof Node) dispatch((Node)o);
-					}
-				}
-			}.dispatch(node);
-			runtime.console().format(clp.getClassTree()).pln().flush();
-			runtime.console().pln("------------");
-			//		     runtime.console().format(clp.getDataLayoutTree("Object")).pln().flush();
-	    }// end transform	
+		final ClassLayoutParser clp = new ClassLayoutParser(node);
 		
-		if( runtime.test("testCPPPrinter") ) {
-			//This simple visitor is just used to place a dummy vtable declaration node into each classes class body
-			//for testing purposes.  It also tests and implements mutability of the AST tree.
-			new Visitor() {
-				public void visit(Node n) {
-					for( Object o : n ) if( o instanceof Node ) dispatch((Node)o);
+		new Visitor() {
+		    // When we encounter a class in the AST, send it to 
+		    // ClassLayoutParser 
+		    public void visitClassDeclaration(GNode n) {
+			clp.addClass(n);
+		
+			visit(n);
+		    } // end visitClassDeclaration
+		    
+		    public void visit(Node n) {
+			for( Object o : n) {
+			    if (o instanceof Node) dispatch((Node)o);
+			}
+		    }
+		}.dispatch(node);
+
+		clp.pClassTree();
+
+		//		System.out.println("Looking for String, found " + 
+		//				   clp.getName(clp.getClass("String")) );
+
+	
+
+		//		runtime.console().format(clp.getClassTree()).pln().flush();
+	
+	    }	
+	    
+
+
+
+	    if( runtime.test("testCPPPrinter") ) {
+		//This simple visitor is just used to place a dummy vtable declaration node into each classes class body
+		//for testing purposes.  It also tests and implements mutability of the AST tree.
+		new Visitor() {
+		    public void visit(Node n) {
+			for( Object o : n ) if( o instanceof Node ) dispatch((Node)o);
+		    }
+		    
+		    public void visitClassDeclaration(GNode n) {
+			n.set(5, GNode.ensureVariable(GNode.cast(n.getNode(5)))); //make sure the class body is mutable (num of nodes can be changed).  If not, it is made mutable.
+			n.getNode(5).add(0, GNode.create("VirtualTableDeclaration")); //insert a vtabledecl node, currently has no functionality, just for testing
+			visit(n);
 				}
-				
-				public void visitClassDeclaration(GNode n) {
-					n.set(5, GNode.ensureVariable(GNode.cast(n.getNode(5)))); //make sure the class body is mutable (num of nodes can be changed).  If not, it is made mutable.
-					n.getNode(5).add(0, GNode.create("VirtualTableDeclaration")); //insert a vtabledecl node, currently has no functionality, just for testing
-					visit(n);
-				}
-			}.dispatch(node);
-			
+		}.dispatch(node);
+		
 			//The real CPPPrinter, initalized and dispatched...
 			new CPPPrinter( runtime.console() ).dispatch(node); 
 		}	
