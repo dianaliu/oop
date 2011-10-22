@@ -211,7 +211,7 @@ public class ClassLayoutParser extends Visitor {
 	// FIXME: vtables are type "MethodDeclaration" nodes
 	// shitty name, how do we create new types/visitors?
 
-	GNode objectVT = GNode.create("MethodDeclaration");
+	GNode objectVT = GNode.create("MethodDeclaration"); // lol, why?
 
 	ArrayList objectVTArray = new ArrayList();
 	objectVTArray.add(0, "Object"); // Object's parent is Object or null?
@@ -228,9 +228,32 @@ public class ClassLayoutParser extends Visitor {
 	// ALWAYS add vtable at index 0 because we append new classes
 	classTree.add(0, objectVT);
 
-	if(DEBUG) printVTable(classTree);
+
+	GNode stringVT = GNode.create("MethodDeclaration");
 	
-	//	addGrimmMethod();
+	ArrayList stringVTArray = new ArrayList();
+	// need to code automate get parent class
+	// FIXME: Hardcoding Grimm's parent classes
+	// use for isa and methods overriding
+	stringVTArray.add(0, "Object");
+	stringVTArray.add(1, "hashCode"); // FIXME: Point to method, not string
+	stringVTArray.add(2, "equals");
+	stringVTArray.add(3, "Parent's " + 
+			  (  (ArrayList) (classTree.getNode(0).getProperty("vtable") )).get(3) );
+	stringVTArray.add(4, "toString");
+	stringVTArray.add(5, "length");
+	stringVTArray.add(6, "charAt");
+	
+	stringVT.setProperty("vtable", stringVTArray);
+
+	getClass("String").add(0, stringVT);
+
+	if(DEBUG) {
+	    printVTable(getClass("Object"));
+	    printVTable(getClass("String"));
+	    
+	}
+	
 
     }
 
@@ -249,8 +272,6 @@ public class ClassLayoutParser extends Visitor {
     }
 
 
-
-
     public void pClassTree() {
 
 	System.out.println("========= Class Tree ============");
@@ -262,7 +283,9 @@ public class ClassLayoutParser extends Visitor {
 
 		if(n.hasProperty("name")) {
 		    System.out.println( "\tNode is " + n.getProperty("name") );
-		    if( n.hasProperty("vtable") )
+		    
+		    // FIXME: Never called
+		    if( !n.isEmpty() &&  n.getNode(0).hasProperty("vtable") )
 			System.out.print(" and has a vtable");
 		}
 
@@ -280,7 +303,7 @@ public class ClassLayoutParser extends Visitor {
 
 
 	    public void visitMethodDeclaration(Node n) {
-
+		// never called??????
 		visit(n);
 	    }
 	 
@@ -323,43 +346,7 @@ public class ClassLayoutParser extends Visitor {
     public GNode getClassTree() {
 	return classTree;
     }
-    
-    // returns the data layout tree for a specific class
-    // @param className class you want data layout for
-    // note data layout contains isa property
-    public GNode getDataLayoutTree(final String className) {
-	
-	// traverse class tree
-	// if node.hasName(className)
-	// return the dataLayout property value
 
-	return (GNode) ( new Visitor() {
-	    
-		public Node visit(Node n) {
-		    if( ((String)n.getName()).equals(className) )
-			return (GNode)(n.getProperty("dataLayout"));
-		    
 
-		    // Continue searching
-		    for( Object o : n) {
-			if (o instanceof Node) {
-			    GNode returnValue = (GNode)dispatch((Node)o);
-			    if( returnValue != null ) return returnValue;
-			}
-		    }
-		    return null; 
-		    
-		} // end visit()
-		
-	    }.dispatch(classTree) );
-
-    }
-
-    public void visit(Node n) {
-	for( Object o : n) {
-	    if (o instanceof Node) dispatch((Node)o);
-	}
-    }
-    
 
 }
