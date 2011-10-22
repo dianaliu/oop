@@ -1,0 +1,15 @@
+*.class
+*.java~
+*.DS_STORE
+*.gitignore~
+.#DataLayout.java
+*~
+
+
+
+# OS generated files #
+######################
+.DS_Store*
+ehthumbs.db
+Icon?
+Thumbs.db

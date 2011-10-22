@@ -43,6 +43,7 @@ import java.io.Reader;
 
 import java.util.ArrayList;
 
+import xtc.oop.LeafTransplant;
 
 
 public class Translator extends xtc.util.Tool {
@@ -67,19 +68,26 @@ public class Translator extends xtc.util.Tool {
     public void init() {
 	    super.init();  
 		runtime.
-		bool("printAST", "printAST", false, "Print Java AST.").
+		bool("printAST", "printAST", false, "Print AST.").
 		bool("testDependencies", "testDependencies", false, "Test dependency resolution.").
 		bool("testVtable", "testVtable", false, "Test the creation of data structures for vtable and data layout").
 		bool("testCPPPrinter", "testCPPPrinter", false, "Test the functionality of the CPPPrinter class").
 		bool("translateToCPP", "translateToCPP", false, "Translate Java code to C++ without inheritance.");
 	}
-    
+    ///*
     public Node parse(Reader in, File file) throws IOException, ParseException {
 	    JavaFiveParser parser =
 		new JavaFiveParser(in, file.toString(), (int)file.length());
 		Result result = parser.pCompilationUnit(0);
 		return (Node)parser.value(result);
-	}  
+	}  //*/
+	/*
+	public Node parse(Reader in, File file) throws IOException, ParseException {
+	    CParser parser =
+		new CParser(in, file.toString(), (int)file.length());
+		Result result = parser.pTranslationUnit(0);
+		return (Node)parser.value(result);
+	} //*/ 
     
     public void process(Node node) {
 	    if (runtime.test("printAST")) {
@@ -196,15 +204,13 @@ public class Translator extends xtc.util.Tool {
 		if( runtime.test("translateToCPP") ) {
 			// Where the MAGIC happens!
 			
-			/*
-				Rough idea of what should go here:
-				1. dependencyResolver dispatch on node -> adding all dependencies for imports
-				2. makeVtablesAndDataLayout for node and return the tree with a new importDeclaration node or null
-				3. if a new import node is returned, goto step 1.   (this means that more dependencies are needed)
-				4. more tree analysis to format properly for cppprinter?
-				5. send a structurally sound 'C++' AST to CPPPrinter
-				6. handle the output (to files, I assume)
-			 */
+			LeafTransplant trsltr = new LeafTransplant(GNode.cast(node), GNode.cast(node));
+			trsltr.translateJavaToCPP();
+			GNode returned = trsltr.getTranslatedTree();
+			//runtime.console().format(returned).pln().flush();
+			new CPPPrinter( runtime.console() ).dispatch(returned);
+			runtime.console().flush();
+			
 		}
     } // end process
     

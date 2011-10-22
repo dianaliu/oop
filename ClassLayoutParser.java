@@ -20,6 +20,7 @@ public class ClassLayoutParser extends Visitor {
 
     Node astTree;
     GNode classTree;
+
     GNode dataLayoutTree;
     GNode vTableTree;
 
@@ -27,14 +28,36 @@ public class ClassLayoutParser extends Visitor {
     ArrayList methods;
 
 
-    // Creates a class tree.  
-    // Each class node has a data property pointing to it's data layout tree
+    // Creates a helper class hierarchy tree.
+  
+    // Each ast class node has property = ptr to corresponding class node 
+    // in class hierarchy tree.
+    
+    // Each class node in the class hierarchy tree is know as the "data layout"
+    // for that class.
+    // Each class node has property = isa
+    // Each class node has n children for it's methods
+
+    // Each method node has children representing it's metadata
+    // method.getNode(0) = 
+    
+
+    // data property pointing to it's data layout tree
+    // Each class node has children representing it's methods
     // Each data layout node has a pointer to it's vtable tree
+    // 
     // @param n node for a class declaration
+
     public ClassLayoutParser(Node ast) {
+	// TODO: How to modify original java ast tree
 	astTree = ast;
+
 	initGrimmClassTree();
 	initGrimmDataLayout();
+
+	// TODO: Implement Field declarations
+	// TODO: Getter methods for everything
+
     }
 
 
@@ -67,23 +90,20 @@ public class ClassLayoutParser extends Visitor {
 		//		System.out.println("Parent of " + className + 
 		// " is " + getParentClass(className).getName() );
 
-
 	    } // end else
-
-	    
 	}
-
     }
 
+
+    // Creates DataLayout and isa relationships for newly added classes
+    // @param n new class node
     public void generateDataLayout (Node n) {
-	// Creates DataLayout and isa relationships for newly added classes
-	// @param n new class node
-	
+
 	GNode dl = GNode.create(n.getName());
 	dl.setProperty("isa", getParentClass(n.getName()).getName());
 
 	// add method nodes w/corresponding 4 children
-	// use astTree
+	// FIXME: use astTree
 
 	new Visitor() {
 
@@ -128,6 +148,8 @@ public class ClassLayoutParser extends Visitor {
 
 	// FIXME: Have only hardcoded object
 
+	// Class nodes have methods as children.  
+	// Methods have their info as children
 	classTree = GNode.create("Object"); // shallow copy
 	classTree.addNode(GNode.create("String")); // 0 
 	classTree.addNode(GNode.create("Class")); // 1
@@ -144,6 +166,7 @@ public class ClassLayoutParser extends Visitor {
 
 	// Structure of Data Layout :
 	// Class Name w/isa property >
+	// 
 	// Methods 0 - X >
 	// 0.method name 1. modifier 2. return type 3. parameter(s)
 
@@ -189,6 +212,11 @@ public class ClassLayoutParser extends Visitor {
 
 	if(DEBUG) System.out.println("Init Grimm data layouts");
 
+    }
+
+    public GNode getClass (final String className) {
+	// returning bad value just to compile
+	return classTree;
     }
 
     public GNode getParentClass(final String className) {
@@ -264,25 +292,5 @@ public class ClassLayoutParser extends Visitor {
 	}
     }
     
-
-    public void findMethods(GNode n) {
-	
-    }
-
-
-    public void formDataLayout() {
-	// Data Layout contains the method signatures implemented by a class
-
-	// Each method signature must include : 
-	// 
-
-    }
-
-
-    public void formVTableLayout() {
-	// VTable Layout contains the "resolved" method signatures
-	// formatted as pointers and typed correctly
-
-    }
 
 }
