@@ -109,39 +109,95 @@ public class ClassLayoutParser extends Visitor {
 	    
 	    parent.addNode(newChildNode); // append new classes
 	    
-	    System.out.println("+Sub of " + getName( parent ) + ": "
-			       + getName(newChildNode));
+	    if(DEBUG) System.out.println( "+" + getName(newChildNode) + 
+					  " extends " +  getName(parent));
+
 	}
 	else {
 	    // Doesn't extend, add to root (Object)
 	    classTree.addNode(newChildNode);
 	    parent = classTree;
 	    
-	    if(DEBUG) System.out.println("+Sub of Object: " + getName(newChildNode));
+	    if(DEBUG) System.out.println( "+" + getName(newChildNode) + 
+					  " extends " +  getName(parent));
+
 	}
 	
-	
-	
-	// Part 2!
-	createVTable( n, newChildNode, parent );
+      	// Part 2!
+	// @param n AST classDeclaration node
+       	addVTable( n, newChildNode, parent );
 	
     }
 
     // Adds VTable substructure to nodes in classTree
-    // @param n Java AST ClassDeclaration node
-    // @param childNode classTree node
-    public void createVTable(Node n, Node child, Node parent) {
+    // @param n AST ClassDeclaration node
+    // @param child newly added classTree node
+    // @param parent 
+    public void addVTable(Node n, Node child, Node parent) {
 
-	// when adding methods, check parent first
-	// if parent has by same index, point to it
+	if(DEBUG) System.out.println("[ entered addVTable ] ");
+
+	// 0. How to get Methods?
+	// Initially fill index 1 - parent_vtable.size() w/parent's methods
+	// assume inheritance
+	// Must search vtable each time we "add" a new method
+	// If method exists, replace it w/child's implementation
+	// If method DNE, append new method
 
 	ArrayList vTable = new ArrayList();
-	// isa returns parent node
-	// All classes have Object's getClass - returns "name" property
-	vTable.add(0, parent); // isa
 
-	addParentMethods(parent, child); // copy parents vtable entries over
-	// hopping to grimm objects to make sure they have vtables now!
+	vTable.add(0, parent); // isa
+	// FIXME: Can we assume parent's vtable exists when adding children?
+	// if not, could run addClass on it.  
+	// FIXME: Add if statements for safety everywhere!
+	
+	// Initially, inherit all of parent's methods
+	final ArrayList parentVTable = 
+	    (ArrayList) (parent.getNode(0).getProperty("vtable"));
+	
+	for(int i = 0; i < parentVTable.size(); i++)
+	    {
+		// will follow all the way up
+		vTable.add(parentVTable.get(i)); 
+	    }
+
+	// visit method names under AST ClassDeclaration
+	// Does it exist in index 1 - parentVTable.size()?
+	// if yes, replace
+	// if no, append new entry to vTable
+
+	new Visitor() {
+
+	    public void visitMethodDeclaration(GNode n) {
+		
+		String className = n.get(3).toString();
+		if(DEBUG) System.out.println("Encountered method " + className);
+
+		if(overrides(className, parentVTable) > 0) {
+		    // FIXME: Can't access vTable from inner method
+		    //		    vTable.add(overrides(className, parentVTable), className);
+		}
+		else {
+		    //FIXME: Change everything to pointers to nodes
+		    // Could do vTable.add(n) right now, but GrimmVTables 
+		    // are strings.
+		    // Come back and fix after I've implemented GrimmObjects
+		    // in tree form
+		    //		    vTable.add(className); 
+		}
+
+      	    }
+	    
+	    public void visit(GNode n) {
+		for( Object o : n) {
+		    if (o instanceof Node) dispatch((GNode)o);
+		}
+	    }
+
+
+	}.dispatch(n);
+
+
 
 	// default add pointers to all of parent methods
        	// get methods from AST Tree,
@@ -160,6 +216,23 @@ public class ClassLayoutParser extends Visitor {
 	vTableNode.setProperty("vtable", vTable);
 
 
+    }
+
+    // Determines if a method overrides it's parent method
+    public int overrides(String className, ArrayList parentVTable) {
+	
+	for(int i = 1; i < parentVTable.size(); i++) {
+
+	    // FIXME: Currently comparing strings 
+	    // When pointers to nodes are implemented, 
+	    // change equals implementation (by location?)
+
+	    if(className.equals(parentVTable.get(i))) {
+		return i;
+	    }
+	}
+
+	return -1;
     }
 
     public void addParentMethods(Node parent, Node child) {
@@ -206,11 +279,16 @@ public class ClassLayoutParser extends Visitor {
     }
 
     public void initGrimmVTables() {
+	// FIXME: Complete implementation w/ array and integer pls!
+
 	// FIXME: Making them type "MethodDeclaration" doesn't even give us 
 	// the corresponding visitor method! Cheated!  
 	// FIXME: vtables are type "MethodDeclaration" nodes
 	// shitty name, how do we create new types/visitors?
 
+
+	// ------------------------------------------------
+	
 	GNode objectVT = GNode.create("MethodDeclaration"); // lol, why?
 
 	ArrayList objectVTArray = new ArrayList();
@@ -228,6 +306,7 @@ public class ClassLayoutParser extends Visitor {
 	// ALWAYS add vtable at index 0 because we append new classes
 	classTree.add(0, objectVT);
 
+	// ------------------------------------------------
 
 	GNode stringVT = GNode.create("MethodDeclaration");
 	
@@ -236,11 +315,14 @@ public class ClassLayoutParser extends Visitor {
 	// FIXME: Hardcoding Grimm's parent classes
 	// use for isa and methods overriding
 	stringVTArray.add(0, "Object");
-	stringVTArray.add(1, "hashCode"); // FIXME: Point to method, not string
+	// over ridden
+       	stringVTArray.add(1, "hashCode"); // FIXME: Point to method, not string
 	stringVTArray.add(2, "equals");
-	stringVTArray.add(3, "Parent's " + 
-			  (  (ArrayList) (classTree.getNode(0).getProperty("vtable") )).get(3) );
+	// inherited
+	stringVTArray.add(3, ( (ArrayList) (classTree.getNode(0).getProperty("vtable") ) ).get(3) );
+	// over ridden
 	stringVTArray.add(4, "toString");
+	// new methods
 	stringVTArray.add(5, "length");
 	stringVTArray.add(6, "charAt");
 	
@@ -248,9 +330,67 @@ public class ClassLayoutParser extends Visitor {
 
 	getClass("String").add(0, stringVT);
 
+	// ------------------------------------------------
+
+	GNode classVT = GNode.create("MethodDeclaration");
+	
+	ArrayList classVTArray = new ArrayList();
+
+	classVTArray.add(0, "Object");
+	// inherited
+	classVTArray.add(1, ( (ArrayList) (classTree.getNode(0).getProperty("vtable") ) ).get(1) );
+	classVTArray.add(2,  ( (ArrayList) (classTree.getNode(0).getProperty("vtable") ) ).get(2));
+	classVTArray.add(3, ( (ArrayList) (classTree.getNode(0).getProperty("vtable") ) ).get(3) );
+
+
+	/**  If, for testing, you want to append parent in front of method name
+
+	classVTArray.add(1, classVTArray.get(0) + "'s " + 
+			 ( (ArrayList) (classTree.getNode(0).getProperty("vtable") ) ).get(1) );
+	classVTArray.add(2,  classVTArray.get(0) + "'s " + 
+			  ( (ArrayList) (classTree.getNode(0).getProperty("vtable") ) ).get(2));
+	classVTArray.add(3, classVTArray.get(0) + "'s " + 
+			  ( (ArrayList) (classTree.getNode(0).getProperty("vtable") ) ).get(3) );
+	**/
+	// overridden
+	classVTArray.add(4, "toString"); 
+	// new methods
+	classVTArray.add(5, "getName");
+	classVTArray.add(6, "getSuperClass");
+	classVTArray.add(7, "isPrimitive");
+	classVTArray.add(8, "isArray");	
+	classVTArray.add(9, "getComponentType");
+	classVTArray.add(10, "isInstance");
+
+	// Attach vTable to vt node
+	classVT.setProperty("vtable", classVTArray);
+
+	// Attach vt node to class node
+	getClass("Class").add(0, classVT);
+
+	// ------------------------------------------------
+
+	GNode arrayVT = GNode.create("MethodDeclaration");
+
+	/**
+	   Finish implementing
+	 **/
+
+	// ------------------------------------------------
+
+	GNode integerVT = GNode.create("MethodDeclaration");
+
+	/**
+	   Finish implementing
+	 **/
+
+	// ------------------------------------------------
+
+
 	if(DEBUG) {
 	    printVTable(getClass("Object"));
 	    printVTable(getClass("String"));
+	    printVTable(getClass("Class"));
 	    
 	}
 	
@@ -282,11 +422,13 @@ public class ClassLayoutParser extends Visitor {
 		}
 
 		if(n.hasProperty("name")) {
-		    System.out.println( "\tNode is " + n.getProperty("name") );
+		    System.out.print( "\tNode is " + n.getProperty("name") );
 		    
 		    // FIXME: Never called
 		    if( !n.isEmpty() &&  n.getNode(0).hasProperty("vtable") )
-			System.out.print(" and has a vtable");
+			System.out.println(" and has a vtable");
+		    else
+			System.out.println();
 		}
 
 		if(n.hasProperty("vtable")) {
