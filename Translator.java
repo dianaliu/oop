@@ -94,7 +94,7 @@ public class Translator extends xtc.util.Tool {
 		    runtime.console().format(node).pln().flush();
 		}
 		
-	    if( runtime.test("testDependencies") ) {
+	      if( runtime.test("testDependencies") ) {
 			Node depTree;
 			
 			//
@@ -103,40 +103,55 @@ public class Translator extends xtc.util.Tool {
 			System.out.println("\n------------------------------");
 			System.out.println("The Current Working Directory");
 			System.out.println("------------------------------");
-			String curDir = System.getProperty("user.dir");
-			System.out.println(curDir);
+			System.out.println(System.getProperty("user.dir"));
 			
-			//
+			//*****************************************************
 			//Begin analyzing the AST to determine all dependencies
-			//
+			//*****************************************************
 			System.out.println("\n-------------------------------");
 			System.out.println("Initial Dependency Analysis Stage");
 			System.out.println("-------------------------------");
-			DependencyVisitor depVisitor = new DependencyVisitor();
 			
-			//call DependencyVisitor on node and store the addresses inside 
-			//DependencyVisitor.addressArray
-			depVisitor.dispatch(node);
-			depVisitor.printAddressArray();
-			//parse the dependencies listed in addressArray and append to node
+			DependencyResolver depResolver = new DependencyResolver();
+			depResolver.processMainFile();
+			
+			depResolver.processDependencies(trees);
 			try {
-				depTree = depVisitor.parseArray(node);
+				trees = depResolver.parseDependencies();
+				trees[0] = node;
 			} 
 			catch (IOException e) {
-				depTree = null;
-				System.out.println("IOException");
+				trees = null;
+				System.out.println("IOException Translator->ParseDependencies()");
 			}
 			catch (ParseException e) {
-				depTree = null;
-				System.out.println("ParseException");
-			} 
+				trees = null;
+				System.out.println("ParseException Translator->ParseDependencies()");
+			}
 			
+			
+			
+			
+			depResolver.printAddressArray();
+			
+			
+			for(int i = 0; i < trees.length; i++) {
+				if(trees[i] != null){
+					if(i == 0)	System.out.println("$$Main java test file:");
+					else	System.out.println("$$Dependency file # " + i + ":");
+					runtime.console().pln().format(trees[i]).pln().pln().flush();
+				}
+			}
+			
+			
+			int numtrees = depResolver.getTreeCount(trees);
+			System.out.println(numtrees);
+			
+
 			runtime.console().pln().format(depTree).pln().flush();
-			
-			
 			//
 			//Begin analyzing the AST to create the VTable
-			//
+
 			/* 			System.out.println("\n-----------------------------");
 			 System.out.println("Analyzing Virtual Table Stage");
 			 System.out.println("-----------------------------");
@@ -152,13 +167,11 @@ public class Translator extends xtc.util.Tool {
 			 }
 			 }.dispatch(myVisitor.getVtableTree());
 			 runtime.console().format(myVisitor.getVtableTree()).pln().flush();  
-			 */
-			
+	
 			//Translate to C++ - to do
 			//Print out C++ code - to do
 		}
 	    
-
 
 
 
