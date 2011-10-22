@@ -18,8 +18,6 @@ PACKAGE_LOC = xtc/oop
 SOURCE = \
 	Translator.java \
 	ClassLayoutParser.java \
-	DependencyVisitor.java \
-	DependencyParser.java \
 	LeafTransplant.java \
 	CPPPrinter.java \	
 	ClassLayoutParser.java
