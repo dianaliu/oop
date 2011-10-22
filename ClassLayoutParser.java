@@ -32,8 +32,6 @@ public class ClassLayoutParser extends Visitor {
     GNode dataLayoutTree; // 
     GNode vTableTree;
 
-   
-
     String className;
     ArrayList methods;
 
