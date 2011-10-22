@@ -21,12 +21,18 @@ public class ClassLayoutParser extends Visitor {
 
     public static final boolean DEBUG = true;
 
+    // Returned to satisfy the compiler  
+    // Hopefully, never actually returned
+    public static final GNode impossible = GNode.create("wtf");
+
     GNode astTree; // Original JavaAST
 
     GNode classTree; // Hold basic class hierarchy
 
     GNode dataLayoutTree; // 
     GNode vTableTree;
+
+   
 
     String className;
     ArrayList methods;
@@ -47,66 +53,67 @@ public class ClassLayoutParser extends Visitor {
 
     // Returns node from classTree if you know it's name
     // @param sc name of Class you want
-    public Node getClass(String sc) {
+    public GNode getClass(String sc) {
 	// return class node from classTree
 
 	final String s = sc;
-
-	Node foundClass = (Node)(new Visitor() {
-
-		public Node visit(Node n) {
 	
-		    if(n.hasProperty("name")) {
-
-			if( n.getStringProperty("name").equals(s) )
-			    return n;
-			
-			for( Object o : n) {
-			    if (o instanceof Node) {
-				Node returnValue = (Node)dispatch((Node)o);
-				if( returnValue != null ) return returnValue;
-			    }
-			}
-			return null;
-			
-		    } 
-
-		    else if(n.hasProperty("vtable")) {
-			// ignore vtable nodes
-			return null;
+	return (GNode)( new Visitor() {
+		
+		public void  visit(GNode n) {
+		    for( Object o : n) {
+			if (o instanceof Node) dispatch((GNode)o);
 		    }
-		    
-		    return classTree; //NEVER RETURN THIS PLEASE!
+		}
+		
+		public GNode visitClass(GNode n) {
+		    // Found the class
+		    if( getName(n).equals(s) ) {
+			if(DEBUG) {
+			    System.out.println("Retrieved class " 
+					       + getName(n) );
+			}
+			return n;
+		    }
 
-		} // end visit()
-	    }.dispatch(classTree));
-
-	return foundClass;
-
+		    // Keep Searching
+		    for( Object o : n) {
+			if (o instanceof Node) {
+			    GNode returnValue = (GNode)dispatch((GNode)o);
+			    if( returnValue != null ) return returnValue;
+			}
+		    }
+		    return null;
+		}
+		
+	    }.dispatch(classTree) );
     }
 
-    public String getName(Node n) {
+    public String getName(GNode n) {
 	return n.getStringProperty("name");
 
     }
-
 
     // Adds classes in proper location in classTree
     // @param n ClassDeclaration node of AST Tree
     public void addClass(GNode n) {
 
+	GNode parent = classTree;
+
 	String className = n.get(1).toString();
-	GNode newChildNode = GNode.create("ClassDeclaration");
+	GNode newChildNode = GNode.create("Class");
 	newChildNode.setProperty("name", className);
-	Node parent;
 	
-	if(n.get(3) != null) {
-	    // Extends  something
+	if(DEBUG) System.out.println("Created new class " + 
+				     getName(newChildNode));
+	
+	
+	if(n.get(3) != null) { // Extends  something
 	    
 	    // adding vtable at index 0 messed this up
-	    parent = 
-		getClass( n.getNode(3).getNode(0).getNode(0).get(0).toString() );
-	    
+	    String extendedClass = (String) (n.getNode(3).getNode(0).getNode(0).get(0));
+
+	    parent = getClass(extendedClass);
 	    parent.addNode(newChildNode); // append new classes
 	    
 	    if(DEBUG) System.out.println( "+" + getName(newChildNode) + 
@@ -125,7 +132,8 @@ public class ClassLayoutParser extends Visitor {
 	
       	// Part 2!
 	// @param n AST classDeclaration node
-       	addVTable( n, newChildNode, parent );
+	// 
+	//       	addVTable( n, newChildNode, parent );
 	
     }
 
@@ -133,7 +141,8 @@ public class ClassLayoutParser extends Visitor {
     // @param n AST ClassDeclaration node
     // @param child newly added classTree node
     // @param parent 
-    public void addVTable(Node n, Node child, Node parent) {
+    public void addVTable(GNode n, GNode child, GNode parent) {
+	// FIXME: Is super buggy
 
 	if(DEBUG) System.out.println("[ entered addVTable ] ");
 
@@ -152,6 +161,7 @@ public class ClassLayoutParser extends Visitor {
 	// FIXME: Add if statements for safety everywhere!
 	
 	// Initially, inherit all of parent's methods
+	// FIXME: Need to cast all getNodes to GNode?
 	final ArrayList parentVTable = 
 	    (ArrayList) (parent.getNode(0).getProperty("vtable"));
 	
@@ -235,33 +245,27 @@ public class ClassLayoutParser extends Visitor {
 	return -1;
     }
 
-    public void addParentMethods(Node parent, Node child) {
-	// go to parent in classTree
-	// set pointers to it's vtable from index 1 - n in child's vtable
-    }
-   
-
     // Init tree w/Grimm defined classes
     // Nodes have "name" property and vtable children
     public void initGrimmClassTree() {
 
 	// FIXME: Don't hardcode Grimm objects
-	// FIXME: has shitty name "MethodDeclaration".
-	// How do we create our own node types/visitors
 
-	GNode objectNode = GNode.create("ClassDeclaration");
+	GNode objectNode = GNode.create("Class");
 	objectNode.setProperty("name", "Object");
 	
-	GNode stringNode = GNode.create("ClassDeclaration");
+	// FIXME: Subsequent properties set to null!!!
+
+	GNode stringNode = GNode.create("Class");
 	stringNode.setProperty("name", "String");
 
-	GNode classNode = GNode.create("ClassDeclaration");
+	GNode classNode = GNode.create("Class");
 	classNode.setProperty("name", "Class");
 
-	GNode arrayNode = GNode.create("ClassDeclaration");
+	GNode arrayNode = GNode.create("Class");
 	arrayNode.setProperty("name", "Array");
  
-	GNode integerNode = GNode.create("ClassDeclaration");
+	GNode integerNode = GNode.create("Class");
 	integerNode.setProperty("name", "Integer");
 
 
@@ -271,14 +275,15 @@ public class ClassLayoutParser extends Visitor {
 	classTree.add(2, arrayNode);
 	classTree.add(3, integerNode);
 
-	if(DEBUG) System.out.println("Init Grimm Class Tree");
-
 	// Part 2!
 	
 	initGrimmVTables();
     }
 
     public void initGrimmVTables() {
+
+
+
 	// FIXME: Complete implementation w/ array and integer pls!
 
 	// FIXME: Making them type "MethodDeclaration" doesn't even give us 
@@ -416,41 +421,35 @@ public class ClassLayoutParser extends Visitor {
 
 	System.out.println("========= Class Tree ============");
 	new Visitor () {
-	    public void visit(Node n) {
+	    public void visit(GNode n) {
 		for( Object o : n) {
-		    if (o instanceof Node) dispatch((Node)o);
+		    if (o instanceof Node) dispatch((GNode)o);
 		}
 
+		/*
 		if(n.hasProperty("name")) {
 		    System.out.print( "\tNode is " + n.getProperty("name") );
 		    
-		    // FIXME: Never called
-		    if( !n.isEmpty() &&  n.getNode(0).hasProperty("vtable") )
+       		    if( !n.isEmpty() &&  n.getNode(0).hasProperty("vtable") )
 			System.out.println(" and has a vtable");
 		    else
 			System.out.println();
-		}
-
-		if(n.hasProperty("vtable")) {
-		    
-		}
-
+		*/
 	    }
 
-	    public void visitClassDeclaration(Node n) {
-		// er, why is this never visited?
-		System.out.println("AT A NODE OF TYPE CLASSDECLARATION");
+
+	    public void visitClass(GNode n) {
+		System.out.print("Class " + n.getStringProperty("name"));
 		visit(n);
 	    }
-
-
-	    public void visitMethodDeclaration(Node n) {
-		// never called??????
-		visit(n);
+	    
+	    // fix?
+	    public void visitMethodDeclaration(GNode n) {
+		System.out.println(" has vtable\n");
 	    }
-	 
- 
+	    
 	}.dispatch(classTree);
+
     }
 
     public GNode getParentClass(final String className) {
@@ -459,8 +458,10 @@ public class ClassLayoutParser extends Visitor {
 	// FIXME: Does nay work :-(
 	// QUERY: Redundant to have class hierch tree and explicit isa?
 
-	    GNode parentClass =  (GNode)(new Visitor() {
-		    public Node visit(Node n) {
+	// FIXME: Use GNodes and "Class" and "VT" type nodes/visitors
+
+	return (GNode) ( new Visitor() {
+		     public GNode visit(GNode n) {
 			
 			// Found the parent class
 			if( ((String)n.getName()).equals(className) ) 
@@ -469,7 +470,7 @@ public class ClassLayoutParser extends Visitor {
 			// Keep searching
 			for( Object o : n) {
 			    if (o instanceof Node) {
-				GNode returnValue = (GNode)dispatch((Node)o);
+				GNode returnValue = (GNode)dispatch((GNode)o);
 				if( returnValue != null ) return returnValue;
 			    }
 			}
@@ -477,12 +478,9 @@ public class ClassLayoutParser extends Visitor {
 			// i.e. parent class always exists
 			return null; 
 		    }
-		}.dispatch(classTree));
 
-	    if(DEBUG) System.out.println("The parent class of " + className + 
-					 " is " + parentClass.getName());
+	    }.dispatch(classTree) );
 
-	    return parentClass;
     }
 
     public GNode getClassTree() {
