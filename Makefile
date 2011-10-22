@@ -19,6 +19,7 @@ SOURCE = \
 	Translator.java \
 	ClassLayoutParser.java \
 	LeafTransplant.java \
+	DependencyResolver.java \
 	CPPPrinter.java
 
 
