@@ -2065,7 +2065,7 @@ public class CPPPrinter extends Visitor {
 	/** Visit the specified call expression. */
 	public void visitCallExpression(GNode n) {
 		final int prec = startExpression(160);
-		if (null != n.get(0)) printer.p(n.getNode(0)).p('.');
+		if (null != n.get(0)) printer.p(n.getNode(0)).p("::");
 		printer.p(n.getNode(1)).p(n.getString(2)).p(n.getNode(3));
 		endExpression(prec);
 	}
@@ -2240,7 +2240,7 @@ public class CPPPrinter extends Visitor {
 	
 	public void visitSelectionExpression(GNode n) {
 		final int prec = startExpression(160);
-		printer.p(n.getNode(0)).p('.').p(n.getString(1));
+		printer.p(n.getNode(0)).p("::").p(n.getString(1));
 		endExpression(prec);
 	}
 	
@@ -2254,6 +2254,75 @@ public class CPPPrinter extends Visitor {
 		}
 		printer.p(')');
 	}
+	
+	public void visitConditionalStatement(GNode n) {
+		final int     flag   = null == n.get(2) ? STMT_IF : STMT_IF_ELSE;
+		final boolean nested = startStatement(flag, n);
+
+		if (isIfElse) {
+			printer.p(' ');
+		} else {
+			printer.indent();
+		}
+		printer.p("if (").p(n.getNode(0)).p(')');
+		prepareNested();
+		printer.p(n.getNode(1));
+		if (null != n.get(2)) {
+			if (isOpenLine) {
+				printer.p(" else");
+			} else {
+				printer.indent().p("else");
+			}
+			prepareNested();
+			boolean ifElse = isIfElse;
+			isIfElse       = true;
+			printer.p(n.getNode(2));
+			isIfElse       = ifElse;
+		}
+		endStatement(nested);
+	}
+	
+	public void visitIntegerLiteral(GNode n) {
+		final int prec = startExpression(160);
+		printer.p(n.getString(0));
+		endExpression(prec);
+	}
+	
+	/** Visit the specified floating point literal. */
+	public void visitFloatingPointLiteral(GNode n) {
+		final int prec = startExpression(160);
+		printer.p(n.getString(0));
+		endExpression(prec);
+	}
+	
+	/** Visit the specified character literal. */
+	public void visitCharacterLiteral(GNode n) {
+		final int prec = startExpression(160);
+		printer.p(n.getString(0));
+		endExpression(prec);
+	}
+	
+	/** Visit the specified string literal. */
+	public void visitStringLiteral(GNode n) {
+		final int prec = startExpression(160);
+		printer.p(n.getString(0));
+		endExpression(prec);
+	}
+	
+	/** Visit the specified boolean literal. */
+	public void visitBooleanLiteral(GNode n) {
+		final int prec = startExpression(160);
+		printer.p(n.getString(0));
+		endExpression(prec);
+	}
+	
+	/** Visit the specified null literal. */
+	public void visitNullLiteral(GNode n) {
+		final int prec = startExpression(160);
+		printer.p("null");
+		endExpression(prec);
+	}
+
 	
 	public Object unableToVisit(Node node) {
 		System.out.println( "Could not visit node of type: " + node.getName() );

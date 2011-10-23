@@ -23,6 +23,10 @@ interface CPPUtil {
 	public static final String kSimpDecl = "SimpleDeclarator";
 	public static final String kPtr = "Pointer";
 	public static final String kPrimID = "PrimaryIdentifier";
+	public static final String kFuncDef = "FunctionDefinition";
+	public static final String kFuncDecltor = "FunctionDeclarator";
+	public static final String kCmpStmt = "CompoundStatement";
+	public static final String kStrLtrl = "StringLiteral";
 }
 
 public class LeafTransplant extends Visitor implements CPPUtil {
@@ -130,7 +134,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	}
 	
 	public void addMethodImplementation(GNode n) {
-		thisClassImplementation.add(n);
+		thisClassImplementation.add(functionDefForMethDecl(n));
 		visit(n);
 	}
 	
@@ -139,7 +143,26 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		// Function name:
 		// Return type:
 		// Parameters: 
-		return null;
+		GNode fncDef = GNode.create(kFuncDef);
+		{
+			fncDef.add(0, null);
+			GNode declSpef = GNode.create(kDeclSpef);
+			{
+				declSpef.add( n.get(2) ); //add return type (java type)
+			}
+			fncDef.add(1, declSpef);
+			GNode fncDeclarator = GNode.create(kFuncDecltor);
+			{
+				GNode simpDecl = (GNode)GNode.create(kSimpDecl).add(n.get(3));
+				fncDeclarator.add(0, simpDecl);
+				fncDeclarator.add(1, null);
+			}
+			fncDef.add(2, fncDeclarator);
+			fncDef.add(3, null);
+			fncDef.add(4, n.get(7));  
+			// ^ NOTE: we are adding a java code block instead of a C compound statement
+		}
+		return fncDef;
 	}
 	
 	public void translateJavaToCPP() { dispatch(originalTree); }
@@ -148,8 +171,9 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
     //----- VISITOR METHODS -----
 	
-	public void visit(Node n) {
+	public Object visit(Node n) {
 		for( Object o : n ) if( o instanceof Node ) dispatch((Node)o);
+		return null;
 	}
 	
 	public void visitClassDeclaration(GNode n) {
@@ -164,5 +188,29 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		addToVTable(n);
 		addMethodImplementation(n);
 		visit(n);
+	}
+	
+	public void visitExpressionStatementNOPE(GNode n) {
+		if( n.size() < 1 ) {
+			//do nothing
+		}
+		else if(((String)n.getNode(0).getNode(0).getNode(0).get(0)).equals("System") && 
+		   ((String)n.getNode(0).get(2)).equals("println")) {
+			System.out.println( "found a system statement" );
+			n.getNode(0).set(2, "cout");
+			//n.getNode(0).getNode(0).getNode(0).set(0, "std");
+			//n.getNode(0).getNode(0).set(1, null);
+			GNode strLiteral = (GNode)GNode.create( kPrimID ).add(0, "std");
+			n.getNode(0).set(0, strLiteral);
+		}
+		visit(n);
+	}
+	
+	public void visitCallExpression(GNode n) {
+		if( n.size() >= 3 && "println".equals((String)n.get(2)) ) {
+			n.set(2, "cout");
+			GNode strLiteral = (GNode)GNode.create( kPrimID ).add(0, "std");
+			n.set(0, strLiteral);
+		}
 	}
 }
