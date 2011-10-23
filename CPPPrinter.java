@@ -1961,6 +1961,331 @@ public class CPPPrinter extends Visitor {
 		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
 	}
 	
+	//
+	// ---------------------- copied from java printer!
+	//
+	
+	
+	public void visitMethodDeclaration(GNode n) {
+		printer.indent().p(n.getNode(0));
+		if (null != n.get(1)) printer.p(n.getNode(1)).p(' ');
+		printer.p(n.getNode(2));
+		if (! "<init>".equals(n.get(3))) {
+			printer.p(' ').p(n.getString(3));
+		}
+		printer.p(n.getNode(4));
+		if (null != n.get(5)) {
+			printer.p(' ').p(n.getNode(5));
+		}
+		if (null != n.get(6)) {
+			printer.p(' ').p(n.getNode(6));
+		}
+		if (null != n.get(7)) {
+			isOpenLine = true;
+			printer.p(n.getNode(7)).pln();
+		} else {
+			printer.pln(';');
+		}
+		isOpenLine = false;
+	}
+	
+	public void visitModifiers(GNode n) {
+		for (Object o : n) printer.p((Node)o).p(' ');
+	}
+	
+	/** Visit the specified modifier. */
+	public void visitModifier(GNode n) {
+		printer.p(n.getString(0));
+	}
+	
+	public void visitDeclarator(GNode n) {
+		printer.p(n.getString(0));
+		if(null != n.get(1)) {
+			if (Token.test(n.get(1))) {
+				formatDimensions(n.getString(1).length());
+			} else {
+				printer.p(n.getNode(1));
+			}
+		}
+		if(null != n.get(2)) {
+			printer.p(" = ").p(n.getNode(2));
+		}
+	}
+	
+	protected void formatDimensions(final int n) {
+		for (int i=0; i<n; i++) printer.p("[]");
+	}
+	
+	public void visitDeclarators(GNode n) {
+		for (Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
+			printer.p((Node)iter.next());
+			if (iter.hasNext()) printer.p(", ");
+		}
+	}
+	
+	public void visitFieldDeclaration(GNode n) {
+		printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(' ').p(n.getNode(2)).
+		p(';').pln();
+		isDeclaration = true;
+		isOpenLine    = false;
+	}
+	
+	public void visitBlockDeclaration(GNode n) {
+		printer.indent();
+		if (null != n.get(0)) {
+			printer.p(n.getString(0));
+			isOpenLine = true;
+		} 
+		printer.p(n.getNode(1)).pln();
+		isOpenLine = false;
+	}
+	
+	public void visitBlock(GNode n) {
+		if (isOpenLine) {
+			printer.p(' ');
+		} else {
+			printer.indent();
+		}
+		printer.pln('{').incr();
+		
+		isOpenLine    = false;
+		isNested      = false;
+		isIfElse      = false;
+		isDeclaration = false;
+		isStatement   = false;
+		
+		printDeclsAndStmts(n);
+		
+		printer.decr().indent().p('}');
+		isOpenLine    = true;
+		isNested      = false;
+		isIfElse      = false;
+	}
+
+	/** Visit the specified call expression. */
+	public void visitCallExpression(GNode n) {
+		final int prec = startExpression(160);
+		if (null != n.get(0)) printer.p(n.getNode(0)).p('.');
+		printer.p(n.getNode(1)).p(n.getString(2)).p(n.getNode(3));
+		endExpression(prec);
+	}
+	
+	public void visitClassLiteralExpression(GNode n) {
+		final int prec = startExpression(160);
+		printer.p(n.getNode(0)).p(".class");
+		endExpression(prec);
+	}
+	
+	/** Visit the specified this expression. */
+	public void visitThisExpression(GNode n) {
+		final int prec = startExpression(160);
+		if (null != n.get(0)) printer.p(n.getNode(0)).p('.');
+		printer.p("this");
+		endExpression(prec);
+	}
+	
+	/** Visit the specified super expression. */
+	public void visitSuperExpression(GNode n) {
+		final int prec = startExpression(160);
+		if (null != n.get(0)) printer.p(n.getNode(0)).p('.');
+		printer.p("super");
+		endExpression(prec);
+	}
+	
+	/** Visit the specified type. */
+	public void visitType(GNode n) {
+		printer.p(n.getNode(0));
+		if (null != n.get(1)) {
+			if (Token.test(n.get(1))) {
+				formatDimensions(n.getString(1).length());
+			} else {
+				printer.p(n.getNode(1));
+			}
+		}
+	}
+	
+	public void visitInstantiatedType(GNode n) {
+		boolean first = true;
+		for (Object o : n) {
+			if (first) first = false;
+			else printer.p('.');
+			printer.p((Node)o);
+		}
+	}
+	
+	/** Visit the specified type instantiation. */
+	public void visitTypeInstantiation(GNode n) {
+		printer.p(n.getString(0)).p(n.getNode(1));
+	}
+	
+	/** Visit the specified type parameters. */
+	public void visitTypeParameters(GNode n) {
+		printer.p('<');
+		for (Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
+			printer.p((Node)iter.next());
+			if (iter.hasNext()) printer.p(", ");
+		}
+		printer.p('>');
+	}
+	
+	/** Visit the specified type parameter. */
+	public void visitTypeParameter(GNode n) {
+		printer.p(n.getString(0));
+		if (null != n.get(1)) printer.p(" extends ").p(n.getNode(1));
+	}
+	
+	protected boolean isLongDeclarationJava(GNode decl) {
+		return (decl.hasName("ConstructorDeclaration") ||
+				decl.hasName("ClassDeclaration") ||
+				decl.hasName("InterfaceDeclaration") ||
+				decl.hasName("AnnotationDeclaration") ||
+				decl.hasName("EnumDeclaration") ||
+				decl.hasName("BlockDeclaration") ||
+				(decl.hasName("MethodDeclaration") &&
+				 (null != decl.get(7))) ||
+				(decl.hasName("FieldDeclaration") &&
+				 containsLongExpression(decl)) ||
+				(decl.hasName("AnnotationMethod") &&
+				 containsLongExpression(decl)));
+	}
+	
+	/**
+	 * Print the specified node's children as declarations and/or
+	 * statements.
+	 *
+	 * @param n The node.
+	 */
+	protected void printDeclsAndStmts(GNode n) {
+		isOpenLine     = false;
+		isNested       = false;
+		isIfElse       = false;
+		isDeclaration  = false;
+		isStatement    = false;
+		GNode previous = null;
+		
+		for (Object o : n) {
+			final Node  node    = (Node)o;
+			if (null == node) continue;
+			final GNode current = GNode.cast(node);
+			
+			// If there was a previous node and the previous node was a
+			// block or long declaration, the current node is a block or
+			// long declaration, or the previous node was a statement and
+			// the current node is a declaration, then print an extra
+			// newline.
+			if ((null != previous) &&
+				(previous.hasName("Block") ||
+				 (isLongDeclarationJava(previous) &&
+				  current.getName().endsWith("Declaration")) ||
+				 current.hasName("Block") ||
+				 isLongDeclarationJava(current) ||
+				 (! previous.getName().endsWith("Declaration") &&
+				  current.getName().endsWith("Declaration")))) {
+					 printer.pln();
+				 }
+			
+			printer.p(node);
+			
+			if (isOpenLine) printer.pln();
+			isOpenLine = false;
+			previous   = current;
+		}
+	}
+	
+	public void visitVoidType(GNode n) {
+		printer.p("void");
+	}
+	
+	public void visitFormalParameters(GNode n) {
+		printer.p('(');
+		for (Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
+			printer.p((Node)iter.next());
+			if (iter.hasNext()) printer.p(", ");
+		}
+		printer.p(')');
+	}
+	
+	public void visitFormalParameter(GNode n) {
+		final int size = n.size();
+		printer.p(n.getNode(0)).p(n.getNode(1));
+		for (int i=2; i<size-3; i++) { // Print multiple catch types.
+			printer.p(" | ").p(n.getNode(i));
+		}
+		if (null != n.get(size-3)) printer.p(n.getString(size-3));
+		printer.p(' ').p(n.getString(size-2)).p(n.getNode(size-1));
+	}
+	
+	public void visitQualifiedIdentifier(GNode n) {
+		final int prec = startExpression(160);
+		
+		if (1 == n.size()) {
+			printer.p(n.getString(0));
+		} else {
+			for (Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
+				printer.p(Token.cast(iter.next()));
+				if (iter.hasNext()) printer.p('.');
+			}
+		}
+		
+		endExpression(prec);
+	}
+	
+	public void visitDimensions(GNode n) {
+		for (int i=0; i<n.size(); i++) printer.p("[]");
+	}
+	
+	protected boolean containsLongExpression(GNode n) {
+		return (Boolean)containsLongExprVisitor.dispatch(n);
+	}
+	
+	public void visitSelectionExpression(GNode n) {
+		final int prec = startExpression(160);
+		printer.p(n.getNode(0)).p('.').p(n.getString(1));
+		endExpression(prec);
+	}
+	
+	public void visitArguments(GNode n) {
+		printer.p('(');
+		for (Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
+			final int prec = enterContext(PREC_LIST);
+			printer.p((Node)iter.next());
+			exitContext(prec);
+			if (iter.hasNext()) printer.p(", ");
+		}
+		printer.p(')');
+	}
+	
+	public Object unableToVisit(Node node) {
+		System.out.println( "Could not visit node of type: " + node.getName() );
+		for( Object o : node ) if ( o instanceof GNode ) printer.p((GNode)o);
+		GNode returned = GNode.create("EmptyStatement");
+		return returned;
+	}
+	
+	/** The actual implementation of {@link #containsLongExpression}. */
+	@SuppressWarnings("unused")
+	private static final Visitor containsLongExprVisitor = new Visitor() {
+		public Boolean visitBlock(GNode n) {
+			return Boolean.TRUE;
+		}
+
+		public Boolean visitArrayInitializer(GNode n) {
+			return Boolean.TRUE;
+		}
+
+		public Boolean visit(GNode n) {
+			for (Object o : n) {
+				if ((o instanceof Node) && (Boolean)dispatch((Node)o)) {
+					return Boolean.TRUE;
+				}
+			}
+			return Boolean.FALSE;
+		}
+	};
+	
+	//
+	// ------------------ end copied from javaprinter
+	//
 	
 	/** Visit the specified line marker. */
 	public void visit(LineMarker mark) {

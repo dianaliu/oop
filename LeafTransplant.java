@@ -134,6 +134,14 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		visit(n);
 	}
 	
+	GNode functionDefForMethDecl(GNode n) {
+		//Java:MethodDeclaration() -> CPP:FunctionDefinition()
+		// Function name:
+		// Return type:
+		// Parameters: 
+		return null;
+	}
+	
 	public void translateJavaToCPP() { dispatch(originalTree); }
     
     public GNode getTranslatedTree() { return translatedTree; }
