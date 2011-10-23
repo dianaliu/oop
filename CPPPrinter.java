@@ -1961,6 +1961,7 @@ public class CPPPrinter extends Visitor {
 		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
 	}
 	
+	
 	/** Visit the specified line marker. */
 	public void visit(LineMarker mark) {
 		if (isOpenLine) {

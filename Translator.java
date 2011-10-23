@@ -191,7 +191,7 @@ public class Translator extends xtc.util.Tool {
 				
 				public void visitClassDeclaration(GNode n) {
 					n.set(5, GNode.ensureVariable(GNode.cast(n.getNode(5)))); //make sure the class body is mutable (num of nodes can be changed).  If not, it is made mutable.
-					n.getNode(5).add(0, GNode.create("VirtualTableDeclaration")); //insert a vtabledecl node, currently has no functionality, just for testing
+					n.getNode(5).add(0, GNode.create("VsirtualTableDeclaration")); //insert a vtabledecl node, currently has no functionality, just for testing
 					visit(n);
 				}
 			}.dispatch(node);

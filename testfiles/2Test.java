@@ -9,7 +9,7 @@ class Test {
 		System.out.println("Goodbye, world");
 	}
 }
-
+/*
 class Foo extends Test {
 	void anotherMethod() {
 		
@@ -19,3 +19,4 @@ class Foo extends Test {
 class Bar extends Foo {
 
 }
+*/
