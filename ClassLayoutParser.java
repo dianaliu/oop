@@ -693,41 +693,6 @@ public class ClassLayoutParser extends Visitor {
 	System.out.println();
     }
 
-    // Remove this method?  It's never called!
-    // To get parent class, instead call getClass() on the isa of a class
-    public GNode getParentClass(final String className) {
-	
-	// returns parent node for isa and class hierch tree
-
-	// FIXME: Does nay work :-(
-	// i think i fixed this?  do i even need this?
-	// QUERY: Redundant to have class hierch tree and explicit isa?
-
-	return (GNode) ( new Visitor() {
-		     public GNode visit(GNode n) {
-			
-			// Found the parent class
-			if( ((String)n.getName()).equals(className) ) 
-			    return n;
-			
-			// Keep searching
-			for( Object o : n) {
-			    if (o instanceof Node) {
-				GNode returnValue = (GNode)dispatch((GNode)o);
-				if( returnValue != null ) return returnValue;
-			    }
-			}
-			// Assuming correct input, should never return null
-			// i.e. parent class always exists
-			return null; 
-		    }
-
-	    }.dispatch(classTree) );
-
-    }
-
-
-
     // ----------------------------------------------------
     // ---------- Getter methods for Translator -----------
     // ----------------------------------------------------
