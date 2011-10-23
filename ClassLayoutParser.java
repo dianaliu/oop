@@ -391,6 +391,16 @@ public class ClassLayoutParser extends Visitor {
 	
     }
 
+
+
+    // ---------------- Data Layouts ----------------
+
+
+
+
+    // -----------------  Printers -------------------
+
+
     // Prints out vtable given a class Node
     //@param n class node
     // FIXME: How do we get the vtable node?  ALWAYS INSERT AT ZERO.
@@ -464,10 +474,19 @@ public class ClassLayoutParser extends Visitor {
 
     }
 
+
+
+
+    // ---------- Getter methods for Translator -------------
+
+    // Used by Translator
     public GNode getClassTree() {
 			return classTree;
     }
 
+
+
+    
 
 
 }
