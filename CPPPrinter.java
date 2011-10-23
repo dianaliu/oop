@@ -1961,6 +1961,13 @@ public class CPPPrinter extends Visitor {
 		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
 	}
 	
+	public void visitStreamOutputList(GNode n) {
+		for(Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
+			printer.p( (GNode)iter.next() );
+			if(iter.hasNext() )printer.p( " << " );
+		}
+	}
+	
 	//
 	// ---------------------- copied from java printer!
 	//
@@ -2323,6 +2330,9 @@ public class CPPPrinter extends Visitor {
 		endExpression(prec);
 	}
 
+	public void visitPrimitiveType(GNode n) {
+		printer.p(n.getString(0));
+	} 
 	
 	public Object unableToVisit(Node node) {
 		System.out.println( "Could not visit node of type: " + node.getName() );

@@ -8,6 +8,7 @@ interface CPPUtil {
 	//Group defined GNode types:
 	public static final String kHeadDec = "HeaderDeclaration";
 	public static final String kImplDec = "ImplementationDeclaration";
+	public static final String kStrmOut = "StreamOutputList";
 	
 	//Preexisting GNode types:
 	public static final String kRoot = "TranslationUnit";
@@ -38,6 +39,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	String thisClassName;
 	GNode thisClassVTableStructDeclList;
 	GNode thisClassImplementation;
+	GNode thisExpressionStatement;
     
     public LeafTransplant(GNode classTree, GNode javaAST) { 
 		this.translatedTree = GNode.create(kRoot);
@@ -190,7 +192,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		visit(n);
 	}
 	
-	public void visitExpressionStatementNOPE(GNode n) {
+	public void visitExpressionStatement(GNode n) {
+		/*
 		if( n.size() < 1 ) {
 			//do nothing
 		}
@@ -203,14 +206,23 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 			GNode strLiteral = (GNode)GNode.create( kPrimID ).add(0, "std");
 			n.getNode(0).set(0, strLiteral);
 		}
+		 */
+		thisExpressionStatement = n;
 		visit(n);
 	}
 	
 	public void visitCallExpression(GNode n) {
 		if( n.size() >= 3 && "println".equals((String)n.get(2)) ) {
+			GNode strOut = GNode.create(kStrmOut);
+			strOut.add(0, (GNode)GNode.create( kPrimID ).add(0, "std::cout") );
+			strOut.add(1, n.getNode(3).get(0) );
+			strOut.add(2, (GNode)GNode.create( kPrimID ).add(0, "std::endl") );
+			/*
 			n.set(2, "cout");
 			GNode strLiteral = (GNode)GNode.create( kPrimID ).add(0, "std");
 			n.set(0, strLiteral);
+			 */
+			thisExpressionStatement.set(0, strOut);
 		}
 	}
 }
