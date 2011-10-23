@@ -130,7 +130,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	}
 	
 	public void addMethodImplementation(GNode n) {
-		
+		thisClassImplementation.add(n);
+		visit(n);
 	}
 	
 	public void translateJavaToCPP() { dispatch(originalTree); }
@@ -145,8 +146,9 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	
 	public void visitClassDeclaration(GNode n) {
 		thisClassName = n.get(1).toString();
-		translatedTree.add(buildImplementationForClass());
 		translatedTree.add(buildHeaderForClass());
+		thisClassImplementation = buildImplementationForClass();
+		translatedTree.add(thisClassImplementation);
 		visit(n);
 	}
 	
