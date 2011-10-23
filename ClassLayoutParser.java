@@ -136,11 +136,16 @@ public class ClassLayoutParser extends Visitor {
     // @param n AST ClassDeclaration node
     // @param child newly added classTree node
     // @param parent node in classTree
+ 
+    // FIXME: Temporarily using global variables, which are accessible from 
+    // inner class of Visitor
+    ArrayList childVTableList = new ArrayList();
+
     public void addVTable(GNode n, GNode child, GNode parent) {
-	// FIXME: Trouble creating vtables - finding methods and add/overriding
-
-	ArrayList childVTable = new ArrayList();
-
+	
+	// Need to clear out array before starting, 
+	// since we're using global variable
+	if(!childVTableList.isEmpty()) childVTableList.clear();
 
 
 	// 1. Inherit all of parent's methods
@@ -150,7 +155,7 @@ public class ClassLayoutParser extends Visitor {
 
 	for(int i = 0; i < parentVTable.size(); i++)
 	    {
-     		childVTable.add(parentVTable.get(i)); 
+     		childVTableList.add(parentVTable.get(i)); 
 	    }
 
 	// 2. Visit AST MethodDeclarations under ClassDeclaration
@@ -158,46 +163,36 @@ public class ClassLayoutParser extends Visitor {
 	// if yes, Override - replace with pointer to AST MethodDeclaration
 	// if no, Create - append to vtable, pointer to AST MethodDeclaration
 
-	/*	physically cycle through classDeclaration's children. and add as you're going along. fuck visitor. visitor is no good cause I need lots of information out of each method.*/
+	new Visitor() {
 
-	/*
+	    public void visitMethodDeclaration(GNode n) {
+		String methodName = n.get(3).toString();
+		int overrideIndex = overrides(methodName, parentVTable);
 
-	for(int i = 0; i < n.size(); i++) {
-	    
-	    String methodName;
-	    GNode methodDeclarationNode;
-
-	    if( n.test(n.get(i)) && 
-		"MethodDeclaration".equals(n.getName()) ) { 
-	
-		methodDeclarationNode = n;
-		methodName = n.get(3).toString();
-
-		System.out.println("Found a MethodDeclaration Node " + 
-				   methodName);
-		
-	      	int index = overrides(methodName, parentVTable);
-		
-		if(index > 0) { // overrides
-		    childVTable.add(index, methodDeclarationNode);
+		if(overrideIndex > 0) {
+		    // overrides, must replace
+		    childVTableList.add(overrideIndex, n);
 		}
-		else { // extends
-		    childVTable.add(methodDeclarationNode);
+		else { //extended, append to list
+		    childVTableList.add(n);
 		}
+	    }
 
-	    } // end if methodDeclaration
-	} // end for 
+	    public void visit(GNode n) {
+		// Need to override visit to work for GNodes
+		for( Object o : n) {
+		    if (o instanceof Node) dispatch((GNode)o);
+		}
+	    }
 
-	*/
-
+	}.dispatch(n);
 
 	// make vtable node and set property
 	GNode childVTableNode = GNode.create("VTable");
-	childVTableNode.setProperty("vtable", childVTable);
+	childVTableNode.setProperty("vtable", childVTableList);
 
 	// Add VTable node to Child at index 0
 	child.add(0, childVTableNode);
-
 
 	if(DEBUG) printVTable(child);
 
