@@ -112,7 +112,7 @@ public class Translator extends xtc.util.Tool {
 			//*****************************************************
 			//Begin analyzing the AST to determine all dependencies
 			//*****************************************************
-			System.out.println("\n-------------------------------");
+			System.out.println("\n===============================");
 			System.out.println("START Dependency Analysis Stage");
 			System.out.println("-------------------------------");
 			
@@ -134,8 +134,9 @@ public class Translator extends xtc.util.Tool {
 			//print out the dependency addresses
 			System.out.println("The following ASTs are stored in trees[]:");
 			depResolver.printAddressArray();
-			//print out the ASTs stored in trees[]
+			
 			/*
+			//print out the ASTs stored in trees[]
 			for(int i = 0; i < trees.length; i++) {
 				if(trees[i] != null){
 					if(i == 0)	System.out.println("$$Main java test file:");
@@ -146,16 +147,24 @@ public class Translator extends xtc.util.Tool {
 			*/
 			
 			//print out the number of ASTs stored in trees
-			//int numtrees = depResolver.getTreeCount(trees);
-			//System.out.println(numtrees);
+			System.out.println("The number of working ASTs: " + depResolver.getTreeCount(trees) + "\n");
 			
 			System.out.println("\n-------------------------------");
 			System.out.println("END Dependency Analysis Stage");
+			System.out.println("===============================\n");
+			
+			
+			System.out.println("\n===============================");
+			System.out.println("START Vtable Creation Stage");
 			System.out.println("-------------------------------\n");
 			
 			final ClassLayoutParser clp = new ClassLayoutParser(trees);
 			clp.beginCLP(trees);
 			clp.pClassTree();
+			
+			System.out.println("\n-------------------------------");
+			System.out.println("END Vtable Creation Stage");
+			System.out.println("===============================\n");
 	    }
 	    
 
