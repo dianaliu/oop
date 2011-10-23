@@ -47,21 +47,21 @@ public class ClassLayoutParser extends Visitor {
     // Entry point of creating the vtables, this method calls the ClassLayoutParser
     // @param trees array of ASTs we want to search for classes
     public void beginCLP(GNode[] trees) {
+    	//do for all AST trees we have
     	for(int i = 0; i < trees.length; i++) {
     		if(trees[i] != null) {
 				new Visitor() {
 						// When we encounter a class in the AST, send it to 
 						// ClassLayoutParser 
 						public void visitClassDeclaration(GNode n) {
-						addClass(n);
-		
-						visit(n);
+							addClass(n);
+							visit(n);
 						} // end visitClassDeclaration
 				
 						public void visit(Node n) {
-						for( Object o : n) {
-							if (o instanceof Node) dispatch((Node)o);
-						}
+							for( Object o : n) {
+								if (o instanceof Node) dispatch((Node)o);
+							}
 						}
 				}.dispatch(trees[i]);
 			}
@@ -87,24 +87,24 @@ public class ClassLayoutParser extends Visitor {
 		public GNode visitClass(GNode n) {
 				// Found the class
 				if( getName(n).equals(s) ) {
-				if(DEBUG) {
-					System.out.println("Retrieved class " 
-							   + getName(n) );
-				}
-				return n;
+					if(DEBUG) {
+						System.out.println("Retrieved class " 
+								   + getName(n) );
+					}
+					return n;
 				}
 
 				// Keep Searching
 				for( Object o : n) {
-				if (o instanceof Node) {
-					GNode returnValue = (GNode)dispatch((GNode)o);
-					if( returnValue != null ) return returnValue;
-				}
+					if (o instanceof Node) {
+						GNode returnValue = (GNode)dispatch((GNode)o);
+						if( returnValue != null ) return returnValue;
+					}
 				}
 				return null;
 			}
 		
-			}.dispatch(classTree) );
+			}.dispatch(classTree));
     }
 
     public String getName(GNode n) {
@@ -126,11 +126,10 @@ public class ClassLayoutParser extends Visitor {
 							 getName(newChildNode));
 	
 	
-			if(n.get(3) != null) { // Extends  something
+			if(n.get(3) != null) { // Extends something
 			
 				// String name of Parent Class
-				String extendedClass = (String) 
-				(n.getNode(3).getNode(0).getNode(0).get(0));
+				String extendedClass = (String)(n.getNode(3).getNode(0).getNode(0).get(0));
 
 				// Append new class as child of Parent
 				parent = getClass(extendedClass);
@@ -174,9 +173,9 @@ public class ClassLayoutParser extends Visitor {
 	
 
 			for(int i = 0; i < parentVTable.size(); i++)
-				{
+			{
 			 		childVTable.add(parentVTable.get(i)); 
-				}
+			}
 
 			// 2. Visit AST MethodDeclarations under ClassDeclaration
 			// Is it already in the parent's vtable?
@@ -185,35 +184,36 @@ public class ClassLayoutParser extends Visitor {
 
 			/*	physically cycle through classDeclaration's children. and add as you're going along. fuck visitor. visitor is no good cause I need lots of information out of each method.*/
 
-			/*
-
+			//----
+			//System.out.println("Entering method addition subroutine.");
 			for(int i = 0; i < n.size(); i++) {
 			
 				String methodName;
 				GNode methodDeclarationNode;
 
-				if( n.test(n.get(i)) && 
-				"MethodDeclaration".equals(n.getName()) ) { 
+				if( n.test(n.get(i))
+				 && "MethodDeclaration".equals(n.getName()) ) { 
 	
-				methodDeclarationNode = n;
-				methodName = n.get(3).toString();
+					methodDeclarationNode = n;
+					System.out.println("Adding a method for : " + n.getName());
+					methodName = n.get(3).toString();
 
-				System.out.println("Found a MethodDeclaration Node " + 
-						   methodName);
+					System.out.println("Found a MethodDeclaration Node " + 
+							   methodName);
 		
-				  	int index = overrides(methodName, parentVTable);
+					  	int index = overrides(methodName, parentVTable);
 		
-				if(index > 0) { // overrides
-					childVTable.add(index, methodDeclarationNode);
-				}
-				else { // extends
-					childVTable.add(methodDeclarationNode);
-				}
+					if(index > 0) { // overrides
+						childVTable.add(index, methodDeclarationNode);
+					}
+					else { // extends
+						childVTable.add(methodDeclarationNode);
+					}
 
 				} // end if methodDeclaration
 			} // end for 
 
-			*/
+			//----
 
 
 			// make vtable node and set property
@@ -225,13 +225,14 @@ public class ClassLayoutParser extends Visitor {
 
 
 			if(DEBUG) {
-				System.out.println("==========Temporary VTable");
+				System.out.println("\n==========Temporary VTable");
 				printVTable(child);
 			  
 			}
 
 	
     }
+
 
 
     // Determines if a Class overrides it's parent method
@@ -245,7 +246,7 @@ public class ClassLayoutParser extends Visitor {
 				// How to compare nodes?
 
 				if(methodName.equals(parentVTable.get(i))) {
-				return i;
+					return i;
 				}
 			}
 
@@ -407,23 +408,23 @@ public class ClassLayoutParser extends Visitor {
 
     public void pClassTree() {
 
-			System.out.println("========= Class Tree ============");
+			System.out.println("\n========= Class Tree ============");
 			new Visitor () {
 				public void visit(GNode n) {
-				for( Object o : n) {
-					if (o instanceof Node) dispatch((GNode)o);
-				}
+					for( Object o : n) {
+						if (o instanceof Node) dispatch((GNode)o);
+					}
 				}
 
 
 				public void visitClass(GNode n) {
-				System.out.print("Class " + n.getStringProperty("name") + " ");
-				visit(n);
+					System.out.print("Class " + n.getStringProperty("name") + " ");
+					visit(n);
 				}
 			
 				// fix?
 				public void visitVTable(GNode n) {
-				System.out.println(" has vtable\n");
+					System.out.println(" has vtable\n");
 				}
 			
 			}.dispatch(classTree);
