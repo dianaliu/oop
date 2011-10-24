@@ -71,8 +71,7 @@ public class Translator extends xtc.util.Tool {
 		bool("printAST", "printAST", false, "Print AST.").
 		bool("testDependencies", "testDependencies", false, "Test dependency resolution.").
 		bool("testVtable", "testVtable", false, "Test the creation of data structures for vtable and data layout").
-		bool("testCPPPrinter", "testCPPPrinter", false, "Test the functionality of the CPPPrinter class").
-		bool("translateToCPP", "translateToCPP", false, "Translate Java code to C++ without inheritance.");
+		bool("translate", "translate", false, "Translate Java code to C++ without inheritance.");
 	}
     ///*
     public Node parse(Reader in, File file) throws IOException, ParseException {
@@ -180,28 +179,9 @@ public class Translator extends xtc.util.Tool {
 			runtime.console().pln("------------");
 			//		     runtime.console().format(clp.getDataLayoutTree("Object")).pln().flush();
 	    }// end transform	
+	
 		
-		if( runtime.test("testCPPPrinter") ) {
-			//This simple visitor is just used to place a dummy vtable declaration node into each classes class body
-			//for testing purposes.  It also tests and implements mutability of the AST tree.
-			new Visitor() {
-				public void visit(Node n) {
-					for( Object o : n ) if( o instanceof Node ) dispatch((Node)o);
-				}
-				
-				public void visitClassDeclaration(GNode n) {
-					n.set(5, GNode.ensureVariable(GNode.cast(n.getNode(5)))); //make sure the class body is mutable (num of nodes can be changed).  If not, it is made mutable.
-					n.getNode(5).add(0, GNode.create("VsirtualTableDeclaration")); //insert a vtabledecl node, currently has no functionality, just for testing
-					visit(n);
-				}
-			}.dispatch(node);
-			
-			//The real CPPPrinter, initalized and dispatched...
-			new CPPPrinter( runtime.console() ).dispatch(node); 
-		}	
-			
-		
-		if( runtime.test("translateToCPP") ) {
+		if( runtime.test("translate") ) {
 			// Where the MAGIC happens!
 			
 			LeafTransplant trsltr = new LeafTransplant(GNode.cast(node), GNode.cast(node));
