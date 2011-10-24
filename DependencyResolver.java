@@ -18,6 +18,9 @@ import xtc.tree.Printer;
 import xtc.lang.JavaFiveParser;
 import xtc.lang.JavaPrinter;
 
+/* Traces dependencies for all Java files and returns an array of ASTs
+ */
+
 //create a filenamefilter that only accepts files ending in .java
 class JavaFilter implements FilenameFilter {
     public boolean accept(File dir, String name) {
