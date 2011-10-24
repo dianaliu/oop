@@ -44,7 +44,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     public LeafTransplant(GNode classTree, GNode javaAST) { 
 		this.translatedTree = GNode.create(kRoot);
 		this.originalTree = javaAST;
-		this.classHierarchy = classTree;
+		//		this.classHierarchy = classTree;
 		
 		//translatedTree.add( buildHeaderForClass( "FooBar" ) );
 		//translateJavaToCPP();
