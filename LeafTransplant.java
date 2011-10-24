@@ -10,7 +10,8 @@ interface CPPUtil {
 	public static final String kImplDec = "ImplementationDeclaration";
 	public static final String kStrmOut = "StreamOutputList";
 	
-	//Preexisting GNode types:
+    //Preexisting GNode types:
+    // FIXME: Make alphabetical
 	public static final String kRoot = "TranslationUnit";
 	public static final String kStruct = "StructureTypeDefinition";
 	public static final String kStructDeclList = "StructureDeclarationList";
@@ -30,10 +31,12 @@ interface CPPUtil {
 	public static final String kStrLtrl = "StringLiteral";
 }
 
+
+// Builds a CPP AST tree using a Java AST tree
+// Uses new types of nodes and new tree structure
 public class LeafTransplant extends Visitor implements CPPUtil {
 	
 	GNode originalTree;
-	//GNode classHierarchy;
 	GNode translatedTree;
 	
 	String thisClassName;
@@ -41,10 +44,11 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	GNode thisClassImplementation;
 	GNode thisExpressionStatement;
     
+    // FIXME: Must take in an array of Java ASTs
     public LeafTransplant(GNode classTree, GNode javaAST) { 
 	this.translatedTree = GNode.create(kRoot);
 	this.originalTree = javaAST;
-	//		this.classHierarchy = classTree;
+
 	
 	//translatedTree.add( buildHeaderForClass( "FooBar" ) );
 	//translateJavaToCPP();
@@ -56,18 +60,24 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     }
     
     GNode buildHeaderForClass() {
-	String className = thisClassName;
+	String className = thisClassName;  
+
+	// objectTree(root) = HeaderDeclaration node
 	GNode objectTree = GNode.create(kHeadDec); //defines a header declaration node, which has been arbitrarly invented
-	{
+
+	{   // 1. Set objectTree.getNode(0) = Typedef Declaration node
+	    // Create CPP Typedef Declaration node using Java Declaration nodes
 	    GNode typedefDecl = GNode.create(kDecl); //typedef __Object* Object;
 	    {
 		typedefDecl.add(0, null);
+
 		GNode typeDefDeclSpef = GNode.create(kDeclSpef);
 		{
 		    typeDefDeclSpef.add( 0, GNode.create(kTypedef));
 		    typeDefDeclSpef.add( 1, createPrimaryIdentifier( "__" + className + "*" ) );
 		}
 		typedefDecl.add(1, typeDefDeclSpef);
+
 		GNode initDeclList = GNode.create(kInitDeclList);
 		{
 		    GNode initDecl = GNode.create(kInitDecl);
@@ -81,9 +91,16 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		typedefDecl.add(2, initDeclList);
 	    }
 	    objectTree.add(0, typedefDecl);
+
+
+	    // 2. Set objectTree.getNode(1) = dataLayout node
+	    // Create CPP dataLayout node using Java Declaration nodes
 	    GNode dataLayout = GNode.create(kDecl); //struct __Object { }
-	    {
+	    { 
 		dataLayout.add(0, null);
+		
+		// Create dataLayout Declaration Specifiers using 
+		// Java Declaration Specifiers. 
 		GNode dlDeclSpef = GNode.create(kDeclSpef);
 		{
 		    GNode structDef = GNode.create(kStruct, 4);
@@ -96,9 +113,13 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    dlDeclSpef.add(structDef);
 		}
 		dataLayout.add(1, dlDeclSpef);
+
 		dataLayout.add(2, null);
 	    }
 	    objectTree.add(1, dataLayout);
+
+	    // 3. Set objectTree.getNode(2) = vtableLayout
+	    // Create vtableLayout using Java Declarations
 	    GNode vtableLayout = GNode.create(kDecl); //struct __Object_VT { }
 	    {
 		vtableLayout.add(0, null);
@@ -121,7 +142,9 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		vtableLayout.add(2, null);
 	    }
 	    objectTree.add(2, vtableLayout);
+
 	}
+	
 	return objectTree;
     }
     
@@ -198,11 +221,17 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     }
     
     public void visitCallExpression(GNode n) {
+
 	if( n.size() >= 3 && "println".equals((String)n.get(2)) ) {
 	    GNode strOut = GNode.create(kStrmOut);
 	    strOut.add(0, (GNode)GNode.create( kPrimID ).add(0, "std::cout") );
-	    strOut.add(1, n.getNode(3).get(0) ); //FIXME: only adds the first argument
+	    // Add all arguments to System.out.println
+	    for(int i = 0; i < n.getNode(3).size(); i++) {
+		strOut.add(1, n.getNode(3).get(i) ); 
+	    }
+
 	    strOut.add(2, (GNode)GNode.create( kPrimID ).add(0, "std::endl") );
+
 	    /*
 	      n.set(2, "cout");
 	      GNode strLiteral = (GNode)GNode.create( kPrimID ).add(0, "std");
@@ -213,8 +242,15 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	else if( n.size() >= 3 && "print".equals((String)n.get(2)) ) {
 	    GNode strOut = GNode.create(kStrmOut);
 	    strOut.add(0, (GNode)GNode.create( kPrimID ).add(0, "std::cout") );
-	    strOut.add(1, n.getNode(3).get(0) ); //FIXME: only adds the first argument
+	    // Add all arguments to System.out.print
+	    for(int i = 0; i < n.getNode(3).size(); i++) {
+		strOut.add(1, n.getNode(3).get(i) ); 
+	    }
+	    
+
 	    thisExpressionStatement.set(0, strOut);
-	}
-    }
+	} // end else if 
+	
+
+    } // end visitCallExpression
 }
