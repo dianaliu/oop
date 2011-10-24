@@ -13,13 +13,25 @@ import java.io.Reader;
 
 import java.util.ArrayList;
 
+/* Creates a helper class hierarchy tree of vtables and data layouts
+ */
+
 public class ClassLayoutParser extends Visitor {
+
+
+    // Decision made! After looking over LeafTransplant and CPPPrinter
+    // For non-Grimm types, I am returning java ast nodes.  
+    // TODO: Create documentation and getters.
+    // For Grimm types, I am returning strings.  These will be stored in custom
+    // CPP nodes, so CPPPrinter will treat differently.
+    // TODO: Demonstrate with test code how to piece together calls to
+    // java_lang.cc using ast, vtables, and data layouts
 
     public static final boolean DEBUG = true;
 
     GNode classTree; // Contains nodes of type Class, VTable, and Data
 
-    // Creates a helper class hierarchy tree of vtables and data layouts
+    // Constructor
     // @param n node for a class declaration
     public ClassLayoutParser(GNode[] ast) {
 
@@ -52,7 +64,7 @@ public class ClassLayoutParser extends Visitor {
 	}
     }
     
-    // Adds classe in proper hierarchal location to classTree
+    // Adds class in proper hierarchal location to classTree
     // Calls methods to addVTable and addDataLayout
     // @param n ClassDeclaration node from a Java AST 
     public void addClass(GNode n) {
@@ -316,11 +328,11 @@ public class ClassLayoutParser extends Visitor {
     }
 
 
-
     // ----------------------------------------------------
     // -------------- Initialization Code -----------------
     // ----------------------------------------------------
     
+
     // Init tree w/Grimm defined classes
     // Nodes have "name" property and vtable children
     public void initGrimmTypes() {
@@ -459,8 +471,7 @@ public class ClassLayoutParser extends Visitor {
 	getClass("Integer").add(0, integerVT);
 
 	// ------------------------------------------------
-	
-	
+		
 	if(DEBUG) {
 	    
 	    printVTable(getClass("Object"));
@@ -473,10 +484,7 @@ public class ClassLayoutParser extends Visitor {
 	
     }
 
-
-
     // ---------------- Data Layouts ----------------
-
 
     // DataLayout nodes always reside at index 1 of it's class
     public void initGrimmDataLayout() {
@@ -498,7 +506,6 @@ public class ClassLayoutParser extends Visitor {
 	objectData.setProperty("data", objectDataStructure);
 	getClass("Object").add(1, objectData);
 
-
 	// --------------------------------------------------
 
 	GNode stringData = GNode.create("DataLayout");
@@ -507,7 +514,6 @@ public class ClassLayoutParser extends Visitor {
 	stringDataStructure.add(0, getVTable("String")); // pointer to vtable
 	stringDataStructure.add(1,"__String(std::string data)" ); // constructor
 	
-	// TODO: Create integration with Translator
 	// Method invocations without parameter(s)
 	stringDataStructure.add(2, "static int32_t hashCode");
 	stringDataStructure.add(3, "static bool equals");
@@ -516,7 +522,6 @@ public class ClassLayoutParser extends Visitor {
 	stringDataStructure.add(6, "static char charAt");
 	stringDataStructure.add(7, "static Class __class()");
 	stringDataStructure.add(8, "static __String_VT __vtable");
-
 
 	stringData.setProperty("data", stringDataStructure);
 	getClass("String").add(1, stringData);
@@ -529,7 +534,6 @@ public class ClassLayoutParser extends Visitor {
 	classDataStructure.add(0, getVTable("Class")); // pointer to vtable
 	classDataStructure.add(1, "__Class(String name, Class parent, Class component = (Class)__rt::null(), bool primitive = false)" ); // constructor
 	
-	// TODO: Create integration with Translator
 	// Method invocations without parameter(s)
 	classDataStructure.add(2, "static String toString"); 
 	classDataStructure.add(3, "static String getName");
@@ -549,8 +553,8 @@ public class ClassLayoutParser extends Visitor {
 	GNode integerData = GNode.create("DataLayout");
 	
 	ArrayList integerDataStructure = new ArrayList();
-	integerDataStructure.add(0, getVTable("Integer")); // pointer to vtable
-	// UH, this is all Grimm has online?
+	integerDataStructure.add(0, getVTable("Integer")); // __vptr
+	// FIXME: this is all Grimm has online! Do we continue implementing?
 	integerDataStructure.add(1, "static Class TYPE()");
 
 	integerData.setProperty("data", integerDataStructure);
@@ -561,18 +565,14 @@ public class ClassLayoutParser extends Visitor {
 	GNode arrayData = GNode.create("DataLayout");
 	
 	ArrayList arrayDataStructure = new ArrayList();
-	arrayDataStructure.add(0, getVTable("Array")); // pointer to vtable
+	arrayDataStructure.add(0, getVTable("Array")); // __vptr
 	arrayDataStructure.add(1,"Array(const int32_t length)" );
-	
-	// TODO: Create integration with Translator
 	arrayDataStructure.add(2, "static java::lang::Class __class()");
 	arrayDataStructure.add(3, "static Array_VT<T> __vtable");
 
 	arrayData.setProperty("data", arrayDataStructure);
 	getClass("Array").add(1, arrayData);
 
-
-	// --------------------------------------------------
 	if(DEBUG) {
 	 
 	    printDataLayout(getClass("Object"));
@@ -588,12 +588,12 @@ public class ClassLayoutParser extends Visitor {
 
 
 
-
     // ----------------------------------------------------
     // -----------------  Printers ------------------------
     // ----------------------------------------------------
     // Note: Crude printers are implemented only for debugging.
     // Printing internal structures is not needed to translate.
+
 
     // FIXME: Should parameter be node or className?
     // @param n Class node
@@ -679,8 +679,7 @@ public class ClassLayoutParser extends Visitor {
 
 
     // Prints out vtable given a class Node
-    //@param n Class node
-    // FIXME: How do we get the vtable node?  ALWAYS INSERT AT ZERO.
+    // @param n Class node
     public void printVTable(GNode n) {
 
 	if(n.getNode(0).hasName("VTable")) {
