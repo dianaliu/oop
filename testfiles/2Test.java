@@ -13,16 +13,11 @@ class Test {
 			int z = x + y;
 			System.out.print( z );
 		}
+		System.out.println("Goodbye, world");
+		System.out.println("Goodbye, world");
+		System.out.println("Goodbye, world");
+		System.out.println("Goodbye, world");
+		System.out.println("Goodbye, world");
+		System.out.println("Goodbye, world");
 	}
 }
-/*
-class Foo extends Test {
-	void anotherMethod() {
-		
-	}
-}
-
-class Bar extends Foo {
-
-}
-*/

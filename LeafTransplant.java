@@ -33,7 +33,7 @@ interface CPPUtil {
 public class LeafTransplant extends Visitor implements CPPUtil {
 	
 	GNode originalTree;
-	GNode classHierarchy;
+	//GNode classHierarchy;
 	GNode translatedTree;
 	
 	String thisClassName;
@@ -65,7 +65,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 				GNode typeDefDeclSpef = GNode.create(kDeclSpef);
 				{
 					typeDefDeclSpef.add( 0, GNode.create(kTypedef));
-					typeDefDeclSpef.add(1, createPrimaryIdentifier( "__" + className + "*" ) );
+					typeDefDeclSpef.add( 1, createPrimaryIdentifier( "__" + className + "*" ) );
 				}
 				typedefDecl.add(1, typeDefDeclSpef);
 				GNode initDeclList = GNode.create(kInitDeclList);
@@ -81,7 +81,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 				typedefDecl.add(2, initDeclList);
 			}
 			objectTree.add(0, typedefDecl);
-			GNode dataLayout = GNode.create(kDecl); //struct __Object {
+			GNode dataLayout = GNode.create(kDecl); //struct __Object { }
 			{
 				dataLayout.add(0, null);
 				GNode dlDeclSpef = GNode.create(kDeclSpef);
@@ -99,7 +99,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 				dataLayout.add(2, null);
 			}
 			objectTree.add(1, dataLayout);
-			GNode vtableLayout = GNode.create(kDecl); //struct __Object_VT {
+			GNode vtableLayout = GNode.create(kDecl); //struct __Object_VT { }
 			{
 				vtableLayout.add(0, null);
 				GNode vtDeclSpef = GNode.create(kDeclSpef);
@@ -155,7 +155,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 			fncDef.add(1, declSpef);
 			GNode fncDeclarator = GNode.create(kFuncDecltor);
 			{
-				GNode simpDecl = (GNode)GNode.create(kSimpDecl).add(n.get(3));
+				GNode simpDecl = (GNode)GNode.create(kSimpDecl).add(n.get(3)); //method name
 				fncDeclarator.add(0, simpDecl);
 				fncDeclarator.add(1, null);
 			}
@@ -193,20 +193,6 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	}
 	
 	public void visitExpressionStatement(GNode n) {
-		/*
-		if( n.size() < 1 ) {
-			//do nothing
-		}
-		else if(((String)n.getNode(0).getNode(0).getNode(0).get(0)).equals("System") && 
-		   ((String)n.getNode(0).get(2)).equals("println")) {
-			System.out.println( "found a system statement" );
-			n.getNode(0).set(2, "cout");
-			//n.getNode(0).getNode(0).getNode(0).set(0, "std");
-			//n.getNode(0).getNode(0).set(1, null);
-			GNode strLiteral = (GNode)GNode.create( kPrimID ).add(0, "std");
-			n.getNode(0).set(0, strLiteral);
-		}
-		 */
 		thisExpressionStatement = n;
 		visit(n);
 	}
@@ -215,7 +201,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		if( n.size() >= 3 && "println".equals((String)n.get(2)) ) {
 			GNode strOut = GNode.create(kStrmOut);
 			strOut.add(0, (GNode)GNode.create( kPrimID ).add(0, "std::cout") );
-			strOut.add(1, n.getNode(3).get(0) );
+			strOut.add(1, n.getNode(3).get(0) ); //FIXME: only adds the first argument
 			strOut.add(2, (GNode)GNode.create( kPrimID ).add(0, "std::endl") );
 			/*
 			n.set(2, "cout");
@@ -227,7 +213,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		else if( n.size() >= 3 && "print".equals((String)n.get(2)) ) {
 			GNode strOut = GNode.create(kStrmOut);
 			strOut.add(0, (GNode)GNode.create( kPrimID ).add(0, "std::cout") );
-			strOut.add(1, n.getNode(3).get(0) );
+			strOut.add(1, n.getNode(3).get(0) ); //FIXME: only adds the first argument
 			thisExpressionStatement.set(0, strOut);
 		}
 	}

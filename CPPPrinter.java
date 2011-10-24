@@ -30,7 +30,7 @@ import xtc.tree.Token;
 import xtc.tree.Visitor;
 
 /**
- * A pretty printer for C.
+ * A pretty printer for C++.
  *
  * <p />A note on operator precedence: This printer uses precedence
  * levels to control when to print parentheses around expressions.
