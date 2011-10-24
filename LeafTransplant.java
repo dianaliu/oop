@@ -4,13 +4,18 @@ import xtc.tree.GNode;
 import xtc.tree.Node;
 import xtc.tree.Visitor;
 
+/* Builds a CPP AST tree using a Java AST tree
+ * Uses new types of nodes and new tree structure
+ */
+
+
 interface CPPUtil {
-	//Group defined GNode types:
-	public static final String kHeadDec = "HeaderDeclaration";
-	public static final String kImplDec = "ImplementationDeclaration";
-	public static final String kStrmOut = "StreamOutputList";
+    //Custom GNode types:
+    public static final String kHeadDec = "HeaderDeclaration";
+    public static final String kImplDec = "ImplementationDeclaration";
+    public static final String kStrmOut = "StreamOutputList";
 	
-    //Preexisting GNode types:
+    //xtc GNode types:
     // FIXME: Make alphabetical
 	public static final String kRoot = "TranslationUnit";
 	public static final String kStruct = "StructureTypeDefinition";
@@ -31,9 +36,6 @@ interface CPPUtil {
 	public static final String kStrLtrl = "StringLiteral";
 }
 
-
-// Builds a CPP AST tree using a Java AST tree
-// Uses new types of nodes and new tree structure
 public class LeafTransplant extends Visitor implements CPPUtil {
 	
 	GNode originalTree;
