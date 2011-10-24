@@ -48,6 +48,9 @@ import xtc.oop.LeafTransplant;
 
 public class Translator extends xtc.util.Tool {
 	
+
+    public static boolean DEBUG = false;
+
 	/** Create a new translator. */
     public Translator() {
 	    // Nothing to do.
@@ -69,8 +72,9 @@ public class Translator extends xtc.util.Tool {
 	    super.init();  
 	    runtime.
 		bool("printAST", "printAST", false, "Print AST.").
+		bool("debug", "debug", false, "Extra output for debugging").
 		bool("run", "run", false, 
-		     "Runs current version of Translator with latest features").
+		     "Runs Translator with latest features").
 		bool("translate", "translate", false, 
 		     "Translate Java code to C++ without inheritance.");
     }
@@ -87,6 +91,10 @@ public class Translator extends xtc.util.Tool {
 	    runtime.console().format(node).pln().flush();
 	}
 	
+	if(runtime.test("debug")) {
+	    DEBUG = true;
+	}
+
 	if( runtime.test("run") ) {
 	    GNode[] trees = new GNode[100];
 	    trees[0] = (GNode)node;
@@ -104,10 +112,6 @@ public class Translator extends xtc.util.Tool {
 	    //*****************************************************
 	    //Begin analyzing the AST to determine all dependencies
 	    //*****************************************************
-	    System.out.println("\n===============================");
-	    System.out.println("START Dependency Analysis Stage");
-	    System.out.println("-------------------------------");
-	    
 	    DependencyResolver depResolver = new DependencyResolver();
 	    depResolver.processDependencies(trees);
 	    try {
@@ -122,10 +126,13 @@ public class Translator extends xtc.util.Tool {
 		trees = null;
 		System.out.println("ParseException: " + e);
 	    }
-	    
+
 	    //print out the dependency addresses
-	    System.out.println("The following ASTs are stored in trees[]:");
-	    depResolver.printAddressArray();
+	    if(DEBUG) {
+		runtime.console().
+		    p("The below ASTs are stored in trees[]:").flush();
+		depResolver.printAddressArray();
+	    }
 	    
 	    /*
 	    //print out the ASTs stored in trees[]
@@ -139,24 +146,25 @@ public class Translator extends xtc.util.Tool {
 	    */
 	    
 	    //print out the number of ASTs stored in trees
-	    System.out.println("The number of working ASTs: " + depResolver.getTreeCount(trees) + "\n");
+	    if(DEBUG) {
+		runtime.console().pln("# Active ASTs: " + 
+				    depResolver.getTreeCount(trees)).flush();
+	    }
 	    
-	    System.out.println("\n-------------------------------");
-	    System.out.println("END Dependency Analysis Stage");
-	    System.out.println("===============================\n");
+	    if(DEBUG) {
+		runtime.console().pln("--Process and Analyze dependencies: done"
+				      ).flush();
+	    }
 	    
-	    
-	    System.out.println("\n===============================");
-	    System.out.println("START Vtable Creation Stage");
-	    System.out.println("-------------------------------\n");
-	    
-	    final ClassLayoutParser clp = new ClassLayoutParser(trees);
-	    clp.beginCLP(trees);
-	    clp.pClassTree();
-	    
-	    System.out.println("\n-------------------------------");
-	    System.out.println("END Vtable Creation Stage");
-	    System.out.println("===============================\n");
+      	    final ClassLayoutParser clp = new ClassLayoutParser(trees);
+	
+	    if(DEBUG) {
+		runtime.console().pln("--Create vtables & data layouts: done"
+				      ).flush();
+	    }
+
+	    // ---------- Sample usage of clp
+	 
 	}
 	
 	if( runtime.test("translate") ) {
