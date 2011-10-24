@@ -19,8 +19,9 @@ SOURCE = \
 	Translator.java \
 	ClassLayoutParser.java \
 	LeafTransplant.java \
-	DependencyResolver.java \
-	CPPPrinter.java
+	CPPPrinter.java \
+	CAST.java \
+	DependencyResolver.java
 
 
 JNI_SOURCE =
