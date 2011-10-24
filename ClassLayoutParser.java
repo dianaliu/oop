@@ -15,64 +15,225 @@ import java.util.ArrayList;
 
 public class ClassLayoutParser extends Visitor {
 
-    
-    // TODO: Modify isa to be a pointer to parent class using getparent class.
-    // This way, only need findClass method
-
     public static final boolean DEBUG = true;
 
-    // Returned to satisfy the compiler  
-    // Hopefully, never actually returned
-    public static final GNode impossible = GNode.create("wtf");
+    GNode classTree; // Contains nodes of type Class, VTable, and Data
 
-    GNode javaASTTree; // Original JavaAST
-
-    GNode classTree; // Contains nodes of type :
-    // "Class" 
-    // "VTable" - at Class.getChild(0)
-
-
-
-    // Creates a helper class hierarchy tree containing vtable structure
+    // Creates a helper class hierarchy tree of vtables and data layouts
     // @param n node for a class declaration
-
     public ClassLayoutParser(GNode[] ast) {
-			javaASTTree = ast[0]; // Original JavaAST, just in case
-			initGrimmClassTree();
 
-			// TODO: Getter methods for everything
-			// FIXME: Add if statements for safety everywhere!
+	initGrimmTypes();
+	parseAllClasses(ast);
+	
     }
     
-    // Entry point of creating the vtables, this method calls the ClassLayoutParser
-    // @param trees array of ASTs we want to search for classes
-    public void beginCLP(GNode[] trees) {
-    	//do for all AST trees we have
+    // Traverses all dependencies to find and add all classes
+    // @param trees Array of all ASTs (main and dependencies)
+    public void parseAllClasses(GNode[] trees) {
+ 
     	for(int i = 0; i < trees.length; i++) {
 	    if(trees[i] != null) {
 		new Visitor() {
-		    // When we encounter a class in the AST, send it to 
-		    // ClassLayoutParser 
+		  
 		    public void visitClassDeclaration(GNode n) {
 			addClass(n);
 			visit(n);
-		    } // end visitClassDeclaration
+		    } 
 		    
 		    public void visit(Node n) {
 			for( Object o : n) {
 			    if (o instanceof Node) dispatch((Node)o);
 			}
 		    }
+
 		}.dispatch(trees[i]);
 	    }
 	}
     }
     
+    // Adds classe in proper hierarchal location to classTree
+    // Calls methods to addVTable and addDataLayout
+    // @param n ClassDeclaration node from a Java AST 
+    public void addClass(GNode n) {
+		
+	String className = n.get(1).toString();
+	GNode newChildNode = GNode.create("Class");
+	newChildNode.setProperty("name", className);
+	if(DEBUG) System.out.println("Created new class " + 
+				     getName(newChildNode));
+	
+	GNode parent = null; 
+	
+	if(n.get(3) != null) { // Extends something
+	    
+	    // String name of Parent Class
+	    String extendedClass = (String)(n.getNode(3).getNode(0).getNode(0).get(0));
+	    
+	    // Append new class as child of Parent
+	    parent = getClass(extendedClass);
+	 	}
+	else {
+	    // Doesn't extend, add to root (Object)
+	    parent = getClass("Object");	   
+	}
+	
+	parent.addNode(newChildNode);
+	if(DEBUG) System.out.println( "+" + getName(newChildNode) + 
+				      " extends " +  getName(parent));
+	    
+	// VTable resides at index 0 of a Class node
+	// DataLayout resides at index 1 of a Class node
+	addVTable( n, newChildNode, parent );
+	addDataLayout(n, newChildNode, parent);
+	
+    }
     
-    // Returns node from classTree if you know it's name
-    // @param sc name of Class you want
+    // Adds VTable node to child0 of a Class node.
+    // Actual structure is kept in property "vtable" as an Arraylist
+    // @param n AST ClassDeclaration node
+    // @param child New child node in classTree
+    // @param parent Parent node in classTree
+    
+    // Using global variable childVTableList, so as accessible from 
+    // inner class of Visitor
+    ArrayList childVTableList = new ArrayList();
+    
+    public void addVTable(GNode n, GNode child, GNode parent) {
+	
+	// Need to clear out array before starting, 
+	// since we're using a global variable
+	if(!childVTableList.isEmpty()) childVTableList.clear();
+	
+	// VTable[0] = isa
+	childVTableList.add(0, getClass(getName(parent)));
+	
+	// 1. Inherit all of parent's methods
+	final ArrayList parentVTable = 
+	    (ArrayList) (parent.getNode(0).getProperty("vtable"));
+	
+	
+	for(int i = 1; i < parentVTable.size(); i++)
+	    {
+     		childVTableList.add(parentVTable.get(i)); 
+	    }
+	
+	// 2. Visit AST MethodDeclarations under ClassDeclaration.
+	// Override and extend methods as needed.
+	new Visitor() {
+	    
+	    public void visitMethodDeclaration(GNode n) {
+		String methodName = n.get(3).toString();
+		int overrideIndex = overrides(methodName, parentVTable);
+		
+		if(overrideIndex > 0) {
+		    // overrides, must replace
+		    childVTableList.add(overrideIndex, n);
+		}
+		else { //extended, append to list
+		    childVTableList.add(n);
+		}
+	    }
+	    
+	    public void visit(GNode n) {
+		// Need to override visit to work for GNodes
+		for( Object o : n) {
+		    if (o instanceof Node) dispatch((GNode)o);
+		}
+	    }
+	    
+	}.dispatch(n);
+	
+	// Make VTable node and attach list
+	GNode childVTableNode = GNode.create("VTable");
+	childVTableNode.setProperty("vtable", childVTableList);
+	
+	// Add VTable node to Child at index 0
+	child.add(0, childVTableNode);
+	
+	if(DEBUG) printVTable(child);
+	
+    }
+    
+     
+    // Using global variable childDataStructure, so as to be accessible from 
+    // inner class of Visitor
+    ArrayList childDataStructure = new ArrayList();
+
+    // Adds DataLayout node to Class node at index 1
+    // Actual structure is kept in property "data" as an ArrayList
+    // @param n ClassDeclaration node of Java AST
+    // @param child Child Class node
+    // @param parent Parent Class node
+    public void addDataLayout(GNode n, GNode child, GNode parent) {
+	
+	// Need to clear out array before starting, 
+	// since we're using global variable
+	if(!childDataStructure.isEmpty()) childDataStructure.clear();
+			
+	// DataLayout[0] = __vptr
+	childDataStructure.add(0, getVTable( child.getProperty("name").toString())); 
+	
+	// Only want to visit the Constructor
+	GNode constructorDeclaration = (GNode) n.getNode(5).getNode(0);
+	
+	// Visit FieldDeclarations and pull out/save relevant information
+	new Visitor() {
+	    
+      	    public void visitConstructorDeclaration(GNode n) {
+		childDataStructure.add(1, n); // Constructor is always 1
+		visit(n);
+	    }
+	    
+	    public void visitFieldDeclaration(GNode n) {
+		if(DEBUG) System.out.println("Added a field declaration");
+		childDataStructure.add(n);
+		visit(n);
+	    }
+	    
+	    public void visitExpressionStatement(GNode n) {
+		if(DEBUG) System.out.println("Added an expression statemetn");
+		childDataStructure.add(n);
+		visit(n);
+	    }
+	    
+	    public void visit(GNode n) {
+		// Need to override visit to work for GNodes
+		for( Object o : n) {
+		    if (o instanceof Node) dispatch((GNode)o);
+		}
+	    }
+	    
+	}.dispatch(constructorDeclaration);
+	
+	// Make DataLayout node and attach list
+	GNode childData = GNode.create("DataLayout");
+	childData.setProperty("data", childDataStructure);
+	
+	// Add DataLayout node to Child at index 1
+	child.add(1, childData); 
+	
+	if(DEBUG) printDataLayout(child);
+    }
+    
+    
+    
+   
+
+
+    // ----------------------------------------------------
+    // ------------- Internal Methods --------------
+    // ----------------------------------------------------
+
+  
+   public String getName(GNode n) {
+	return n.getStringProperty("name");
+	
+    }
+
+    // Returns a Class node
+    // @param sc name of the Class desired
     public GNode getClass(String sc) {
-	// return class node from classTree
 	
 	final String s = sc;
 	
@@ -103,192 +264,17 @@ public class ClassLayoutParser extends Visitor {
 	    }.dispatch(classTree));
     }
     
-    public String getName(GNode n) {
-	return n.getStringProperty("name");
-	
-    }
-    
-    // Adds classes in proper location in classTree
-    // @param n ClassDeclaration node of Java AST 
-    public void addClass(GNode n) {
-	
-	GNode parent = classTree;
-	
-	String className = n.get(1).toString();
-	GNode newChildNode = GNode.create("Class");
-	newChildNode.setProperty("name", className);
-	
-	if(DEBUG) System.out.println("Created new class " + 
-				     getName(newChildNode));
-	
-	
-	if(n.get(3) != null) { // Extends something
-	    
-	    // String name of Parent Class
-	    String extendedClass = (String)(n.getNode(3).getNode(0).getNode(0).get(0));
-	    
-	    // Append new class as child of Parent
-	    parent = getClass(extendedClass);
-	    parent.addNode(newChildNode);
-	    
-	    if(DEBUG) System.out.println( "+" + getName(newChildNode) + 
-					  " extends " +  getName(parent));
-	    
-	}
-	else {
-	    // Doesn't extend, add to root (Object)
-	    classTree.addNode(newChildNode);
-	    parent = classTree;
-	    
-	    if(DEBUG) System.out.println( "+" + getName(newChildNode) + 
-					  " extends " +  getName(parent));
-	    
-	}
-	
-      	// Part 2!
-	// @param n AST classDeclaration node
-	// 
-	addVTable( n, newChildNode, parent );
-	addDataLayout(n, newChildNode, parent);
-	
-    }
-    
-    // Adds VTable substructure to nodes in classTree
-    // @param n AST ClassDeclaration node
-    // @param child newly added classTree node
-    // @param parent node in classTree
-    
-    // FIXME: Temporarily using global variables, which are accessible from 
-    // inner class of Visitor
-    ArrayList childVTableList = new ArrayList();
-    
-    public void addVTable(GNode n, GNode child, GNode parent) {
-	
-	// Need to clear out array before starting, 
-	// since we're using global variable
-	if(!childVTableList.isEmpty()) childVTableList.clear();
-	
-	
-	// 1. Inherit all of parent's methods
-	final ArrayList parentVTable = 
-	    (ArrayList) (parent.getNode(0).getProperty("vtable"));
-	
-	
-	for(int i = 0; i < parentVTable.size(); i++)
-	    {
-     		childVTableList.add(parentVTable.get(i)); 
-	    }
-	
-	// 2. Visit AST MethodDeclarations under ClassDeclaration
-	// Is it already in the parent's vtable?
-	// if yes, Override - replace with pointer to AST MethodDeclaration
-	// if no, Create - append to vtable, pointer to AST MethodDeclaration
-	
-	new Visitor() {
-	    
-	    public void visitMethodDeclaration(GNode n) {
-		String methodName = n.get(3).toString();
-		int overrideIndex = overrides(methodName, parentVTable);
-		
-		if(overrideIndex > 0) {
-		    // overrides, must replace
-		    childVTableList.add(overrideIndex, n);
-		}
-		else { //extended, append to list
-		    childVTableList.add(n);
-		}
-	    }
-	    
-	    public void visit(GNode n) {
-		// Need to override visit to work for GNodes
-		for( Object o : n) {
-		    if (o instanceof Node) dispatch((GNode)o);
-		}
-	    }
-	    
-	}.dispatch(n);
-	
-	// make vtable node and set property
-	GNode childVTableNode = GNode.create("VTable");
-	childVTableNode.setProperty("vtable", childVTableList);
-	
-	// Add VTable node to Child at index 0
-	child.add(0, childVTableNode);
-	
-	if(DEBUG) printVTable(child);
-	
-    }
-    
-    
-    
-    // @param n ClassDeclaration node of Java AST
-    // @param child Child class Node
-    // @param parent Parent class Node
-    
-    // FIXME: Temporarily using global variables, which are accessible from 
-    // inner class of Visitor
-    ArrayList childDataStructure = new ArrayList();
-    
-    public void addDataLayout(GNode n, GNode child, GNode parent) {
-	
-	// Need to clear out array before starting, 
-	// since we're using global variable
-	if(!childDataStructure.isEmpty()) childDataStructure.clear();
-	
-	// Only want to visit constructor
-	GNode constructorDeclaration = (GNode) n.getNode(5).getNode(0);
-	
-	GNode childData = GNode.create("DataLayout");
-	
-	// __vptr at index 0
-	childDataStructure.add(0, getVTable( child.getProperty("name").toString())); 
-	
-	// Visit FieldDeclarations and pull out/save relevant information
-	new Visitor() {
-	    
-      	    public void visitConstructorDeclaration(GNode n) {
-		childDataStructure.add(1, n); // Constructor is always 1
-		visit(n);
-	    }
-	    
-	    public void visitFieldDeclaration(GNode n) {
-		System.out.println("Added a field declaration");
-		childDataStructure.add(n);
-		visit(n);
-	    }
-	    
-	    public void visitExpressionStatement(GNode n) {
-		System.out.println("Added an expression statemetn");
-		childDataStructure.add(n);
-		visit(n);
-	    }
-	    
-	    public void visit(GNode n) {
-		// Need to override visit to work for GNodes
-		for( Object o : n) {
-		    if (o instanceof Node) dispatch((GNode)o);
-		}
-	    }
-	    
-	}.dispatch(constructorDeclaration);
-	
-	childData.setProperty("data", childDataStructure);
-	
-	child.add(1, childData); 
-	
-	if(DEBUG) printDataLayout(child);
-    }
-    
-    // Determines if a Class overrides it's parent method
+    // Determines if a Class overrides it's Parent method
+    // @param methodName
+    // @param parentVTable
     public int overrides(String methodName, ArrayList parentVTable) {
 	
-	// Search Parent VTable to see if needs to be overriden
-	// and at what index
+	// Search Parent VTable to see if overriden and at what index
 	for(int i = 1; i < parentVTable.size(); i++) {
 	    
 	    // FIXME: Currently comparing strings 
 	    // How to compare nodes?
-	    
+	    // ALTHOUGH - nodes are can be compared as strings...
 	    if(methodName.equals(parentVTable.get(i))) {
 		return i;
 	    }
@@ -296,16 +282,48 @@ public class ClassLayoutParser extends Visitor {
 	
 	return -1;
     }
-    
-    
-    
+
+
+    // ----------------------------------------------------
+    // ---------- Getter methods for Translator -----------
+    // ----------------------------------------------------
+
+
+    // Returns VTable list for a class
+    // @param cN Class Name
+    public ArrayList getVTable(String cN) {
+
+	GNode className = getClass(cN);
+	GNode classVT = (GNode) (className.getNode(0));
+	if(classVT.hasProperty("vtable")) {
+	    return (ArrayList) (classVT.getProperty("vtable"));
+	}
+
+	return null;
+    }
+
+    // Returns Data Layout list for a class
+    // @param cN Class Name
+    public ArrayList getDataLayout(String cN) {
+
+	GNode className = getClass(cN);
+	GNode classData = (GNode) (className.getNode(1));
+	if(classData.hasProperty("data")) {
+	    return (ArrayList) (classData.getProperty("data"));
+	}
+
+	return null;
+    }
+
+
+
     // ----------------------------------------------------
     // -------------- Initialization Code -----------------
     // ----------------------------------------------------
     
     // Init tree w/Grimm defined classes
     // Nodes have "name" property and vtable children
-    public void initGrimmClassTree() {
+    public void initGrimmTypes() {
 	
 	// FIXME: Don't hardcode Grimm objects
 	// FIXME: Create Class/MethodDeclaration ASTs fro Grimm types
@@ -569,12 +587,15 @@ public class ClassLayoutParser extends Visitor {
     }
 
 
+
+
     // ----------------------------------------------------
     // -----------------  Printers ------------------------
     // ----------------------------------------------------
-    // Note: Printers are only needed for debugging, not translating
+    // Note: Crude printers are implemented only for debugging.
+    // Printing internal structures is not needed to translate.
 
-    // Should parameter be node or className?
+    // FIXME: Should parameter be node or className?
     // @param n Class node
     public void printDataLayout (GNode n ) {
 	
@@ -678,28 +699,26 @@ public class ClassLayoutParser extends Visitor {
 	} // end if
     }
 
-    // FIXME: consistent naming of method
-    public void pClassTree() {
+
+    public void printClassTree() {
 	
 	System.out.println("\n========= Class Tree ============");
 	new Visitor () {
+
 	    public void visit(GNode n) {
 		for( Object o : n) {
 		    if (o instanceof Node) dispatch((GNode)o);
 		}
 	    }
 	    
-	    
 	    public void visitClass(GNode n) {
 		System.out.print("Class " + n.getStringProperty("name") + " ");
 		visit(n);
 	    }
 	    
-	    // fix?
 	    public void visitVTable(GNode n) {
 		System.out.print(" has vtable");
 	    }
-	    
 	    
 	    public void visitDataLayout(GNode n) {
 		System.out.println(" has data layout");
@@ -709,41 +728,5 @@ public class ClassLayoutParser extends Visitor {
 	
 	System.out.println();
     }
-
-    // ----------------------------------------------------
-    // ---------- Getter methods for Translator -----------
-    // ----------------------------------------------------
-
-    // returns VTable list for a class
-    // @param class Name of class whose VTable you want
-    public ArrayList getVTable(String cN) {
-
-	GNode className = getClass(cN);
-	GNode classVT = (GNode) (className.getNode(0));
-	if(classVT.hasProperty("vtable")) {
-	    return (ArrayList) (classVT.getProperty("vtable"));
-	}
-
-	return null;
-    }
-
-
-    public ArrayList getDataLayout(String cN) {
-
-	GNode className = getClass(cN);
-	GNode classData = (GNode) (className.getNode(1));
-	if(classData.hasProperty("data")) {
-	    return (ArrayList) (classData.getProperty("data"));
-	}
-
-	return null;
-    }
-
-    // returns full class tree.  
-    // Shouldn't need this if I make appropriate getter methods
-    public GNode getClassTree() {
-	return classTree;
-    }
-
 
 }
