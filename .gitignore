@@ -1,12 +1,12 @@
 *.class
-*.java~
 *.DS_STORE
-*.gitignore~
 .#DataLayout.java
 *~
-*.orig
 *#
+
+# Files created by merge/diff-ing  #
 *.33131
+*.orig
 
 # OS generated files #
 ######################
