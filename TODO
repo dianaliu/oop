@@ -1,9 +1,11 @@
 LEAF TRANSLATOR - TRIVIAL (kirim?)
+- Add comments
 - Add support for multiple ASTs.
   for each AST in AST[], translate & output
 - Produce CPP code that compiles and runs :
   #include, main returns type int, re-order structs and typedefs
-- Support variable arguments for System.out.println
+- DONE - Support variable arguments for System.out.println
+- Alphabeticize CPPUtil interface
 - Translate all expressions :
   for, do/while, switch, etc.
 
@@ -15,6 +17,7 @@ LEAF TRANSLATOR - TEDIOUS (rob & diana?)
 - Produce CPP code that compiles and runs
 
 TESTING (hernel?)
+- Add comments
 - Automate running test Java and CPP files and comparing output
 - Rehearse presentation
   10 minutes : Presentation & Demo
