@@ -224,5 +224,11 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 			 */
 			thisExpressionStatement.set(0, strOut);
 		}
+		else if( n.size() >= 3 && "print".equals((String)n.get(2)) ) {
+			GNode strOut = GNode.create(kStrmOut);
+			strOut.add(0, (GNode)GNode.create( kPrimID ).add(0, "std::cout") );
+			strOut.add(1, n.getNode(3).get(0) );
+			thisExpressionStatement.set(0, strOut);
+		}
 	}
 }

@@ -11,7 +11,7 @@ class Test {
 			int x = 2 + 2;
 			int y = 3 + 3;
 			int z = x + y;
-			System.out.println( z );
+			System.out.print( z );
 		}
 	}
 }
