@@ -36,7 +36,6 @@ public class DependencyResolver extends xtc.util.Tool {
 	
 	//default constructor
    	public DependencyResolver() {
-   		addressArray[0] = "/Test.java";
 	}
 	
 	//about this file
@@ -49,8 +48,11 @@ public class DependencyResolver extends xtc.util.Tool {
 		return "Robert, Diana, Hernel, Kirim";
 	}
 	
+	public void processMainFile() {
+		addressArray[0] = "/Test.java";
+	}
+	
 	//puts imported java files into the address array
-	//@param trees: array of ASTs we want to search for dependencies
 	public void processDependencies(GNode[] trees) {
 		int additionalTrees = 0;
 		for(int i = 0; i < trees.length; i++) {
@@ -71,7 +73,7 @@ public class DependencyResolver extends xtc.util.Tool {
 						if(((String)(n.get(2))) != null) { 
 							//call a function that takes the address of all java files in 
 							//the directory and add them to addressArray
-							resolveCatchAll(currentAddress);
+							resolveWildCard(currentAddress);
 							//do not put wildcard directory into addressArray
 							return;
 						}
@@ -93,22 +95,19 @@ public class DependencyResolver extends xtc.util.Tool {
 						}
 						
 					}
-			
+			/*
 					//put addresses of packaged java files into addressArray[] 
-					//NOT WORKING AS EXPECTED - TO BE FIXED
 					public void visitPackageDeclaration(GNode n) {	
-						String packAddress = System.getProperty("user.dir");
-						for (int i = 0; i < n.getNode(1).size(); i++){
-							packAddress += "/";
-							if(((String)(n.getNode(1).get(i))) != null)
-								packAddress += ((String)(n.getNode(1).get(i)));
-							System.out.println("Package at: " + packAddress);
+						String currentAddress = System.getProperty("user.dir");
+						for (int i = 0; i < n.getNode(1).size()-1; i++){
+							currentAddress += "/";
+							currentAddress += ((String)(n.getNode(1).get(i)));
 						}
-						//addressArray[addressIndex] = currentAddress;
-						//addressIndex++;
+						addressArray[addressIndex] = currentAddress;
+						addressIndex++;
 						//process all java files in the current directory
 					}
-			
+			*/
 					public void visit(GNode n) {
 						for (Object o : n) if (o instanceof GNode) dispatch((GNode)o);
 					}
@@ -121,8 +120,7 @@ public class DependencyResolver extends xtc.util.Tool {
 	
 	//called when importing .* or a package is declared
 	//reads in all java files in the directory currentAddress
-	//@param currentAddress: the address of the directory holding the dependencies
-	public void resolveCatchAll(String currentAddress) {
+	public void resolveWildCard(String currentAddress) {
 		//filename filter allows us to only read in java files
 		FilenameFilter javaOnly = new JavaFilter(); 
 		File folder = new File((System.getProperty("user.dir")).concat(currentAddress));
@@ -153,10 +151,9 @@ public class DependencyResolver extends xtc.util.Tool {
 	}
 	
 	
-	//uses the address array to return a Node array 
+	//uses the address array to return a GNode array 
 	//the main java test file's AST is at index 0
 	//dependency files AST are at index >= 1
-	//@return: the updated array of ASTs
 	public GNode[] parseDependencies() throws IOException, ParseException {
 		GNode depTree[] = new GNode[100];
 		String curDir = System.getProperty("user.dir");
@@ -183,8 +180,6 @@ public class DependencyResolver extends xtc.util.Tool {
 	} 
 	
 	//return a Java AST from the file directory passed into the method
-	//@param in: Java Reader object
-	//@param file: contains address of the dependency
 	public GNode parse(Reader in, File file) throws IOException, ParseException {
 		
 		JavaFiveParser parser =
@@ -194,12 +189,12 @@ public class DependencyResolver extends xtc.util.Tool {
 		return (GNode)parser.value(result);
 	}  
 	
-	//@return: the String array containing the addresses of dependencies
+	//return the String array containing the addresses of dependencies
 	public String[] getAddressArray() {
 		return addressArray;
 	}
 	
-	//@return: the number of AST trees
+	//return the number of AST trees
 	public int getTreeCount(GNode[] trees) {
 		int count = 0;
 		for(int i = 0; i < trees.length; i++) {
@@ -210,7 +205,7 @@ public class DependencyResolver extends xtc.util.Tool {
 	}
 	
 	//print out the contents of the addressArray which contains the
-	//addresses of the dependency java files
+	//directories of the dependency java files
 	public void printAddressArray() {
 		for(int i = 0; i < addressArray.length; i++) {
 			if(addressArray[i] != null)

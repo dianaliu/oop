@@ -4,8 +4,9 @@
 *.gitignore~
 .#DataLayout.java
 *~
-
-
+*.orig
+*#
+*.33131
 
 # OS generated files #
 ######################
