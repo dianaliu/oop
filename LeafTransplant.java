@@ -17,43 +17,41 @@ interface CPPUtil {
 	
     //xtc GNode types:
     // FIXME: Make alphabetical
-	public static final String kRoot = "TranslationUnit";
-	public static final String kStruct = "StructureTypeDefinition";
-	public static final String kStructDeclList = "StructureDeclarationList";
-	public static final String kStructDecl = "StructureDeclaration";
-	public static final String kTypedef = "TypedefSpecifier";
-	public static final String kDecl = "Declaration";
-	public static final String kDeclSpef = "DeclarationSpecifiers";
-	public static final String kInt = "Int";
-	public static final String kInitDeclList = "InitializedDeclaratorList";
-	public static final String kInitDecl = "InitializedDeclarator";
-	public static final String kSimpDecl = "SimpleDeclarator";
-	public static final String kPtr = "Pointer";
-	public static final String kPrimID = "PrimaryIdentifier";
-	public static final String kFuncDef = "FunctionDefinition";
-	public static final String kFuncDecltor = "FunctionDeclarator";
-	public static final String kCmpStmt = "CompoundStatement";
-	public static final String kStrLtrl = "StringLiteral";
+    public static final String kRoot = "TranslationUnit";
+    public static final String kStruct = "StructureTypeDefinition";
+    public static final String kStructDeclList = "StructureDeclarationList";
+    public static final String kStructDecl = "StructureDeclaration";
+    public static final String kTypedef = "TypedefSpecifier";
+    public static final String kDecl = "Declaration";
+    public static final String kDeclSpef = "DeclarationSpecifiers";
+    public static final String kInt = "Int";
+    public static final String kInitDeclList = "InitializedDeclaratorList";
+    public static final String kInitDecl = "InitializedDeclarator";
+    public static final String kSimpDecl = "SimpleDeclarator";
+    public static final String kPtr = "Pointer";
+    public static final String kPrimID = "PrimaryIdentifier";
+    public static final String kFuncDef = "FunctionDefinition";
+    public static final String kFuncDecltor = "FunctionDeclarator";
+    public static final String kCmpStmt = "CompoundStatement";
+    public static final String kStrLtrl = "StringLiteral";
 }
 
 public class LeafTransplant extends Visitor implements CPPUtil {
-	
-	GNode originalTree;
-	GNode translatedTree;
-	
-	String thisClassName;
-	GNode thisClassVTableStructDeclList;
-	GNode thisClassImplementation;
-	GNode thisExpressionStatement;
+    
+    GNode originalTree;
+    GNode translatedTree;
+    ClassLayoutParser classParser;
+    
+    String thisClassName;
+    GNode thisClassVTableStructDeclList;
+    GNode thisClassImplementation;
+    GNode thisExpressionStatement;
     
     // FIXME: Must take in an array of Java ASTs
-    public LeafTransplant(GNode classTree, GNode javaAST) { 
+    public LeafTransplant(ClassLayoutParser clp, GNode javaAST) { 
 	this.translatedTree = GNode.create(kRoot);
 	this.originalTree = javaAST;
-
-	
-	//translatedTree.add( buildHeaderForClass( "FooBar" ) );
-	//translateJavaToCPP();
+	this.classParser = clp;
     } 
     
     GNode createPrimaryIdentifier( String contents ) {
@@ -152,12 +150,13 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     
     public GNode buildImplementationForClass() {
 	GNode mainTree = GNode.create(kImplDec);
-	mainTree.setProperty("className", thisClassName);
+	mainTree.setProperty("className", thisClassName); //unused, remove?
 	return mainTree;
     }
     
     public void addToVTable(GNode n) {
-	thisClassVTableStructDeclList.add(0, createPrimaryIdentifier( "__" + thisClassName + "::" + (String)n.get(3) ));
+	thisClassVTableStructDeclList.add(0, createPrimaryIdentifier( "__" + thisClassName + "::" + (String)n.get(3) ));  
+	// ^ dummy method, replace with actual vtable implementation
     }
     
     public void addMethodImplementation(GNode n) {
@@ -175,7 +174,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	    fncDef.add(0, null);
 	    GNode declSpef = GNode.create(kDeclSpef);
 	    {
-		declSpef.add( n.get(2) ); //add return type (java type)
+		declSpef.add( n.get(2) ); //add return type (adding a java type)
 	    }
 	    fncDef.add(1, declSpef);
 	    GNode fncDeclarator = GNode.create(kFuncDecltor);
@@ -217,6 +216,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	visit(n);
     }
     
+    //This visitor visits every expression statement, which can roughly be though of as any line of code that ends with a semicolon
     public void visitExpressionStatement(GNode n) {
 	thisExpressionStatement = n;
 	visit(n);
@@ -252,7 +252,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
 	    thisExpressionStatement.set(0, strOut);
 	} // end else if 
-	
+
+	//TODO: In call expression (this visitor), we should translate all class method calls to use our VTable dispatch
 
     } // end visitCallExpression
 }

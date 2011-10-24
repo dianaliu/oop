@@ -96,7 +96,7 @@ public class Translator extends xtc.util.Tool {
 	}
 
 	if( runtime.test("run") ) {
-	    GNode[] trees = new GNode[100];
+	    GNode[] trees = new GNode[100];  //FIXME: hardcoded array size
 	    trees[0] = (GNode)node;
 	    
 	    //
@@ -156,6 +156,7 @@ public class Translator extends xtc.util.Tool {
 				      ).flush();
 	    }
 	    
+
       	    final ClassLayoutParser clp = new ClassLayoutParser(trees);
 	
 	    if(DEBUG) {
@@ -169,14 +170,51 @@ public class Translator extends xtc.util.Tool {
 	
 	if( runtime.test("translate") ) {
 	    
-	    LeafTransplant trsltr = 
-		new LeafTransplant(GNode.cast(node), GNode.cast(node));
-	    trsltr.translateJavaToCPP();
-	    GNode returned = trsltr.getTranslatedTree();
-	    //runtime.console().format(returned).pln().flush();
-	    new CPPPrinter( runtime.console() ).dispatch(returned);
-	    runtime.console().flush();
+	    //Initialize and array of AST trees to hold all dependency files
+	    if(DEBUG) runtime.console().pln("Beginning Translation...");
+	    GNode[] trees = new GNode[100];  //FIXME: hardcoded array size
+	    trees[0] = (GNode)node;
+	    if(DEBUG) runtime.console().pln("Initialized AST Tree array.");
+
+	    //Begin analyzing the AST to determine all dependencies
+	    if(DEBUG) runtime.console().pln("Starting dependency resolution process...");
+	    DependencyResolver depResolver = new DependencyResolver();
+	    depResolver.processDependencies(trees);
+	    try {
+		trees = depResolver.parseDependencies();
+		trees[0] = (GNode)node;
+	    } 
+	    catch (IOException e) {
+		trees = null;
+		System.out.println("IOException: " + e);
+	    }
+	    catch (ParseException e) {
+		trees = null;
+		System.out.println("ParseException: " + e);
+	    }	    
+	    if(DEBUG) runtime.console().pln("Dependency resolution process complete.");
+	    //FIXME: add an optional verbose debug statement with more information
+
+	    //Initialize and run a ClassLayoutParser on the array of trees
+      	    if(DEBUG) runtime.console().pln("Starting class inheritance hierarchy analysis process...");
+	    final ClassLayoutParser clp = new ClassLayoutParser(trees);
+	    if(DEBUG) runtime.console().pln("Inheritance analysis process complete.");
+	    //FIXME: add an optional verbose debug statement with more information
 	    
+	    //Initialize and run the Java AST to CPP AST Translator class
+	    if(DEBUG) runtime.console().pln("Starting Java -> CPP AST translation process...");
+	    LeafTransplant translator = 
+		new LeafTransplant(clp, GNode.cast(trees[0])); //FIXME: only one tree translated
+	    translator.translateJavaToCPP();
+	    GNode returned = translator.getTranslatedTree();
+	    if(DEBUG) runtime.console().pln("AST Translation process complete.");
+
+	    // Run a new CPP printer on the translated AST Tree
+	    if(DEBUG) runtime.console().pln("Starting CPP AST Pretty Printing process...");
+	    new CPPPrinter( runtime.console() ).dispatch(returned); //FIXME: output to a file instead
+	    if(DEBUG) runtime.console().pln("Pretty Printing process complete.");
+	    if(DEBUG) runtime.console().pln("Translation process complete.");
+	    runtime.console().flush(); 
 	}
     } // end process
     
