@@ -116,11 +116,11 @@ public class Translator extends xtc.util.Tool {
 	    } 
 	    catch (IOException e) {
 		trees = null;
-		System.out.println("IOException Translator->ParseDependencies()");
+		System.out.println("IOException: " + e);
 	    }
 	    catch (ParseException e) {
 		trees = null;
-		System.out.println("ParseException Translator->ParseDependencies()");
+		System.out.println("ParseException: " + e);
 	    }
 	    
 	    //print out the dependency addresses
