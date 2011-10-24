@@ -69,9 +69,9 @@ public class Translator extends xtc.util.Tool {
 	    super.init();  
 		runtime.
 		bool("printAST", "printAST", false, "Print AST.").
-		bool("dependency", "dependency", false, "Test dependency resolution.").
-		bool("vtable", "vtable", false, "Test the creation of data structures for vtable and data layout").
-		bool("testCPPPrinter", "testCPPPrinter", false, "Test the functionality of the CPPPrinter class").
+		bool("run", "run", false, 
+		     "Runs current version of Translator with latest features").
+		    bool("testCPPPrinter", "testCPPPrinter", false, "Test the functionality of the CPPPrinter class").
 		bool("translateToCPP", "translateToCPP", false, "Translate Java code to C++ without inheritance.");
 	}
     ///*
@@ -95,7 +95,7 @@ public class Translator extends xtc.util.Tool {
 			runtime.console().format(node).pln().flush();
 		  }
 		
-	      if( runtime.test("dependency") ) {
+	      if( runtime.test("run") ) {
 	      	GNode[] trees = new GNode[100];
 	      	trees[0] = (GNode)node;
 			
@@ -167,28 +167,7 @@ public class Translator extends xtc.util.Tool {
 			System.out.println("===============================\n");
 	    }
 	    
-
-	    if(runtime.test("vtable")) {
-	    	GNode[] trees = new GNode[100];
-	      	trees[0] = (GNode)node;
-			
-			final ClassLayoutParser clp = new ClassLayoutParser(trees);
-		
-			clp.beginCLP(trees);
-			clp.pClassTree();
-
-			//		System.out.println("Looking for String, found " + 
-			//				   clp.getName(clp.getClass("String")) );
-
-	
-
-			//		runtime.console().format(clp.getClassTree()).pln().flush();
-	
-	    }	
-	    
-
-
-
+	 
 	    if( runtime.test("testCPPPrinter") ) {
 			//This simple visitor is just used to place a dummy vtable declaration node into each classes class body
 			//for testing purposes.  It also tests and implements mutability of the AST tree.
