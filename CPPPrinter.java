@@ -30,7 +30,7 @@ import xtc.tree.Token;
 import xtc.tree.Visitor;
 
 /**
- * A pretty printer for C++.
+ * A pretty printer for C++ based heavily on xtc's Java and C printers.
  *
  * <p />A note on operator precedence: This printer uses precedence
  * levels to control when to print parentheses around expressions.
@@ -130,7 +130,7 @@ public class CPPPrinter extends Visitor {
 	protected int precedence;
 	
 	/**
-	 * Create a new C printer.
+	 * Create a new CPP printer.
 	 *
 	 * @param printer The printer.
 	 */
@@ -139,7 +139,7 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	/**
-	 * Create a new C printer.
+	 * Create a new CPP printer.
 	 *
 	 * @param printer The printer.
 	 * @param lineUp The flag for whether to line up declaratons and
