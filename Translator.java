@@ -57,11 +57,11 @@ public class Translator extends xtc.util.Tool {
 	}
     
     public String getName() {
-	    return "Java to C++ Translator";
+	    return "\n********** Java to C++ Translator";
 	}
     
     public String getCopy() {
-	    return "Diana, Hernel, & Robert Kirim";
+	    return "Diana, Hernel, & Robert Kirim **********";
 	}
 	
     public String getVersion() {
