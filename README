@@ -2,6 +2,8 @@
 Midterm project for http://cs.nyu.edu/rgrimm/teaching/fa11-oop/ by Diana, Hernel, Kirim, and Rob.
 
 - HOW TO RUN
-xtc/ directory should contain: magic.sh, Test.java, and testdependecies/
-Run source magic.sh to output Code.cpp, the translated Test.java file, to the xtc/ directory.
+xtc/ directory should contain: midterm-translator.jar, Test.java, and testdependecies/
+
+Run with: java -jar midterm-translator.jar
+This runs our Translator with the -debug flag.
 
