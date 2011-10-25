@@ -37,6 +37,7 @@ import xtc.lang.CPrinter;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.io.PrintWriter;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
@@ -203,19 +204,39 @@ public class Translator extends xtc.util.Tool {
 	    
 	    //Initialize and run the Java AST to CPP AST Translator class
 	    if(DEBUG) runtime.console().pln("Starting Java -> CPP AST translation process...");
-	    LeafTransplant translator = 
-		new LeafTransplant(clp, GNode.cast(trees[0])); //FIXME: only one tree translated
-	    translator.translateJavaToCPP();
-	    GNode returned = translator.getTranslatedTree();
+	    GNode[] returned = new GNode[100];
+	    LeafTransplant translator = new LeafTransplant(clp, GNode.cast(trees[0]));;
+	    for(int i = 0; i < trees.length; i++) {
+	    	if(trees[i] != null)
+	    	{
+	    		translator = new LeafTransplant(clp, GNode.cast(trees[i])); 
+	    		translator.translateJavaToCPP();
+	  			returned[i] = translator.getTranslatedTree();
+	    	}
+		}
 	    if(DEBUG) runtime.console().pln("AST Translation process complete.");
 
 	    // Run a new CPP printer on the translated AST Tree
 	    if(DEBUG) runtime.console().pln("Starting CPP AST Pretty Printing process...");
-	    new CPPPrinter( runtime.console() ).dispatch(returned); //FIXME: output to a file instead
-	    if(DEBUG) runtime.console().pln("Pretty Printing process complete.");
-	    if(DEBUG) runtime.console().pln("Translation process complete.");
-	    runtime.console().flush(); 
-	}
+	    try{
+			PrintWriter fstream = new PrintWriter("Code.cpp");
+			Printer cppCode = new Printer(fstream);
+		
+			for(int i = 0; i < returned.length; i++) {
+				if(returned[i] != null)
+				{
+		   		 	new CPPPrinter( cppCode ).dispatch(returned[i]); 
+		   		}
+		   	}
+			if(DEBUG) runtime.console().pln("Pretty Printing process complete.");
+			if(DEBUG) runtime.console().pln("Translation process complete.");
+			//runtime.console().flush();
+			cppCode.flush();
+	    }
+	    catch(Exception e) {
+	    	System.err.println(e.getMessage());
+	    }
+    }
     } // end process
     
     /**
