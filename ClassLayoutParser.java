@@ -13,37 +13,32 @@ import java.io.Reader;
 
 import java.util.ArrayList;
 
-/* Creates a helper class hierarchy tree of vtables and data layouts
+/* 
+ * Creates a helper class hierarchy tree of vtables and data layouts
  */
 
 public class ClassLayoutParser extends Visitor {
 
 
-    // Decision made! After looking over LeafTransplant and CPPPrinter
-    // For non-Grimm types, I am returning java ast nodes.  
-    // TODO: Create documentation and getters.
-    // For Grimm types, I am returning strings.  These will be stored in custom
-    // CPP nodes, so CPPPrinter will treat differently.
-    // TODO: Demonstrate with test code how to piece together calls to
-    // java_lang.cc using ast, vtables, and data layouts
-
-    public static final boolean DEBUG = true;
+    public static boolean DEBUG = false;
 
     GNode classTree; // Contains nodes of type Class, VTable, and Data
 
     // Constructor
     // @param n node for a class declaration
-    public ClassLayoutParser(GNode[] ast) {
-
+    public ClassLayoutParser(GNode[] ast, boolean db) {
+	DEBUG = db;
+	if(DEBUG) System.out.println("--- Begin Class Layout Parser\n\n");
 	initGrimmTypes();
 	parseAllClasses(ast);
+	if(DEBUG) System.out.println("--- End Class Layout Parser\n\n");
 	
     }
     
     // Traverses all dependencies to find and add all classes
     // @param trees Array of all ASTs (main and dependencies)
     public void parseAllClasses(GNode[] trees) {
- 
+
     	for(int i = 0; i < trees.length; i++) {
 	    if(trees[i] != null) {
 		new Visitor() {
@@ -72,8 +67,6 @@ public class ClassLayoutParser extends Visitor {
 	String className = n.get(1).toString();
 	GNode newChildNode = GNode.create("Class");
 	newChildNode.setProperty("name", className);
-	if(DEBUG) System.out.println("Created new class " + 
-				     getName(newChildNode));
 	
 	GNode parent = null; 
 	
@@ -84,15 +77,16 @@ public class ClassLayoutParser extends Visitor {
 	    
 	    // Append new class as child of Parent
 	    parent = getClass(extendedClass);
-	 	}
+	}
 	else {
 	    // Doesn't extend, add to root (Object)
 	    parent = getClass("Object");	   
 	}
 	
 	parent.addNode(newChildNode);
-	if(DEBUG) System.out.println( "+" + getName(newChildNode) + 
-				      " extends " +  getName(parent));
+	
+	if(DEBUG) System.out.println("\nAdded class " + getName(newChildNode) 
+				      + " extends " +  getName(parent));
 	    
 	// VTable resides at index 0 of a Class node
 	// DataLayout resides at index 1 of a Class node
@@ -101,20 +95,20 @@ public class ClassLayoutParser extends Visitor {
 	
     }
     
-    // Adds VTable node to child0 of a Class node.
+    // Adds VTable node to child 0 of a Class node.
     // Actual structure is kept in property "vtable" as an Arraylist
     // @param n AST ClassDeclaration node
     // @param child New child node in classTree
     // @param parent Parent node in classTree
     
     // Using global variable childVTableList, so as accessible from 
-    // inner class of Visitor
+    // inner class of Visitor :-(
     ArrayList childVTableList = new ArrayList();
     
     public void addVTable(GNode n, GNode child, GNode parent) {
 	
 	// Need to clear out array before starting, 
-	// since we're using a global variable
+	// since it's a global variable
 	if(!childVTableList.isEmpty()) childVTableList.clear();
 	
 	// VTable[0] = isa
@@ -123,7 +117,6 @@ public class ClassLayoutParser extends Visitor {
 	// 1. Inherit all of parent's methods
 	final ArrayList parentVTable = 
 	    (ArrayList) (parent.getNode(0).getProperty("vtable"));
-	
 	
 	for(int i = 1; i < parentVTable.size(); i++)
 	    {
@@ -168,19 +161,18 @@ public class ClassLayoutParser extends Visitor {
     }
     
      
-    // Using global variable childDataStructure, so as to be accessible from 
-    // inner class of Visitor
-    ArrayList childDataStructure = new ArrayList();
-
     // Adds DataLayout node to Class node at index 1
     // Actual structure is kept in property "data" as an ArrayList
     // @param n ClassDeclaration node of Java AST
     // @param child Child Class node
     // @param parent Parent Class node
+    // Using global variable childDataStructure, so as to be accessible from 
+    // inner class of Visitor :-(
+    ArrayList childDataStructure = new ArrayList();
     public void addDataLayout(GNode n, GNode child, GNode parent) {
 	
 	// Need to clear out array before starting, 
-	// since we're using global variable
+	// since it's a global variable
 	if(!childDataStructure.isEmpty()) childDataStructure.clear();
 			
 	// DataLayout[0] = __vptr
@@ -192,19 +184,18 @@ public class ClassLayoutParser extends Visitor {
 	// Visit FieldDeclarations and pull out/save relevant information
 	new Visitor() {
 	    
+	    // FIXME: There are more things we need from the constructor
       	    public void visitConstructorDeclaration(GNode n) {
 		childDataStructure.add(1, n); // Constructor is always 1
 		visit(n);
 	    }
 	    
 	    public void visitFieldDeclaration(GNode n) {
-		if(DEBUG) System.out.println("Added a field declaration");
 		childDataStructure.add(n);
 		visit(n);
 	    }
 	    
 	    public void visitExpressionStatement(GNode n) {
-		if(DEBUG) System.out.println("Added an expression statemetn");
 		childDataStructure.add(n);
 		visit(n);
 	    }
@@ -218,7 +209,7 @@ public class ClassLayoutParser extends Visitor {
 	    
 	}.dispatch(constructorDeclaration);
 	
-	// Make DataLayout node and attach list
+	// Create DataLayout node and attach list
 	GNode childData = GNode.create("DataLayout");
 	childData.setProperty("data", childDataStructure);
 	
@@ -229,35 +220,29 @@ public class ClassLayoutParser extends Visitor {
     }
     
     
-    
-   
-
-
     // ----------------------------------------------------
     // ------------- Internal Methods --------------
     // ----------------------------------------------------
 
   
+    // Returns the name of a class
+    // @param n A Class node 
    public String getName(GNode n) {
 	return n.getStringProperty("name");
 	
     }
 
-    // Returns a Class node
+    // Returns a Class node from the classTree
     // @param sc name of the Class desired
     public GNode getClass(String sc) {
 	
+	// Declared final to be accessible from inner Visitor classes
 	final String s = sc;
 	
 	return (GNode)( new Visitor() {
-		
-		public void visit(GNode n) {
-		    for( Object o : n) {
-			if (o instanceof Node) dispatch((GNode)o);
-		    }
-		}
-		
+			
 		public GNode visitClass(GNode n) {
+
 		    // Found the class
 		    if( getName(n).equals(s) ) {
 			return n;
@@ -271,6 +256,12 @@ public class ClassLayoutParser extends Visitor {
 			}
 		    }
 		    return null;
+		}
+				
+		public void visit(GNode n) { // override visit for GNodes
+		    for( Object o : n) {
+			if (o instanceof Node) dispatch((GNode)o);
+		    }
 		}
 		
 	    }.dispatch(classTree));
@@ -286,12 +277,13 @@ public class ClassLayoutParser extends Visitor {
 	    
 	    // FIXME: Currently comparing strings 
 	    // How to compare nodes?
-	    // ALTHOUGH - nodes are can be compared as strings...
+	    // ALTHOUGH - nodes  can be compared as strings...
 	    if(methodName.equals(parentVTable.get(i))) {
 		return i;
 	    }
 	}
 	
+	// If not overriden, return -1
 	return -1;
     }
 
@@ -334,11 +326,11 @@ public class ClassLayoutParser extends Visitor {
     
 
     // Init tree w/Grimm defined classes
-    // Nodes have "name" property and vtable children
+    // Nodes have "name" property 
+    // Class nodes have children nodes DataLayout, VTable, and maybe Class
     public void initGrimmTypes() {
 	
 	// FIXME: Don't hardcode Grimm objects
-	// FIXME: Create Class/MethodDeclaration ASTs fro Grimm types
 	
 	GNode objectNode = GNode.create("Class");
 	objectNode.setProperty("name", "Object");
@@ -372,8 +364,6 @@ public class ClassLayoutParser extends Visitor {
     // VTable nodes always reside at index 0 of it's class
     public void initGrimmVTables() {
 
-	// ------------------------------------------------
-	
 	GNode objectVT = GNode.create("VTable");
 	
 	ArrayList objectVTArray = new ArrayList();
@@ -605,12 +595,11 @@ public class ClassLayoutParser extends Visitor {
 	    ArrayList dataLayoutList = 
 		(ArrayList) dataLayoutNode.getProperty("data");
 
-	    System.out.println("========= Data Layout for " + 
-			       n.getProperty("name") + " ==========");
+	    System.out.println("--- Data Layout for " + n.getProperty("name"));
 
 	    for(int i = 0; i < dataLayoutList.size(); i++) {
 		
-		// The dataLayoutList can contain: Strings, 
+		// The dataLayoutList can contain: Strings, or nodes of type
 		// ConstructorDeclarations, FieldDeclarations,
 		// ExpressionStatements.
 
@@ -622,8 +611,6 @@ public class ClassLayoutParser extends Visitor {
 		else if (dataLayoutList.get(i) instanceof GNode){
 		    GNode g = (GNode) dataLayoutList.get(i);
 
-		    // FIXME: Implement pretty printing for Nodes
-		    
 		    if("ConstructorDeclaration".equals(g.getName())) {
 		
 			new Visitor() {
@@ -658,9 +645,6 @@ public class ClassLayoutParser extends Visitor {
 				    if (o instanceof Node) dispatch((GNode)o);
 				}
 			    }
-			    
-
-			    
 			}.dispatch(g);
 
 
@@ -675,6 +659,7 @@ public class ClassLayoutParser extends Visitor {
 		} // end else if
 	    } // end for
 	} // end if
+	System.out.println();
     }
 
 
@@ -688,20 +673,23 @@ public class ClassLayoutParser extends Visitor {
 	    ArrayList vtableList = 
 		(ArrayList) vtableNode.getProperty("vtable");
 
-	    System.out.println("========= VTable for class " + 
-			       n.getProperty("name") + " ==========");
+	    System.out.println("--- VTable for class " + n.getProperty("name"));
 
 	    for(int i = 0; i < vtableList.size(); i++) {
 		System.out.println(i + "\t" + vtableList.get(i).toString());
 	    }
 
 	} // end if
+	System.out.println();
     }
 
 
+    // Prints a list of all classes
+    // FIXME: Make prettier
+    // Note: Never actually called
     public void printClassTree() {
 	
-	System.out.println("\n========= Class Tree ============");
+	System.out.println("\n\n--- Class Tree");
 	new Visitor () {
 
 	    public void visit(GNode n) {
