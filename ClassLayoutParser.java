@@ -459,18 +459,6 @@ public class ClassLayoutParser extends Visitor {
 	integerVT.setProperty("vtable", integerVTArray);
 	
 	getClass("Integer").add(0, integerVT);
-
-	// ------------------------------------------------
-		
-	if(DEBUG) {
-	    
-	    printVTable(getClass("Object"));
-	    printVTable(getClass("String"));
-	    printVTable(getClass("Class"));
-	    printVTable(getClass("Array"));
-	    printVTable(getClass("Integer"));
-	 	    
-	}
 	
     }
 
@@ -562,17 +550,6 @@ public class ClassLayoutParser extends Visitor {
 
 	arrayData.setProperty("data", arrayDataStructure);
 	getClass("Array").add(1, arrayData);
-
-	if(DEBUG) {
-	 
-	    printDataLayout(getClass("Object"));
-	    printDataLayout(getClass("String"));
-	    printDataLayout(getClass("Class"));
-	    printDataLayout(getClass("Array"));
-	    printDataLayout(getClass("Integer"));
-	 	    
-	}
-       
 
     }
 
