@@ -205,7 +205,6 @@ public class Translator extends xtc.util.Tool {
 	    if(DEBUG) runtime.console().pln("Starting Java -> CPP AST translation process...");
 	    LeafTransplant translator = 
 		new LeafTransplant(clp, GNode.cast(trees[0])); //FIXME: only one tree translated
-	    translator.translateJavaToCPP();
 	    GNode returned = translator.getTranslatedTree();
 	    if(DEBUG) runtime.console().pln("AST Translation process complete.");
 
