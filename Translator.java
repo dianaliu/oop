@@ -210,7 +210,7 @@ public class Translator extends xtc.util.Tool {
 	    	if(trees[i] != null)
 	    	{
 	    		translator = new LeafTransplant(clp, GNode.cast(trees[i])); 
-	    		translator.translateJavaToCPP();
+			//	    		translator.translateJavaToCPP();
 	  			returned[i] = translator.getTranslatedTree();
 	    	}
 		}
