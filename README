@@ -1,4 +1,7 @@
+- ABOUT
 Midterm project for http://cs.nyu.edu/rgrimm/teaching/fa11-oop/ by Diana, Hernel, Kirim, and Rob.
 
-Run with java xtc.oop.Translator -run TESTFILE.java
-CPP files will be outputted to _______.
+- HOW TO RUN
+xtc/ directory should contain: magic.sh, Test.java, and testdependecies/
+Run source magic.sh to output Code.cpp, the translated Test.java file, to the xtc/ directory.
+
