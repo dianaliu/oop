@@ -95,14 +95,16 @@ public class Translator extends xtc.util.Tool {
 	
 	if( runtime.test("translate") ) {
 	    
-	    //Initialize and array of AST trees to hold all dependency files
-	    if(DEBUG) runtime.console().pln("Beginning Translation...");
-	    GNode[] trees = new GNode[100];  //FIXME: hardcoded array size
-	    trees[0] = (GNode)node;
-	    if(DEBUG) runtime.console().pln("Initialized AST Tree array.");
+	    if(DEBUG) runtime.console().pln("--- Begin translation");
 
-	    //Begin analyzing the AST to determine all dependencies
-	    if(DEBUG) runtime.console().pln("Starting dependency resolution process...");
+	    // Create an array of AST trees to hold each dependency file
+	    // FIXME: Do not hardcode
+	    GNode[] trees = new GNode[100];  
+	    trees[0] = (GNode)node;
+
+	    if(DEBUG) runtime.console().pln("--- Begin dependency analysis");
+
+	    // Analyze the main Java AST to find & resolve dependencies
 	    DependencyResolver depResolver = new DependencyResolver();
 	    depResolver.processDependencies(trees);
 	    try {
@@ -116,32 +118,43 @@ public class Translator extends xtc.util.Tool {
 	    catch (ParseException e) {
 		trees = null;
 		System.out.println("ParseException: " + e);
-	    }	    
-	    if(DEBUG) runtime.console().pln("Dependency resolution process complete.");
-	    //FIXME: add an optional verbose debug statement with more information
+	    }	
+    
+	    if(DEBUG) runtime.console().pln("--- Finish dependency analysis");
 
-	    //Initialize and run a ClassLayoutParser on the array of trees
-      	    if(DEBUG) runtime.console().pln("Starting class inheritance hierarchy analysis process...");
-	    final ClassLayoutParser clp = new ClassLayoutParser(trees);
-	    if(DEBUG) runtime.console().pln("Inheritance analysis process complete.");
-	    //FIXME: add an optional verbose debug statement with more information
+
+	    if(DEBUG) runtime.console().pln("--- Begin inheritance analysis");
+
+	    // Parse all classes to create vtables and data layouts
+	    final ClassLayoutParser clp = new ClassLayoutParser(trees, DEBUG);
 	    
-	    //Initialize and run the Java AST to CPP AST Translator class
-	    if(DEBUG) runtime.console().pln("Starting Java -> CPP AST translation process...");
+	    if(DEBUG) runtime.console().pln("--- Finish inheritance analysis");
+	   	 
+
+	    if(DEBUG) runtime.console().pln("--- Begin cpp translation");
+   
+	    // Create a translator to output a cpp tree for each java ast
+	    // FIXME: Do not hardcode size
 	    GNode[] returned = new GNode[100];
-	    LeafTransplant translator = new LeafTransplant(clp, GNode.cast(trees[0]));;
+	    LeafTransplant translator = 
+		new LeafTransplant(clp, GNode.cast(trees[0]));
+
 	    for(int i = 0; i < trees.length; i++) {
 	    	if(trees[i] != null)
-	    	{
-	    		translator = new LeafTransplant(clp, GNode.cast(trees[i])); 
-			//	    		translator.translateJavaToCPP();
-	  			returned[i] = translator.getTranslatedTree();
-	    	}
-		}
-	    if(DEBUG) runtime.console().pln("AST Translation process complete.");
+		    {
+	    		translator = 
+			    new LeafTransplant(clp, GNode.cast(trees[i])); 
+			returned[i] = translator.getTranslatedTree();
+		    }
+	    }
 
-	    // Run a new CPP printer on the translated AST Tree
-	    if(DEBUG) runtime.console().pln("Starting CPP AST Pretty Printing process...");
+	    if(DEBUG) runtime.console().pln("--- Finish cpp translation");
+	   
+
+	    if(DEBUG) runtime.console().pln("--- Begin printing cpp tree(s)");
+ 
+	    // Run CPP printer on each CPP Tree and output to Code.cpp
+	    // FIXME: Support multiple outputs
 	    try{
 			PrintWriter fstream = new PrintWriter("Code.cpp");
 			Printer cppCode = new Printer(fstream);
@@ -152,16 +165,17 @@ public class Translator extends xtc.util.Tool {
 		   		 	new CPPPrinter( cppCode ).dispatch(returned[i]); 
 		   		}
 		   	}
-			if(DEBUG) runtime.console().pln("Pretty Printing process complete.");
-			if(DEBUG) runtime.console().pln("Translation process complete.");
-			//runtime.console().flush();
+
+			if(DEBUG) runtime.console().pln("--- Finish printing cpp tree(s)");
+
+			if(DEBUG) runtime.console().pln("--- Finish translation");
 			cppCode.flush();
 	    }
 	    catch(Exception e) {
 	    	System.err.println(e.getMessage());
 	    }
-    }
-    } // end process
+	}
+    } // end translate
     
     /**
      * Run the translator with the specified command line arguments.
