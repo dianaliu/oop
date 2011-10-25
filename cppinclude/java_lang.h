@@ -1,5 +1,5 @@
 /*
- * Object-Oriented Programming
+b * Object-Oriented Programming
  * Copyright (C) 2011 Robert Grimm
  *
  * This program is free software; you can redistribute it and/or

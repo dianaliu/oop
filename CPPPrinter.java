@@ -1288,7 +1288,42 @@ public class CPPPrinter extends Visitor {
 		endStatement(nested);
 	}
 	
+	public void visitForStatement(GNode n) {
+		final boolean nested = startStatement(STMT_ANY, n);
+		
+		printer.indent().p("for (").p(n.getNode(0)).p(')');
+		prepareNested();
+		printer.p(n.getNode(1));
+		
+		endStatement(nested);
+	}
+	
+	//COPIED FROM JAVA PRINTER:
+	/** Visit the specified basic for control. */
+	public void visitBasicForControl(GNode n) {
+		printer.p(n.getNode(0));
+		if (null != n.get(1)) printer.p(n.getNode(1)).p(' ');
+		
+		final int prec1 = enterContext(PREC_BASE);
+		printer.p(n.getNode(2)).p("; ");
+		exitContext(prec1);
+		
+		if (null != n.get(3)) {
+			final int prec2 = enterContext(PREC_BASE);
+			formatAsTruthValue(n.getNode(3));
+			exitContext(prec2);
+		}
+		printer.p("; ");
+		
+		final int prec3 = enterContext(PREC_BASE);
+		printer.p(n.getNode(4));
+		exitContext(prec3);
+	}
+
+	
+	//OVERRIDED C FOR STATEMENT VISITOR:
 	/** Visit the specified for statement node. */
+	/*
 	public void visitForStatement(GNode n) {
 		boolean nested = startStatement(STMT_ANY, n);
 		
@@ -1319,7 +1354,7 @@ public class CPPPrinter extends Visitor {
 		printer.p(n.getNode(3));
 		
 		endStatement(nested);
-	}
+	} */
 	
 	/** Visit the specified switch statement node. */
 	public void visitSwitchStatement(GNode n) {
@@ -2204,12 +2239,12 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	public void visitFormalParameters(GNode n) {
-		printer.p('(');
+	    //printer.p('(');  //removed superfluous parens
 		for (Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
 			printer.p((Node)iter.next());
 			if (iter.hasNext()) printer.p(", ");
 		}
-		printer.p(')');
+		//printer.p(')'); //superfulous parens 
 	}
 	
 	public void visitFormalParameter(GNode n) {
@@ -2333,6 +2368,12 @@ public class CPPPrinter extends Visitor {
 	public void visitPrimitiveType(GNode n) {
 		printer.p(n.getString(0));
 	} 
+	
+	public void visitPostfixExpression(GNode n) {
+		final int prec = startExpression(160);
+		printer.p(n.getNode(0)).p(n.getString(1));
+		endExpression(prec);
+	}
 	
 	public Object unableToVisit(Node node) {
 		System.out.println( "Could not visit node of type: " + node.getName() );
