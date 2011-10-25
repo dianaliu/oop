@@ -28,11 +28,10 @@ import xtc.tree.Visitor;
 import xtc.tree.Location;
 import xtc.tree.Printer;
 
-import xtc.lang.JavaFiveParser;
-import xtc.lang.JavaPrinter;
-
 import xtc.lang.CParser;
 import xtc.lang.CPrinter;
+import xtc.lang.JavaFiveParser;
+import xtc.lang.JavaPrinter;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -72,10 +71,8 @@ public class Translator extends xtc.util.Tool {
     public void init() {
 	    super.init();  
 	    runtime.
-		bool("printAST", "printAST", false, "Print AST.").
+		bool("printAST", "printAST", false, "Print Java AST.").
 		bool("debug", "debug", false, "Extra output for debugging").
-		bool("run", "run", false, 
-		     "Runs Translator with latest features").
 		bool("translate", "translate", false, 
 		     "Translate Java code to C++ without inheritance.");
     }
@@ -94,79 +91,6 @@ public class Translator extends xtc.util.Tool {
 	
 	if(runtime.test("debug")) {
 	    DEBUG = true;
-	}
-
-	if( runtime.test("run") ) {
-	    GNode[] trees = new GNode[100];  //FIXME: hardcoded array size
-	    trees[0] = (GNode)node;
-	    
-	    //
-	    //Print out the current working directory - helps with file I/O
-	    //
-	    /*
-	      System.out.println("\n------------------------------");
-	      System.out.println("The Current Working Directory");
-	      System.out.println("------------------------------");
-	      System.out.println(System.getProperty("user.dir"));
-	    */
-	    
-	    //*****************************************************
-	    //Begin analyzing the AST to determine all dependencies
-	    //*****************************************************
-	    DependencyResolver depResolver = new DependencyResolver();
-	    depResolver.processDependencies(trees);
-	    try {
-		trees = depResolver.parseDependencies();
-		trees[0] = (GNode)node;
-	    } 
-	    catch (IOException e) {
-		trees = null;
-		System.out.println("IOException: " + e);
-	    }
-	    catch (ParseException e) {
-		trees = null;
-		System.out.println("ParseException: " + e);
-	    }
-
-	    //print out the dependency addresses
-	    if(DEBUG) {
-		runtime.console().
-		    p("The below ASTs are stored in trees[]:").flush();
-		depResolver.printAddressArray();
-	    }
-	    
-	    /*
-	    //print out the ASTs stored in trees[]
-	    for(int i = 0; i < trees.length; i++) {
-	    if(trees[i] != null){
-	    if(i == 0)	System.out.println("$$Main java test file:");
-	    else	System.out.println("$$Dependency file # " + i + ":");
-	    runtime.console().pln().format(trees[i]).pln().pln().flush();
-	    }
-	    }
-	    */
-	    
-	    //print out the number of ASTs stored in trees
-	    if(DEBUG) {
-		runtime.console().pln("# Active ASTs: " + 
-				    depResolver.getTreeCount(trees)).flush();
-	    }
-	    
-	    if(DEBUG) {
-		runtime.console().pln("--Process and Analyze dependencies: done"
-				      ).flush();
-	    }
-	    
-
-      	    final ClassLayoutParser clp = new ClassLayoutParser(trees);
-	
-	    if(DEBUG) {
-		runtime.console().pln("--Create vtables & data layouts: done"
-				      ).flush();
-	    }
-
-	    // ---------- Sample usage of clp
-	 
 	}
 	
 	if( runtime.test("translate") ) {
