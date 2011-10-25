@@ -94,15 +94,17 @@ public class Translator extends xtc.util.Tool {
 	}
 	
 	if( runtime.test("translate") ) {
-	    
-	    if(DEBUG) runtime.console().pln("--- Begin translation");
+	  
+	    if(DEBUG) 
+		runtime.console().pln("--- Begin translation").flush();
 
 	    // Create an array of AST trees to hold each dependency file
 	    // FIXME: Do not hardcode
 	    GNode[] trees = new GNode[100];  
 	    trees[0] = (GNode)node;
 
-	    if(DEBUG) runtime.console().pln("--- Begin dependency analysis");
+	    if(DEBUG) 
+		runtime.console().pln("--- Begin dependency analysis").flush();
 
 	    // Analyze the main Java AST to find & resolve dependencies
 	    DependencyResolver depResolver = new DependencyResolver();
@@ -120,18 +122,22 @@ public class Translator extends xtc.util.Tool {
 		System.out.println("ParseException: " + e);
 	    }	
     
-	    if(DEBUG) runtime.console().pln("--- Finish dependency analysis");
+	    if(DEBUG) 
+		runtime.console().pln("--- Finish dependency analysis").flush();
 
 
-	    if(DEBUG) runtime.console().pln("--- Begin inheritance analysis");
+	    if(DEBUG) 
+		runtime.console().pln("--- Begin inheritance analysis").flush();
 
 	    // Parse all classes to create vtables and data layouts
 	    final ClassLayoutParser clp = new ClassLayoutParser(trees, DEBUG);
 	    
-	    if(DEBUG) runtime.console().pln("--- Finish inheritance analysis");
+	    if(DEBUG) 
+		runtime.console().pln("--- Finish inheritance analysis").flush();
 	   	 
 
-	    if(DEBUG) runtime.console().pln("--- Begin cpp translation");
+	    if(DEBUG) 
+		runtime.console().pln("--- Begin cpp translation").flush();
    
 	    // Create a translator to output a cpp tree for each java ast
 	    // FIXME: Do not hardcode size
@@ -148,10 +154,12 @@ public class Translator extends xtc.util.Tool {
 		    }
 	    }
 
-	    if(DEBUG) runtime.console().pln("--- Finish cpp translation");
+	    if(DEBUG) 
+		runtime.console().pln("--- Finish cpp translation").flush();
 	   
 
-	    if(DEBUG) runtime.console().pln("--- Begin printing cpp tree(s)");
+	    if(DEBUG) 
+		runtime.console().pln("--- Begin printing cpp tree(s)").flush();
  
 	    // Run CPP printer on each CPP Tree and output to Code.cpp
 	    // FIXME: Support multiple outputs
@@ -166,9 +174,11 @@ public class Translator extends xtc.util.Tool {
 		   		}
 		   	}
 
-			if(DEBUG) runtime.console().pln("--- Finish printing cpp tree(s)");
+			if(DEBUG) 
+			    runtime.console().pln("--- Finish printing cpp tree(s)").flush();
 
-			if(DEBUG) runtime.console().pln("--- Finish translation");
+			if(DEBUG) 
+			    runtime.console().pln("--- Finish translation").flush();
 			cppCode.flush();
 	    }
 	    catch(Exception e) {
