@@ -17,7 +17,7 @@
  
  for ((a=0; a <= 2 ; a++)) 
 	do
- 	 java xtc.oop.Translator -translate -debug ${javaFiles[0]}
+	 java -jar midterm-translator.jar -translate -debug ${javaFiles[0]}
  	 
     done
  
