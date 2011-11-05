@@ -163,6 +163,9 @@ public class ClassLayoutParser extends Visitor {
      
     // Adds DataLayout node to Class node at index 1
     // Actual structure is kept in property "data" as an ArrayList
+    // NOTE: Data structure must implement Collections, so we may addAll to node
+    // in LeafTransplant.buildDataLayout().  Thankfully, ArrayList implements 
+    // the Collectiosn interface
     // @param n ClassDeclaration node of Java AST
     // @param child Child Class node
     // @param parent Parent Class node
@@ -185,6 +188,8 @@ public class ClassLayoutParser extends Visitor {
 	new Visitor() {
 	    
 	    // FIXME: There are more things we need from the constructor
+	    // Need, variables, method names etc., 
+	    // See LeafTransplant.buildDataLayout() for usage
       	    public void visitConstructorDeclaration(GNode n) {
 		childDataStructure.add(1, n); // Constructor is always 1
 		visit(n);
