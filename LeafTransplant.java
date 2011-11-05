@@ -7,8 +7,11 @@ import xtc.tree.Visitor;
 import java.util.ArrayList;
 
 /*
- *  Builds a CPP AST tree using a Java AST tree
+ * Builds a CPP AST tree using a Java AST tree
  * Uses new types of nodes and new tree structure
+ *
+ * @Rob, you only need to look at addVTable and addDataLayout methods in 
+ * ClassLayoutParser.
  */
 
 
@@ -19,35 +22,33 @@ interface CPPUtil {
     public static final String kStrmOut = "StreamOutputList";
 	
     // xtc GNode types:
-    // FIXME: Make alphabetical
-    public static final String kRoot = "TranslationUnit";
-    public static final String kStruct = "StructureTypeDefinition";
-    public static final String kStructDeclList = "StructureDeclarationList";
-    public static final String kStructDecl = "StructureDeclaration";
-    public static final String kTypedef = "TypedefSpecifier";
+    public static final String kCmpStmt = "CompoundStatement";
     public static final String kDecl = "Declaration";
     public static final String kDeclSpef = "DeclarationSpecifiers";
-    public static final String kInt = "Int";
-    public static final String kInitDeclList = "InitializedDeclaratorList";
-    public static final String kInitDecl = "InitializedDeclarator";
-    public static final String kSimpDecl = "SimpleDeclarator";
-    public static final String kPtr = "Pointer";
-    public static final String kPrimID = "PrimaryIdentifier";
-    public static final String kFuncDef = "FunctionDefinition";
     public static final String kFuncDecltor = "FunctionDeclarator";
-    public static final String kCmpStmt = "CompoundStatement";
+    public static final String kFuncDef = "FunctionDefinition";
+    public static final String kInitDecl = "InitializedDeclarator";
+    public static final String kInitDeclList = "InitializedDeclaratorList";
+    public static final String kInt = "Int";
+    public static final String kPrimID = "PrimaryIdentifier";
+    public static final String kPtr = "Pointer";
+    public static final String kRoot = "TranslationUnit";
+    public static final String kSimpDecl = "SimpleDeclarator";
     public static final String kStrLtrl = "StringLiteral";
+    public static final String kStruct = "StructureTypeDefinition";
+    public static final String kStructDecl = "StructureDeclaration";
+    public static final String kStructDeclList = "StructureDeclarationList";
+    public static final String kTypedef = "TypedefSpecifier";
+
 }
 
 public class LeafTransplant extends Visitor implements CPPUtil {
     
-    GNode originalTree;
-    GNode translatedTree;
-    ClassLayoutParser classParser;
+    GNode javaTree;
+    GNode cppTree;
+    ClassLayoutParser clp;
     
     String className;
-    GNode thisClassVTableStructDeclList;
-    GNode thisClassDataLayoutStructDeclList;
     GNode thisClassImplementation;
     GNode thisExpressionStatement;
     
@@ -55,12 +56,12 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     // @param clp To gain access to vtables and data layouts
     // @param javaAST
     public LeafTransplant(ClassLayoutParser clp, GNode javaAST) { 
-		this.translatedTree = GNode.create(kRoot);
-		this.originalTree = javaAST;
-		this.classParser = clp;
+		this.cppTree = GNode.create(kRoot);
+		this.javaTree = javaAST;
+		this.clp = clp;
 		
 		// Translate Java tree to CPP tree using visitors
-		dispatch(originalTree);
+		dispatch(javaTree);
     } 
     
 
@@ -70,19 +71,17 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     
 
     public void visitClassDeclaration(GNode n) {
-	className = n.get( 1 ).toString( );  
-	translatedTree.add( createHeader( ) );
 	
-	// ----- Begin creating the data layout
+	if(n.hasNode(3)) className = n.ge(3).toString();
 	
-	ArrayList dataLayoutList = classParser.getDataLayout(className);
-	//index 0 = __vptr
-	// 1 - constructor - pulled out and inserted as nodes
+	// QUERY: Can we assume each tree only has one class? Does it matter?
+
+	// 1. Create Class header
+	cppTree.add(createHeader(n));
 	
-	// ----- done creating the data layout
-	
-	thisClassImplementation = GNode.create(kImplDec);  //create a new implementation declaration
-	translatedTree.add( thisClassImplementation );	//and add
+	// 2. Create Class implementation
+	cppTree.add(createImplementation(n));
+
 	visit(n);
     }
     
@@ -100,6 +99,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     }
     
     // Translates System.out.print/ln statements
+    // FIXME: Should this be done in printer?
     public void visitCallExpression(GNode n) {
 	
 	if( n.size() >= 3 && "println".equals((String)n.get(2)) ) {
@@ -138,11 +138,13 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
 
     // ------------------------------------------
-    // ----------- Create Header Node  ----------
+    // --------- Create Class Header   ----------
     // ------------------------------------------
 
-    GNode createHeader() {
-	GNode headerNode = GNode.create(kHeadDec); 
+    // Creates the header nodes for a Class
+    // @param n ClassDeclaration node from Java AST
+    GNode createHeader(GNode n) {
+	GNode headerNode = GNode.create("HeaderDeclaration"); 
 
 	createDataLayout(headerNode);
 	createVTableLayout(headerNode);
@@ -154,12 +156,12 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     public void createDataLayout(GNode headerNode) {
 	// 1. Set headerNode.getNode(1) = dataLayout node
 	// Create CPP dataLayout node using Java Declaration nodes
-	GNode dataLayout = GNode.create(kDecl); //struct __Object { }
+	GNode dataLayout = GNode.create("Declaration"); //struct __Object { }
 	{ 
 	    dataLayout.add(0, null);
 	    // Create dataLayout Declaration Specifiers using 
 	    // Java Declaration Specifiers. 
-	    GNode dlDeclSpef = GNode.create(kDeclSpef);
+	    GNode dlDeclSpef = GNode.create("DeclarationSpecifiers");
 	    {
 		GNode structDef = GNode.create(kStruct, 4);
 		{
@@ -180,27 +182,27 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     public void createVTableLayout(GNode headerNode) {
 	// 2. Set headerNode.getNode(2) = vtableLayout
 	// Create vtableLayout using Java Declarations
-	GNode vtableLayout = GNode.create(kDecl); //struct __Object_VT { }
+	GNode vtableLayout = GNode.create("Declaration"); //struct __Object_VT { }
+	
+	vtableLayout.add(0, null);
+	GNode vtDeclSpef = GNode.create("DeclarationSpecifiers");
 	{
-	    vtableLayout.add(0, null);
-	    GNode vtDeclSpef = GNode.create(kDeclSpef);
+	    GNode vtStructDef = GNode.create(4, "StructureTypeDefinition");
 	    {
-		GNode vtStructDef = GNode.create(kStruct, 4);
+		vtStructDef.add(0, null);
+		vtStructDef.add(1, "__" + className + "_VT");
+		thisClassVTableStructDeclList = GNode.create("StructureDeclaration");
 		{
-		    vtStructDef.add(0, null);
-		    vtStructDef.add(1, "__" + className + "_VT");
-		    thisClassVTableStructDeclList = GNode.create(kStructDeclList);
-		    {
-			thisClassVTableStructDeclList.add(0, null);
-		    }
-		    vtStructDef.add(2, thisClassVTableStructDeclList);
-		    vtStructDef.add(3, null);
+		    thisClassVTableStructDeclList.add(0, null);
 		}
-		vtDeclSpef.add(vtStructDef);
+		vtStructDef.add(2, thisClassVTableStructDeclList);
+		vtStructDef.add(3, null);
 	    }
-	    vtableLayout.add(1, vtDeclSpef);
-	    vtableLayout.add(2, null);
+	    vtDeclSpef.add(vtStructDef);
 	}
+	vtableLayout.add(1, vtDeclSpef);
+	vtableLayout.add(2, null);
+	
 	headerNode.add(1, vtableLayout);
 	
     }
@@ -215,7 +217,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	    GNode typeDefDeclSpef = GNode.create(kDeclSpef);
 	    {
 		typeDefDeclSpef.add( 0, GNode.create(kTypedef));
-		typeDefDeclSpef.add( 1, createPrimaryIdentifier( "__" + className + "*" ) );
+		typeDefDeclSpef.add( 1, createPrimaryIdentifier( "__" + className + "*" ) ); // Shouldn't this be done by printer?
 	    }
 	    typedefDecl.add(1, typeDefDeclSpef);
 	    
@@ -234,11 +236,29 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	headerNode.add(2, typedefDecl);
     }
 
+
+    // ------------------------------------------
+    // ----- Create Class Impelmentation  -------
+    // ------------------------------------------
+
+
+    public GNode createImplementation(GNode n) {
+
+	GNode implementationNode = GNode.create("ImplementationDeclaration");
+	
+	// ??? What is part of translating the implementation ???
+
+	return implementationNode;
+    }
+
+
+
+
     // ------------------------------------------
     // ------------- Getter Methods  ------------
     // ------------------------------------------
     
-    public GNode getTranslatedTree() { return translatedTree; }
+    public GNode getCPPTree() { return cppTree; }
     
 
     // ------------------------------------------

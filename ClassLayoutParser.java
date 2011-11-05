@@ -48,9 +48,9 @@ public class ClassLayoutParser extends Visitor {
 			visit(n);
 		    } 
 		    
-		    public void visit(Node n) {
+		    public void visit(GNode n) {
 			for( Object o : n) {
-			    if (o instanceof Node) dispatch((Node)o);
+			    if (o instanceof GNode) dispatch((GNode)o);
 			}
 		    }
 
@@ -641,6 +641,7 @@ public class ClassLayoutParser extends Visitor {
 
 
     // Prints out vtable given a class Node
+    // NOTE: used only for debugging
     // @param n Class node
     public void printVTable(GNode n) {
 
@@ -663,7 +664,7 @@ public class ClassLayoutParser extends Visitor {
 
     // Prints a list of all classes
     // FIXME: Make prettier
-    // Note: Never actually called
+    // Note: Never actually called, for debugging
     public void printClassTree() {
 	
 	System.out.println("\n\n--- Class Tree");

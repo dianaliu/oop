@@ -130,7 +130,8 @@ public class Translator extends xtc.util.Tool {
 		runtime.console().pln("--- Begin inheritance analysis").flush();
 
 	    // Parse all classes to create vtables and data layouts
-	    final ClassLayoutParser clp = new ClassLayoutParser(trees, DEBUG);
+	    // FIXME: Temporarily passing FALSE
+	    final ClassLayoutParser clp = new ClassLayoutParser(trees, false);
 	    
 	    if(DEBUG) 
 		runtime.console().pln("--- Finish inheritance analysis").flush();
