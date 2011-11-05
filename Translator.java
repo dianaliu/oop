@@ -41,9 +41,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
 
-import java.util.ArrayList;
 
-import xtc.oop.LeafTransplant;
 
 
 public class Translator extends xtc.util.Tool {
@@ -57,15 +55,15 @@ public class Translator extends xtc.util.Tool {
 	}
     
     public String getName() {
-	    return "\n********** Java to C++ Translator";
+	    return "\n*** Java to C++ Translator";
 	}
     
     public String getCopy() {
-	    return "Diana, Hernel, & Robert Kirim **********";
+	    return "Diana, Hernel, & Robert Kirim ***";
 	}
 	
     public String getVersion() {
-		return "0.1";
+		return "0.2";
     }
     
     public void init() {
@@ -73,15 +71,14 @@ public class Translator extends xtc.util.Tool {
 	    runtime.
 		bool("printAST", "printAST", false, "Print Java AST.").
 		bool("debug", "debug", false, "Extra output for debugging").
-		bool("translate", "translate", false, 
-		     "Translate Java code to C++ without inheritance.");
+		bool("translate", "translate", false, "Translate Java to C++");
     }
 
     public Node parse(Reader in, File file) throws IOException, ParseException {
 	    JavaFiveParser parser =
 		new JavaFiveParser(in, file.toString(), (int)file.length());
-		Result result = parser.pCompilationUnit(0);
-		return (Node)parser.value(result);
+	    Result result = parser.pCompilationUnit(0);
+	    return (Node)parser.value(result);
     }  
            
     public void process(Node node) {
@@ -146,22 +143,34 @@ public class Translator extends xtc.util.Tool {
 	    LeafTransplant translator = 
 		new LeafTransplant(clp, GNode.cast(trees[0]));
 
+	  
+	    // FIXME: Add comments
 	    for(int i = 0; i < trees.length; i++) {
 	    	if(trees[i] != null)
 		    {
 	    		translator = 
 			    new LeafTransplant(clp, GNode.cast(trees[i])); 
-			returned[i] = translator.getTranslatedTree();
+			returned[i] = translator.getCPPTree();
 		    }
 	    }
+	    
+
+	    // FIXME: Just printing one CPP AST
+	    if(DEBUG) {
+		runtime.console().pln("--- Printing CPP AST");
+		runtime.console().format(returned[0]).pln().flush();
+	    }
+	    
 
 	    if(DEBUG) 
 		runtime.console().pln("--- Finish cpp translation").flush();
 	   
-
 	    if(DEBUG) 
-		runtime.console().pln("--- Begin printing cpp tree(s)").flush();
+		runtime.console().pln("--- Begin writing to files").flush();
  
+	    /*  Commenting out until we get full implementation of visitors in
+		Printer
+
 	    // Run CPP printer on each CPP Tree and output to Code.cpp
 	    // FIXME: Support multiple outputs
 	    try{
@@ -169,23 +178,33 @@ public class Translator extends xtc.util.Tool {
 			Printer cppCode = new Printer(fstream);
 		
 			for(int i = 0; i < returned.length; i++) {
-				if(returned[i] != null)
+			    if(returned[i] != null)
 				{
-		   		 	new CPPPrinter( cppCode ).dispatch(returned[i]); 
+				    new CPPPrinter( cppCode ).dispatch(returned[i]); 
 		   		}
 		   	}
-
-			if(DEBUG) 
-			    runtime.console().pln("--- Finish printing cpp tree(s)").flush();
-
-			if(DEBUG) 
-			    runtime.console().pln("--- Finish translation").flush();
+			
 			cppCode.flush();
+			
+			if(DEBUG) 
+			    runtime.console().pln("--- Finish writing to files)").flush();
+	    
+
+	
+			
 	    }
 	    catch(Exception e) {
 	    	System.err.println(e.getMessage());
 	    }
+
+	    */ 
+
+	if(DEBUG) 
+	    runtime.console().pln("--- Finish translation").flush();
 	}
+
+
+
     } // end translate
     
     /**
