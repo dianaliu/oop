@@ -44,6 +44,19 @@ public class ClassLayoutParser extends Visitor {
 			}
 		}
     }
+	
+	
+	// ----------------------------------
+	//    Tree Processing
+	// ----------------------------------
+	
+	//Visitor method to dispatch this visitor on a tree
+	//@param n The tree to dispatch on.
+	public void visit(Node n) {
+		for( Object o : n ) {
+			if (o instanceof Node) dispatch((Node)o);
+		}
+	}
     
     // Adds class in proper hierarchal location to classTree
     // Calls methods to addVTable and addDataLayout
@@ -51,10 +64,12 @@ public class ClassLayoutParser extends Visitor {
 	GNode currentHeaderNode; //global storage variable to enable proper visitor traversal
     public void visitClassDeclaration(GNode n) {
 		
+		//Setting up the new node for the class tree
 		String className = n.get(1).toString();
 		GNode newChildNode = GNode.create("Class");
 		newChildNode.setProperty("name", className);
 		
+		//Now we need a super class -- every node but object has one, either explicitly or Object by default
 		GNode parent = null; 
 		if(n.get(3) != null) { // Extends something
 			String extendedClass = (String)(n.getNode(3).getNode(0).getNode(0).get(0)); // String name of Parent Class
@@ -65,49 +80,43 @@ public class ClassLayoutParser extends Visitor {
 		}
 		
 		if(DEBUG) System.out.println( "Visiting new class: " + className + " extends " + parent.getProperty("name") );
-	    
-		/*  NOTE: This implementation is in the process of being replaced with the visitor implementation   
-		 *
-		 *	// VTable resides at index 0 of a Class node
-		 *	// DataLayout resides at index 1 of a Class node
-		 *	addVTable( n, newChildNode, parent ); 
-		 *	addDataLayout(n, newChildNode, parent);
-		*/
 		 
 		//Building the vtables and data layout
-		//Place vt/dl setup here:
 		
-		//We create a new node that represents the class header information (vtable and data layout) 
+		// --- Place vt/dl setup here: --- 
+		
 		currentHeaderNode = GNode.create((GNode)parent.getNode(0)); //copy the header node from the parent
-		if(DEBUG) System.out.println( "pre VTable: " + currentHeaderNode.getNode(0).toString() );
 		
 		//STUFF WE NEED TO DO EVENTUALLY:
 		//add the virtual methods and data fields from the parents here -- DONE with the above parent header copy
 		//add (or rather, modify) the isa statement at vtable[0]
 		
-		visit(n);
-		//Place vt/dl finalization here:
+		// --- end setup -----------------
 		
+		visit(n);
+		
+		// --- Place vt/dl finalization here: ---
 		newChildNode.add(currentHeaderNode);
 		parent.addNode(newChildNode);
     }
 	
+	// ----------------------------------
+	//    Virtual Method Processing
+	// ----------------------------------
+	
 	//Visits the method declarations in a class, adding them as virtual methods to the vtable
 	//@param n MethodDeclaration node from a Java AST
 	public void visitMethodDeclaration(GNode n) {
-		//new VirtualMethodDeclaration:
-		//0 - return type
-		//1 - method name
-		//2 - parameters
+		//new VirtualMethodDeclaration: (0) return type, (1) method name, (2) parameters
 		
 		GNode methodSignature = GNode.create("VirtualMethodDeclaration");
 		methodSignature.add(n.get(2)); //adds the return type
 		methodSignature.add(n.get(3)); //adds the method name
-		methodSignature.add(n.get(4)); //adds the parameters (FIXME: double check that this is the case)
+		methodSignature.add(n.get(4)); //adds the parameters (FIXME: check AST to ensure this is complete)
 		
-		//Place override check here -- if overrides, use vtdecl.set(overrideIndex, methodSig) else just add it
+		//Override check here -- if overrides, use vtdecl.set(overrideIndex, methodSig) else just add it
 		String methodName = n.get(3).toString();
-		int overrideIndex = overrides(methodName, (GNode)currentHeaderNode.getNode(0) );
+		int overrideIndex = overridesMethod(methodName, (GNode)currentHeaderNode.getNode(0) );
 		if(overrideIndex >= 0) {
 			if(DEBUG) System.out.println( "overriding method: " + methodName );
 			currentHeaderNode.getNode(0).set(overrideIndex, methodSignature); // overrides, must replace
@@ -117,27 +126,68 @@ public class ClassLayoutParser extends Visitor {
 			currentHeaderNode.getNode(0).add(methodSignature); //extended, add the method signature to the vtable declaration
 		}
 		
-		
 		//FIXME: also add to the data layout as static methods
-		
-		/* FIXME: uncomment and implement overriding
-		 */
+		//FIXME: FINAL: name mangling
 	}
+	
+	// [INTERNAL]
+    // Determines if a Class overrides it's Parent method
+    // @param methodName
+    // @param parentVTable
+    int overridesMethod(String methodName, GNode currentVTable) {
+		// Search current VTable to see if overriden and at what index
+		for(int i = 0; i < currentVTable.size(); i++) {
+			if(methodName.equals(currentVTable.getNode(i).get(1).toString())) return i; //string comparison, return indexof
+		}
+		
+		// If not overriden, return -1
+		return -1;
+    }
+	
+	// ----------------------------------
+	//    Data Layout Processing
+	// ----------------------------------
 	
 	//Visits the field declarations in a class, and adds them to the vtable.
 	//@param n FieldDeclaration node from a Java AST.
 	public void visitFieldDeclaration(GNode n) {
-		System.out.println( "adding field: " + n.getNode(2).getNode(0).get(0).toString() );
-		currentHeaderNode.getNode(1).add(n); //add the data field to the classes' data layout declaration
+		int overrideIndex = overridesField(n, (GNode)currentHeaderNode.getNode(1) );
+		if( overrideIndex >= 0 ) {
+			System.out.println( "overriding field: " + n.getNode(2).getNode(0).get(0).toString() );
+			currentHeaderNode.getNode(1).set(overrideIndex, n); //add the data field to the classes' data layout declaration
+			//FIXME: is additional processing needed for field overrides? like type checking? 
+		}
+		else {
+			System.out.println( "adding field: " + n.getNode(2).getNode(0).get(0).toString() );
+			currentHeaderNode.getNode(1).add(n); //add the data field to the classes' data layout declaration
+		}
+		
+		
+		
+		//FIXME: add overriding of data fields 
 	}
 	
-	//Visitor method to dispatch this visitor on a tree
-	//@param n The tree to dispatch on.
-	public void visit(Node n) {
-		for( Object o : n ) {
-			if (o instanceof Node) dispatch((Node)o);
+	// [INTERNAL]
+	// Determines if a new data field declaration has already been declared (by name)
+	// @param newField the new field to check
+	// @param currentDL a node containing the current data layout
+	int overridesField(GNode newField, GNode currentDL) {
+		// Search current data layout to see if overriden and at what index
+		String newFieldName = newField.getNode(2).getNode(0).get(0).toString();
+		String currentComparisonField;
+		for(int i = 0; i < currentDL.size(); i++) {
+			currentComparisonField = currentDL.getNode(i).getNode(2).getNode(0).get(0).toString(); //just TRUST ME on this...
+			if( newFieldName.equals(currentComparisonField) ) return i;
 		}
-	}
+		
+		// If not overriden, return -1
+		return -1;
+    }
+	
+	
+	// ---------------------------------
+	//      Prior implementation:
+	// ---------------------------------
     
     // Adds VTable node to child 0 of a Class node.
     // Actual structure is kept in property "vtable" as an Arraylist
@@ -312,24 +362,6 @@ public class ClassLayoutParser extends Visitor {
 	    }.dispatch(classTree));
     }
     
-    // Determines if a Class overrides it's Parent method
-    // @param methodName
-    // @param parentVTable
-    public int overrides(String methodName, GNode parentVTable) {
-		// Search Parent VTable to see if overriden and at what index
-		for(int i = 0; i < parentVTable.size(); i++) {
-			// FIXME: Currently comparing strings 
-			// How to compare nodes?
-			// ALTHOUGH - nodes  can be compared as strings...
-			if(methodName.equals(parentVTable.getNode(i).get(1).toString())) {
-				return i;
-			}
-		}
-		
-		// If not overriden, return -1
-		return -1;
-    }
-	
 	
     // ----------------------------------------------------
     // ---------- Getter methods for Translator -----------
@@ -378,11 +410,16 @@ public class ClassLayoutParser extends Visitor {
 		
 		GNode objectNode = GNode.create("Class");
 		objectNode.setProperty("name", "Object");
+		//We create a new node that represents the class header information (vtable and data layout) 
+		//NOTE: this is the ONLY time it should be manually created, because Object inherits from no one
 		GNode classHeaderDeclaration = GNode.create("ClassHeaderDeclaration");
 			classHeaderDeclaration.add( GNode.create("VTableDeclaration"));
 			classHeaderDeclaration.add( GNode.create("DataLayoutDeclaration"));
 		objectNode.add(classHeaderDeclaration );
 		
+		// FIXME: all following statements need to be replaced with the nodal hardcoded implementation
+		// ...which is going to be SO much fun...
+		// NOTE: this includes the other two initGrimm...() methods
 		GNode stringNode = GNode.create("Class");
 		stringNode.setProperty("name", "String");
 		
