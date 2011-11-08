@@ -266,13 +266,10 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     }
 
     // Build CPP typedef node to create typedef __Class* Class;
-    // HELP: I'm confused. typedefs are also vtables?  
-    // Do vtables go inside typedefs? Anyone?
+    // Typedefs are declarations for Objects 
     // @param n ClassDeclaration node from Java AST
     public GNode buildTypedef(GNode n) {
 	// Nodes are created "inside out" from the leaves up
-
-	// FIXME: What is the typedef for? What should it be populated with?
 
 	GNode simpleDeclarator = GNode.create("SimpleDeclarator", className);
 	
@@ -314,14 +311,21 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     // @param n ClassBody node from Java AST
     public void translateClassBody(GNode n) {
 
-	GNode ccNode = buildImplementation(n);
+	// NOTE: ccNode is now nameed "ClassBody" and must use it's visitor
+	GNode ccNode = n;
+	buildImplementation(ccNode);
 	cppTree.add(ccNode);
 
     }
 
     // Build ccNode to hold info for the class.cc file
-    // @param n ClassBody node from Java AST
+    // @param n ccNode, which starts as a copy of the Java ClassBody node.  
+    // @return Transformed ccNode, ready for the CPPPrinter
+    // NOTE: Global variable thisClass to make "this" explicit
+    String thisClass = "";
     public GNode buildImplementation(GNode n) {
+
+	// TODO: translate method invocations using vtable
 
 	// What can we copy directly?
 	// What needs to be 'translated' in the printer?
@@ -329,64 +333,89 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	// This needs to be done with visit methods?
 	// Does order matter?
 
-	GNode ccNode = GNode.create("ImplementationDeclaration");
-	
 	new Visitor () {
-	    // FIXME: add to ccNode, where?
+
+	    public void visitConstructorDeclaration(GNode n) {
+		// Get .this' Class for explicit method invocation
+		// FIXME: In Java AST, the instance name is not stored.
+		// Do we need it for cpp, and how do we get it?
+		thisClass = n.getString(2);
+		//		System.out.println("\t--- Entered class " + thisClass);
+		visit(n);
+	    }
 
 	    public void visitExpressionStatement(GNode n) {
-		// set a global variable for tree traversal: 
+		// Set a global variable for tree traversal: 
 		expressionStatement = n;
 		visit(n);
 	    }
 	    
-	    // Translates System.out.print/ln statements
-	    // FIXME: Should this be done in printer?
+	    // Make the Class calling a method explicit
+	    // Also, translate System methods
 	    public void visitCallExpression(GNode n) {
-		
-		if( n.size() >= 3 && "println".equals((String)n.get(2)) ) {
-		    GNode strOut = GNode.create(kStrmOut);
-		    strOut.add(0, (GNode)GNode.create( kPrimID ).add(0, "std::cout") );
-		    // Add all arguments to System.out.println
-		    for(int i = 0; i < n.getNode(3).size(); i++) {
-			strOut.add(1, n.getNode(3).get(i) ); 
-		    }
-		    
-		    strOut.add(2, (GNode)GNode.create( kPrimID ).add(0, "std::endl") );
-		    
-		    /*
-		      n.set(2, "cout");
-		      GNode strLiteral = (GNode)GNode.create( kPrimID ).add(0, "std");
-		      n.set(0, strLiteral);
-		    */
-		    expressionStatement.set(0, strOut);
-		}
-		else if( n.size() >= 3 && "print".equals((String)n.get(2)) ) {
-		    GNode strOut = GNode.create(kStrmOut);
-		    strOut.add(0, (GNode)GNode.create( kPrimID ).add(0, "std::cout") );
-		    // Add all arguments to System.out.print
-		    for(int i = 0; i < n.getNode(3).size(); i++) {
-			strOut.add(1, n.getNode(3).get(i) ); 
-		    }
-		    expressionStatement.set(0, strOut);
-		} // end else if 
-		
-	    }
-	    
+		//n always has 4 children
+	
+		// 1. Identify the PrimaryIdentifier - calling Class
+		String primaryIdentifier = null;
+	
 
-	    public void visitConstructorDeclaration(GNode n) {
-		visit(n);
-	    }
-	    
-	    public void visitMethodDeclaration(GNode n) {
-		//adding the actual method implementation 
-		// (will go in the .cc file, includes the full method header and body):
-		//	GNode functionDeclaration = translateMethodDeclaration(n);
-		//	classImplementation.add(functionDeclaration);
-		visit(n);
-	    }
-	    
-	    
+		if(n.getNode(0) == null || 
+		   n.getNode(0).hasName("ThisExpression")) {
+		    
+		    primaryIdentifier = thisClass;
+		    System.out.println("\t--- primaryIdentifier = " + 
+				       primaryIdentifier);
+		}
+		else if(n.getNode(0).hasName("SelectionExpression")) {
+		  
+		    primaryIdentifier = n.getNode(0).getNode(0).getString(0);
+		    if(DEBUG) System.out.println("\t--- primaryIdentifier = " 
+						 + primaryIdentifier);
+
+
+		    // Are only System.outs wrapped in SelectionExpression 
+		    // nodes? Is this if needed?
+		    if("System".equals(primaryIdentifier)) {
+			
+			if( "println".equals(n.getString(2)) ) {
+			    GNode strOut = GNode.create(kStrmOut);
+			    strOut.add(0, GNode.create( kPrimID ).add(0, "std::cout") );
+			    // Add all arguments to System.out.println
+			    for(int i = 0; i < n.getNode(3).size(); i++) {
+				strOut.add(1, n.getNode(3).get(i) ); 
+			    }
+			    
+			    strOut.add(2, GNode.create( kPrimID ).add(0, "std::endl") );
+			    
+			    expressionStatement.set(0, strOut);
+			}
+			
+			else if("print".equals(n.getString(2))) {
+			    GNode strOut = GNode.create(kStrmOut);
+			    strOut.add(0, GNode.create( kPrimID ).add(0, "std::cout") );
+			    // Add all arguments to System.out.print
+			    for(int i = 0; i < n.getNode(3).size(); i++) {
+				strOut.add(1, n.getNode(3).get(i) ); 
+			    }
+			    expressionStatement.set(0, strOut);
+			} 
+			
+		    }// end if "System"
+		} // end SelectionExpression
+
+		else if(n.getNode(0).hasName("PrimaryIdentifier")){
+		    // Do nothing
+		    primaryIdentifier = n.getNode(0).getString(0);
+		    System.out.println("\t--- primaryIdentifier = " 
+				       + primaryIdentifier);
+		}
+		else { // catch all
+		    System.out.println("\t--- ERR: Encountered node " + 
+				       n.getNode(0).toString());
+		}
+		
+	    }// End visitCall Expression
+
 	    public void visit(GNode n) {
 		// Need to override visit to work for GNodes
 		for( Object o : n) {
@@ -394,11 +423,9 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		}
 	    }
 	    
-	}.dispatch(n);
-
-
-
-	return ccNode;
+	}.dispatch(n);//end Visitor
+	
+	return n;
     }
 
 
@@ -436,7 +463,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    fncDef.add(1, declSpef);
 			GNode fncDeclarator = GNode.create(kFuncDecltor);
 			{
-			    // FIXME: Must be done in Printer
+			    // FIXME: = Done in Printer?
 			    GNode simpDecl = (GNode)GNode.create(kSimpDecl).add( "__" + className + "::" +  n.get(3));  //method name
 			    fncDeclarator.add(0, simpDecl);
 			    fncDeclarator.add(1, n.get(4));
