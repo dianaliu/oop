@@ -659,9 +659,11 @@ public class CPPPrinter extends Visitor {
 		printer.p(n.getString(1));
 	}
 	
-	/** Visit the specified structure declaration list node. */
+	/** Visit the specified structure declaration list node. */ //MODIFIED
 	public void visitStructureDeclarationList(GNode n) {
 		boolean wasLong = false;
+		for( Object o : n ) printer.p((GNode)o);
+		/*
 		for (Iterator<?> iter = n.iterator(); iter.hasNext(); ) {
 			Node node = (Node)iter.next();
 			
@@ -678,7 +680,7 @@ public class CPPPrinter extends Visitor {
 				wasLong    = false;
 			}
 			printer.p(node);
-		}
+		}*/
 	}
 	
 	/** Visit the specified structure declaration node. */
@@ -2001,6 +2003,12 @@ public class CPPPrinter extends Visitor {
 			printer.p( (GNode)iter.next() );
 			if(iter.hasNext() )printer.p( " << " );
 		}
+	}
+	
+	public void visitVirtualMethodDeclaration(GNode n) {
+		printer.indent().p(n.getNode(0)).p(' ');
+		printer.p("(*").p(n.getString(1)).p(')');
+		printer.p('(').p(n.getNode(2)).p(");").pln();	
 	}
 	
 	//

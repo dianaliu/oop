@@ -161,9 +161,6 @@ public class ClassLayoutParser extends Visitor {
 			System.out.println( "adding field: " + n.getNode(2).getNode(0).get(0).toString() );
 			currentHeaderNode.getNode(1).add(n); //add the data field to the classes' data layout declaration
 		}
-		
-		
-		
 		//FIXME: add overriding of data fields 
 	}
 	
@@ -370,28 +367,20 @@ public class ClassLayoutParser extends Visitor {
 	
     // Returns VTable list for a class
     // @param cN Class Name
-    public ArrayList getVTable(String cN) {
+    public GNode getVTable(String cN) {
 		
 		GNode className = getClass(cN);
-		GNode classVT = (GNode) (className.getNode(0));
-		if(classVT.hasProperty("vtable")) {
-			return (ArrayList) (classVT.getProperty("vtable"));
-		}
-		
-		return null;
+		GNode classVT = (GNode)(className.getNode(0).getNode(0));
+		return classVT;
     }
 	
     // Returns Data Layout list for a class
     // @param cN Class Name
-    public ArrayList getDataLayout(String cN) {
+    public GNode getDataLayout(String cN) {
 		
 		GNode className = getClass(cN);
-		GNode classData = (GNode) (className.getNode(1));
-		if(classData.hasProperty("data")) {
-			return (ArrayList) (classData.getProperty("data"));
-		}
-		
-		return null;
+		GNode classData = (GNode) (className.getNode(0).getNode(1));
+		return classData;
     }
 	
 	
@@ -432,7 +421,6 @@ public class ClassLayoutParser extends Visitor {
 		GNode integerNode = GNode.create("Class");
 		integerNode.setProperty("name", "Integer");
 		
-		
 		classTree = objectNode;
 		classTree.add(stringNode);
 		classTree.add(classNode);
@@ -443,6 +431,27 @@ public class ClassLayoutParser extends Visitor {
 		//initGrimmVTables();
 		//initGrimmDataLayout();
     }
+	
+	// Creates a hard-coded virtual table for the object class.
+	GNode objectClassVirtualTable() {
+		/*
+		 struct __Object_VT {
+		 Class __isa;
+		 int32_t (*hashCode)(Object);
+		 bool (*equals)(Object, Object);
+		 Class (*getClass)(Object);
+		 String (*toString)(Object);
+		 
+		 __Object_VT()
+		 : __isa(__Object::__class()),
+		 hashCode(&__Object::hashCode),
+		 equals(&__Object::equals),
+		 getClass(&__Object::getClass),
+		 toString(&__Object::toString) {
+		 }
+		 */
+		return GNode.create("Null");
+	}
     
     // ------------------ VTables -------------------------
 	
@@ -750,8 +759,6 @@ public class ClassLayoutParser extends Visitor {
 		
 		System.out.println("\n\n--- Class Tree");
 		new Visitor () {
-			
-			
 			public void visit(GNode n) {
 				for( Object o : n) {
 					if (o instanceof Node) dispatch((GNode)o);
