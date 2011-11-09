@@ -205,13 +205,9 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	// Nodes are created "inside out" from the leaves up
        
 	// Populate our Data Layout with information
-       	// NOTE: The dataList is not quite accurate at the moment and needs to
-	// modified in ClassLayoutParser.  However, the logic below is correct.
-	GNode dataDeclarationList = GNode.create("StructureDeclarationList");
-	ArrayList dataList = clp.getDataLayout(className);
-	if(dataList != null) {
-	    dataDeclarationList.addAll(dataList);
-	}
+    	GNode dataDeclarationList = GNode.create("StructureDeclarationList");
+	// FIXME: This breaks printer?
+	dataDeclarationList.add(clp.getDataLayout(className));
 
 	// ------------------------------------
 
@@ -242,10 +238,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	// NOTE: The vtableList is not quite accurate at the moment and needs to
 	// be modified in ClassLayoutParser. But the logic below is correct.
 	GNode vtableDeclarationList = GNode.create("StructureDeclarationList");
-	ArrayList vtableList = clp.getVTable(className);
-	if(vtableList != null) {
-	    vtableDeclarationList.addAll(vtableList);
-	}
+	// FIXME: This breaks printer?
+	vtableDeclarationList.add(clp.getVTable(className));
 
 	// ------------------------------------
 

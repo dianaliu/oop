@@ -659,7 +659,8 @@ public class CPPPrinter extends Visitor {
 		printer.p(n.getString(1));
 	}
 	
-	/** Visit the specified structure declaration list node. */ //MODIFIED
+    /** Visit the specified structure declaration list node. */
+    // VERSION A - Keeping this one
 	public void visitStructureDeclarationList(GNode n) {
 		boolean wasLong = false;
 		for( Object o : n ) printer.p((GNode)o);
@@ -705,7 +706,8 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	/** Visit the specified structure declarator list node. */
-	public void visitStructureDeclaratorList(GNode n) {
+    // VERSION A
+    /***	public void visitStructureDeclaratorList(GNode n) {
 		for (Iterator<?> iter = n.iterator(); iter.hasNext(); ) {
 			printer.p((Node)iter.next());
 			if (iter.hasNext()) {
@@ -713,7 +715,9 @@ public class CPPPrinter extends Visitor {
 			}
 		}
 	}
-	
+	* */ 
+
+
 	/** Visit the specified bit field node. */
 	public void visitBitField(GNode n) {
 		if (null != n.get(0)) {
@@ -1366,41 +1370,21 @@ public class CPPPrinter extends Visitor {
 
 
 
-	/** Visit the specified structure declaration list node. */
-	public void visitStructureDeclarationList(GNode n) {
+    /** Visit the specified structure declaration list node. */
+    // VERSION B - comenting out
+    /**
+    public void visitStructureDeclarationList(GNode n) {
 	
-	    // Our struc decl list holds a list of everything in the data layout or vtable....
-
+	// Our struc decl list holds a list of everything in the data layout or vtable....
 	
-	    printer.p("It has ").p(n.size()).p(" children");
-	    for(int i=0; i<n.size(); i++) {
-		printer.pln(n.get(i).toString());
-	    }
-
-	    /*
 	
-	    boolean wasLong = false;
-		for (Iterator<?> iter = n.iterator(); iter.hasNext(); ) {
-			Node node = (Node)iter.next();
-			
-			if (! iter.hasNext()) {
-				printer.pln();
-			} else if ( node.getName().equals("PrimaryIdentifier") ) {
-				if(wasLong) printer.pln();
-				wasLong = true;
-			} else if (containsLongType(GNode.cast(node).getGeneric(1))) {
-				printer.pln();
-				wasLong    = true;
-			} else if (wasLong) {
-				printer.pln();
-				wasLong    = false;
-			}
-			printer.p(node);
-		}
-	    */
-
+	printer.p("It has ").p(n.size()).p(" children");
+	for(int i=0; i<n.size(); i++) {
+	    printer.pln(n.get(i).toString());
 	}
-
+	
+    }
+    **/ 
 
     public void visitClassBody(GNode n) {
 	// What to do?
