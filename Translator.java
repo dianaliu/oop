@@ -155,11 +155,12 @@ public class Translator extends xtc.util.Tool {
 	    }
 	    
 
-	    // FIXME: Just printing one CPP AST
+
 	    if(DEBUG) {
 		runtime.console().pln("--- Printing CPP AST");
 		runtime.console().format(returned[0]).pln().flush();
 	    }
+
 	    
 
 	    if(DEBUG) 
@@ -168,9 +169,8 @@ public class Translator extends xtc.util.Tool {
 	    if(DEBUG) 
 		runtime.console().pln("--- Begin writing to files").flush();
  
-	    /*  Commenting out until we get full implementation of visitors in
-		Printer
-
+	    
+		
 	    // Run CPP printer on each CPP Tree and output to Code.cpp
 	    // FIXME: Support multiple outputs
 	    try{
@@ -189,15 +189,12 @@ public class Translator extends xtc.util.Tool {
 			if(DEBUG) 
 			    runtime.console().pln("--- Finish writing to files)").flush();
 	    
-
-	
 			
 	    }
 	    catch(Exception e) {
 	    	System.err.println(e.getMessage());
 	    }
 
-	    */ 
 
 	if(DEBUG) 
 	    runtime.console().pln("--- Finish translation").flush();
