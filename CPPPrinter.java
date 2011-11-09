@@ -659,27 +659,7 @@ public class CPPPrinter extends Visitor {
 		printer.p(n.getString(1));
 	}
 	
-	/** Visit the specified structure declaration list node. */
-	public void visitStructureDeclarationList(GNode n) {
-		boolean wasLong = false;
-		for (Iterator<?> iter = n.iterator(); iter.hasNext(); ) {
-			Node node = (Node)iter.next();
-			
-			if (! iter.hasNext()) {
-				printer.pln();
-			} else if ( node.getName().equals("PrimaryIdentifier") ) {
-				if(wasLong) printer.pln();
-				wasLong = true;
-			} else if (containsLongType(GNode.cast(node).getGeneric(1))) {
-				printer.pln();
-				wasLong    = true;
-			} else if (wasLong) {
-				printer.pln();
-				wasLong    = false;
-			}
-			printer.p(node);
-		}
-	}
+
 	
 	/** Visit the specified structure declaration node. */
 	public void visitStructureDeclaration(GNode n) {
@@ -1298,6 +1278,123 @@ public class CPPPrinter extends Visitor {
 		endStatement(nested);
 	}
 	
+
+    // ----------------------------------
+    // START: Modded  by Diana!
+    // ----------------------------------
+
+    // TODO: always #include <iostream>
+    // FIXME: Use tokens
+    // @param n always has 3 children
+    public void visitImportDeclaration(GNode n) {
+	printer.p("#include ");
+
+	if(n.get(0) != null) {
+	    // What's at 0?
+	    printer.p("child 0  = " + n.get(0));
+	}
+
+	if(n.get(1) != null) { // QualifiedIdentifier
+	    
+	    printer.p(fold((GNode)n.getNode(1), n.getNode(1).size()));
+	    
+	    if("java".equals(n.getNode(1).getString(0)))
+		printer.p(".h");
+	}
+
+	if(n.get(2) != null) { // Star import
+	    printer.p(".").p(n.getString(2));
+	}
+
+	printer.p(";").pln();
+    }
+
+
+  /**
+   * Fold the specified qualified identifier.
+   *
+   * @param qid The qualified identifier.
+   * @param size Its size.
+   */
+  protected String fold(GNode qid, int size) {
+    StringBuilder buf = new StringBuilder();
+    for (int i=0; i<size; i++) {
+      buf.append(qid.getString(i));
+      if (i<size-1) buf.append('.');
+    }
+    return buf.toString();
+  }
+
+  /** Visit the specified qualified identifier. */
+  public void visitQualifiedIdentifier(GNode n) {
+	// never visited!?
+    final int prec = startExpression(160);
+   
+    if (1 == n.size()) {
+      printer.p(n.getString(0));
+    } else {
+      for (Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
+        printer.p(Token.cast(iter.next()));
+        if (iter.hasNext()) printer.p('.');
+      }
+    }
+
+    endExpression(prec);
+  }
+
+
+
+	/** Visit the specified structure declaration list node. */
+	public void visitStructureDeclarationList(GNode n) {
+	
+	    // Our struc decl list holds a list of everything in the data layout or vtable....
+
+	
+	    printer.p("It has ").p(n.size()).p(" children");
+	    for(int i=0; i<n.size(); i++) {
+		printer.pln(n.get(i).toString());
+	    }
+
+	    /*
+	
+	    boolean wasLong = false;
+		for (Iterator<?> iter = n.iterator(); iter.hasNext(); ) {
+			Node node = (Node)iter.next();
+			
+			if (! iter.hasNext()) {
+				printer.pln();
+			} else if ( node.getName().equals("PrimaryIdentifier") ) {
+				if(wasLong) printer.pln();
+				wasLong = true;
+			} else if (containsLongType(GNode.cast(node).getGeneric(1))) {
+				printer.pln();
+				wasLong    = true;
+			} else if (wasLong) {
+				printer.pln();
+				wasLong    = false;
+			}
+			printer.p(node);
+		}
+	    */
+
+	}
+
+
+    public void visitClassBody(GNode n) {
+	// What to do?
+    }
+
+    public void visitNewClassExpression(GNode n) {
+	// What to do?
+    }
+
+    // ----------------------------------
+    // END : Modded by Diana!
+    // ----------------------------------
+
+
+
+
 	//COPIED FROM JAVA PRINTER:
 	/** Visit the specified basic for control. */
 	public void visitBasicForControl(GNode n) {
@@ -2002,6 +2099,8 @@ public class CPPPrinter extends Visitor {
 			if(iter.hasNext() )printer.p( " << " );
 		}
 	}
+
+    
 	
 	//
 	// ---------------------- copied from java printer!
@@ -2103,6 +2202,8 @@ public class CPPPrinter extends Visitor {
 		isNested      = false;
 		isIfElse      = false;
 	}
+
+
 
 	/** Visit the specified call expression. */
 	public void visitCallExpression(GNode n) {
@@ -2257,6 +2358,7 @@ public class CPPPrinter extends Visitor {
 		printer.p(' ').p(n.getString(size-2)).p(n.getNode(size-1));
 	}
 	
+    /*
 	public void visitQualifiedIdentifier(GNode n) {
 		final int prec = startExpression(160);
 		
@@ -2271,6 +2373,7 @@ public class CPPPrinter extends Visitor {
 		
 		endExpression(prec);
 	}
+    */
 	
 	public void visitDimensions(GNode n) {
 		for (int i=0; i<n.size(); i++) printer.p("[]");
