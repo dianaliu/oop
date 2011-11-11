@@ -212,7 +212,9 @@ public class ClassLayoutParser extends Visitor {
 		}.dispatch(n);
 		return retVal;
 	}
-							 
+			
+	//Creates a new type node, either primitive or a 'qualified' class name
+	//@param type The type that the new node should specify
 	GNode createTypeNode(String type) {
 		GNode retVal = GNode.create("Type");
 		GNode typeSpecifier;
@@ -245,7 +247,8 @@ public class ClassLayoutParser extends Visitor {
 		//We create a new node that represents the class header information (vtable and data layout) 
 		//NOTE: this is the ONLY time it should be manually created, because Object inherits from no one
 		GNode classHeaderDeclaration = GNode.create("ClassHeaderDeclaration");
-		classHeaderDeclaration.add( GNode.create("VTableDeclaration"));
+		//classHeaderDeclaration.add( GNode.create("VTableDeclaration"));
+		classHeaderDeclaration.add( objectClassVirtualTable() );
 		classHeaderDeclaration.add( GNode.create("DataLayoutDeclaration"));
 		objectNode.add(classHeaderDeclaration );
 		
@@ -293,7 +296,13 @@ public class ClassLayoutParser extends Visitor {
 		 toString(&__Object::toString) {
 		 }
 		 */
-		return GNode.create("Null");
+		GNode retVal = GNode.create("VTableDeclaration");
+		retVal.add( createSkeletonDataField( "Class", "__isa" ) );
+		retVal.add( createSkeletonVirtualMethodDeclaration( "int32_t", "hashCode", new String[]{"Object"} ));
+		retVal.add( createSkeletonVirtualMethodDeclaration( "bool", "equals", new String[]{"Object","Object"} ));
+		retVal.add( createSkeletonVirtualMethodDeclaration( "Class", "getClass", new String[]{"Object"} ));
+		retVal.add( createSkeletonVirtualMethodDeclaration( "String", "toString", new String[]{"Object"} ));
+		return retVal;
 	}
 	
 	// Creates a new virtual method header with the specified information
@@ -301,17 +310,32 @@ public class ClassLayoutParser extends Visitor {
 	// @param returnType Return type for method
 	// @param methodName The name of the new method
 	// @param parametersList The list of parameters for the method
-	GNode createSkeletonVirtualMethodDeclaration( String returnType, String methodName, GNode parametersList ) {
-		//FIXME: implement
-		// returnType
-		return null;
+	GNode createSkeletonVirtualMethodDeclaration( String returnType, String methodName, String[] parameterTypes ) {
+		GNode retVal = GNode.create("VirtualMethodDeclaration");
+		retVal.add( createTypeNode( returnType ) );
+		retVal.add( methodName ); //method name is just a string still
+		GNode params = GNode.create("FormalParameters"); //node for a parameter list
+		for( String s : parameterTypes ) {
+			params.add( createTypeNode(s) );
+		}
+		retVal.add( params );
+		return retVal;
 	}
 	
-	// Creates a new node that specifies a type, either a class name or a primitive (TBD if these two can be combined, as of now assumed true)
-	// @param type The type that the new node should specify
-	GNode createTypeSpecificationNode( String type ) {
-		//FIXME: implement
-		return null;
+	// Creates a new data field with the specified information
+	// Used to force display of the primitive Grimm types, which are prewritten and #included
+	// @param type The type of the data field 
+	// @param name the name of the data field
+	GNode createSkeletonDataField( String type, String name ) {
+		GNode retVal = GNode.create( "FieldDeclaration" );
+		retVal.add(null); //null value for Modifiers()
+		retVal.add( createTypeNode( type ) );
+		GNode declr = GNode.create("Declarator"); //
+		declr.add( name );
+		declr.add( null ); 
+		declr.add( null ); //need to fill in these nulls for printer compatibility
+		retVal.add( declr );
+		return retVal;
 	}
 	
     // Returns the name of a class
