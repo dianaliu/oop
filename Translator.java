@@ -82,152 +82,138 @@ public class Translator extends xtc.util.Tool {
     }  
 	
     public void process(Node node) {
-		if (runtime.test("printAST")) {
-			runtime.console().format(node).pln().flush();
-		}
-		
-		if(runtime.test("debug")) {
-			DEBUG = true;
-		}
-		
-      		if( runtime.test("translate") ) {
+	if (runtime.test("printAST")) {
+	    runtime.console().format(node).pln().flush();
+	}
+	
+	if(runtime.test("debug")) {
+	    DEBUG = true;
+	}
+	
+	if( runtime.test("translate") ) {
+	    
+	    runtime.console().pln("--- Begin translation").flush();
+	    
+	    // Create an array of AST trees to hold each dependency file
+	    // FIXME: Do not hardcode
+	    GNode[] trees = new GNode[100];  
+	    trees[0] = (GNode)node;
+	    
+	    runtime.console().pln("--- Begin dependency analysis").flush();
+	    
+	    // Analyze the main Java AST to find & resolve dependencies
+	    DependencyResolver depResolver = new DependencyResolver();
+	    depResolver.processDependencies(trees);
+	    try {
+		trees = depResolver.parseDependencies();
+		trees[0] = (GNode)node;
+	    } 
+	    catch (IOException e) {
+		trees = null;
+		runtime.console().pln("IOException: " + e).flush();
+	    }
+	    catch (ParseException e) {
+		trees = null;
+		runtime.console().pln("ParseException: " + e).flush();
+	    }	
+	    
+	    runtime.console().pln("--- Finish dependency analysis").flush();
+	    
+	    runtime.console().pln("--- Begin inheritance analysis").flush();
+	    
+	    // Parse all classes to create vtables and data layouts
+	    final ClassLayoutParser clp = new ClassLayoutParser(trees, DEBUG);
+	    
+	    runtime.console().pln("--- Finish inheritance analysis").flush();
+	    	    
+	    runtime.console().pln("--- Begin cpp translation").flush();
+	    
+	    // Create a translator to output a cpp tree for each java ast
+	    // FIXME: Do not hardcode size
+	    GNode[] returned = new GNode[100];
+	    LeafTransplant translator = 
+		new LeafTransplant(clp, GNode.cast(trees[0]), DEBUG);
+	    
+	    for(int i = 0; i < trees.length; i++) {
+		if(trees[i] != null)
+		    {
+			translator = 
+			    new LeafTransplant(clp, GNode.cast(trees[i]), DEBUG); 
+			returned[i] = translator.getCPPTree();
 			
-			if(DEBUG) 
-			    runtime.console().pln("--- Begin translation").flush();
+			if(DEBUG) runtime.console().pln("--- Print CPP AST");
+			if(DEBUG) runtime.console().format(returned[i]).pln().flush();
+		    }
+	    }
+
+		runtime.console().pln("--- Finish cpp translation").flush();
+				
+		runtime.console().pln("--- Begin writing CPP file(s)").flush();
 			
-			// Create an array of AST trees to hold each dependency file
-			// FIXME: Do not hardcode
-			GNode[] trees = new GNode[100];  
-			trees[0] = (GNode)node;
-			
-			if(DEBUG) 
-			    runtime.console().pln("--- Begin dependency analysis").flush();
-			
-			// Analyze the main Java AST to find & resolve dependencies
-			DependencyResolver depResolver = new DependencyResolver();
-			depResolver.processDependencies(trees);
-			try {
-			    trees = depResolver.parseDependencies();
-			    trees[0] = (GNode)node;
-			} 
-			catch (IOException e) {
-			    trees = null;
-			    System.out.println("IOException: " + e);
-			}
-			catch (ParseException e) {
-			    trees = null;
-			    System.out.println("ParseException: " + e);
-			}	
-			
-			if(DEBUG) 
-			    runtime.console().pln("--- Finish dependency analysis").flush();
-						
-			if(DEBUG) 
-			    runtime.console().pln("--- Begin inheritance analysis").flush();
-			
-			// Parse all classes to create vtables and data layouts
-			final ClassLayoutParser clp = new ClassLayoutParser(trees, DEBUG);
-			
-			if(DEBUG) 
-			    runtime.console().pln("--- Finish inheritance analysis").flush();
-			
-			
-			if(DEBUG) 
-			    runtime.console().pln("--- Begin cpp translation").flush();
-			
-			// Create a translator to output a cpp tree for each java ast
-			// FIXME: Do not hardcode size
-			GNode[] returned = new GNode[100];
-			LeafTransplant translator = 
-			    new LeafTransplant(clp, GNode.cast(trees[0]));
-			
-			for(int i = 0; i < trees.length; i++) {
-			    if(trees[i] != null)
-				{
-				    translator = 
-					new LeafTransplant(clp, GNode.cast(trees[i])); 
-				    returned[i] = translator.getCPPTree();
-				}
-			}
-			
-			if(DEBUG) 
-			    runtime.console().pln("--- Finish cpp translation").flush();
-			
-			
-			if(DEBUG) 
-			    runtime.console().pln("--- Begin printing cpp tree(s)").flush();
-			
-			// Run CPP printer on each CPP Tree and output to Code.cpp
-			// FIXME: Support multiple outputs
-			try{
-			    PrintWriter fstream = new PrintWriter("Code.cpp");
-			    Printer cppCode = new Printer(fstream);
-			    
-			    for(int i = 0; i < returned.length; i++) {
-				if(returned[i] != null)
-				    {
-					new CPPPrinter( cppCode ).dispatch(returned[i]); 
-				    }
+		// Run CPP printer on each CPP Tree and output to Code.cpp
+		// FIXME: Support multiple outputs
+		try{
+		    PrintWriter fstream = new PrintWriter("Code.cpp");
+		    Printer cppCode = new Printer(fstream);
+		    
+		    for(int i = 0; i < returned.length; i++) {
+			if(returned[i] != null)
+			    {
+				new CPPPrinter( cppCode ).dispatch(returned[i]); 
 			    }
-			    
-			    if(DEBUG) 
-				runtime.console().pln("--- Finish printing cpp tree(s)").flush();
-			    
-			    if(DEBUG) 
-				runtime.console().pln("--- Finish translation").flush();
-			    cppCode.flush();
-			}
-			catch(Exception e) {
-			    System.err.println(e.getMessage());
-			}
-		} // end -translate
+		    }
+		    
+		    runtime.console().pln("--- Finish writing CPP file(s)").flush();
+		    
+		    runtime.console().pln("--- Finish translation").flush();
+		    cppCode.flush();
+		}
+		catch(Exception e) {
+		    System.err.println(e.getMessage());
+		}
+
+    } // end -translate
 
 
-		if(runtime.test("inherit")) {
-		    DEBUG = true;
-		    
-		    if(DEBUG)
-			runtime.console().pln("--- Begin translation").flush();
-		    
-		    // Create an array of AST trees to hold each dependency file
-		    // FIXME: Do not hardcode
-		    GNode[] trees = new GNode[100];
-		    trees[0] = (GNode)node;
-		    
-		    if(DEBUG)
-			runtime.console().pln("--- Begin dependency analysis").flush();
-		    
-		    // Analyze the main Java AST to find & resolve dependencies
-		    DependencyResolver depResolver = new DependencyResolver();
-		    depResolver.processDependencies(trees);
-		    try {
-			trees = depResolver.parseDependencies();
-			trees[0] = (GNode)node;
-		    }
-		    catch (IOException e) {
-			trees = null;
-			System.out.println("IOException: " + e);
-		    }
-		    catch (ParseException e) {
-			trees = null;
-			System.out.println("ParseException: " + e);
-		    }
-		    
-		    if(DEBUG)
-			runtime.console().pln("--- Finish dependency analysis").flush();
-		    
-		    
-		    if(DEBUG)
-			runtime.console().pln("--- Begin inheritance analysis").flush();
-		    
-		    // Parse all classes to create vtables and data layouts
-		    final ClassLayoutParser clp = new ClassLayoutParser(trees, DEBUG);
-		    
-		    if(DEBUG)
-			runtime.console().pln("--- Finish inheritance analysis").flush();
-		} // end -inherit
+    if(runtime.test("inherit")) {
+	DEBUG = true;
+	
+	runtime.console().pln("--- Begin translation").flush();
+	
+	// Create an array of AST trees to hold each dependency file
+	// FIXME: Do not hardcode
+	GNode[] trees = new GNode[100];
+	trees[0] = (GNode)node;
+	
+	runtime.console().pln("--- Begin dependency analysis").flush();
+	
+	// Analyze the main Java AST to find & resolve dependencies
+	DependencyResolver depResolver = new DependencyResolver();
+	depResolver.processDependencies(trees);
+	try {
+	    trees = depResolver.parseDependencies();
+	    trees[0] = (GNode)node;
+	}
+	catch (IOException e) {
+	    trees = null;
+	    System.out.println("IOException: " + e);
+	}
+	catch (ParseException e) {
+	    trees = null;
+	    System.out.println("ParseException: " + e);
+	}
+	
+	runtime.console().pln("--- Finish dependency analysis").flush();
 		
-    } // end process
+	runtime.console().pln("--- Begin inheritance analysis").flush();
+	
+	// Parse all classes to create vtables and data layouts
+	final ClassLayoutParser clp = new ClassLayoutParser(trees, DEBUG);
+	
+	runtime.console().pln("--- Finish inheritance analysis").flush();
+    } // end -inherit
+    
+} // end process
     
 
     /**

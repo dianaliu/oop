@@ -31,7 +31,7 @@ public class ClassLayoutParser extends Visitor {
 		if(DEBUG) System.out.println("--- Begin Class Layout Parser\n\n");
 		initGrimmTypes();
 		parseAllClasses(ast);
-		printClassTree();
+		if(DEBUG) printClassTree();
 		if(DEBUG) System.out.println("--- End Class Layout Parser\n\n");
     }
     
@@ -664,38 +664,39 @@ public class ClassLayoutParser extends Visitor {
     public void printDataLayout (GNode n ) {
 		if(n.getNode(1).hasName("DataLayout")) {
 			
-			GNode dataLayoutNode = (GNode) n.getNode(1);
-			ArrayList dataLayoutList = 
+		    GNode dataLayoutNode = (GNode) n.getNode(1);
+		    ArrayList dataLayoutList = 
 			(ArrayList) dataLayoutNode.getProperty("data");
+		    
+		    System.out.println("--- Data Layout for " + 
+						 n.getProperty("name"));
+		    
+		    for(int i = 0; i < dataLayoutList.size(); i++) {
 			
-			System.out.println("--- Data Layout for " + n.getProperty("name"));
+			// The dataLayoutList can contain: Strings, or nodes of type
+			// ConstructorDeclarations, FieldDeclarations,
+			// ExpressionStatements.
 			
-			for(int i = 0; i < dataLayoutList.size(); i++) {
+			// FIXME: More elegant way to print
+			if(dataLayoutList.get(i) instanceof java.lang.String) {
+			    System.out.println(i + "\t" + 
+					       dataLayoutList.get(i).toString());
+			}
+			else if (dataLayoutList.get(i) instanceof GNode){
+			    GNode g = (GNode) dataLayoutList.get(i);
+			    
+			    if("ConstructorDeclaration".equals(g.getName())) {
 				
-				// The dataLayoutList can contain: Strings, or nodes of type
-				// ConstructorDeclarations, FieldDeclarations,
-				// ExpressionStatements.
-				
-				// FIXME: More elegant way to print
-				if(dataLayoutList.get(i) instanceof java.lang.String) {
-					System.out.println(i + "\t" + 
-									   dataLayoutList.get(i).toString());
-				}
-				else if (dataLayoutList.get(i) instanceof GNode){
-					GNode g = (GNode) dataLayoutList.get(i);
-					
-					if("ConstructorDeclaration".equals(g.getName())) {
-						
-						new Visitor() {
-							
-							public void visitConstructorDeclaration(GNode n) {
-								// print constructor name
-								System.out.print(n.get(2).toString() + " ");
-								visit(n);
-							}
-							
-							public void visitModifier(GNode n) {
-								// print modifiers
+				new Visitor() {
+				    
+				    public void visitConstructorDeclaration(GNode n) {
+					// print constructor name
+					System.out.print(n.get(2).toString() + " ");
+					visit(n);
+				    }
+				    
+				    public void visitModifier(GNode n) {
+					// print modifiers
 								System.out.print(n.get(0).toString() + " ");
 								visit(n);
 							}

@@ -45,8 +45,7 @@ interface CPPUtil {
 public class LeafTransplant extends Visitor implements CPPUtil {
     
 
-    // FIXME: ya know?
-    public static boolean DEBUG = true;
+    public static boolean DEBUG = false;
 
 
     GNode javaTree;
@@ -69,10 +68,11 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
     // @param clp To gain access to vtables and data layouts
     // @param javaAST
-    public LeafTransplant(ClassLayoutParser clp, GNode javaAST) { 
+    public LeafTransplant(ClassLayoutParser clp, GNode javaAST, boolean db) { 
 		this.cppTree = GNode.create("TranslationUnit");
 		this.javaTree = javaAST;
 		this.clp = clp;
+		DEBUG = db;
 		
 		// Create a CPP tree as we visit the Java AST
 		createCPPTree();
@@ -86,8 +86,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	// We separate the Java AST into 3 stages for translation:
 	// ImportDeclaration(s), ClassDeclaration, and ClassBody nodes.
 
-	// FIXME: Do not hardcode java_lang
-	importJavaLang();
+	// TODO: Vtable lookups at method invocation
 
 	new Visitor() {
 
@@ -99,6 +98,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		// Build and add import node to cpp tree
 		translateImportNode(n);
 
+
 	    }
 
 	    public void visitClassDeclaration(GNode n) {
@@ -107,17 +107,9 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		// Build and add header node
 		translateClassDeclaration(n);
 
-		visit(n); // Necessary b/c ClassBody is a child
+   		translateClassBody(n);
 	    }
 	    
-	    public void visitClassBody(GNode n) {
-		// Call method to translate class implementation.  
-		// Anything else?
-
-		// Build and add implementation node
-		translateClassBody(n);
-	
-	    }
 
 	    public void visit(GNode n) {
 		// Need to override visit to work for GNodes
@@ -133,22 +125,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     // ----- Translate ImportDeclarations  ------
     // ------------------------------------------
 
-    // Initializes the tree with java_lang.h and java_lang.cc
-    // FIXME: Output java_lang.h and java_lang.cc to same pkg
-    // FIXME: Do not hardcode java_lang
-    public void importJavaLang() {
-	// Nodes are created "inside out" - from the leaves up
 
-	GNode qualifiedIdentifiers = GNode.create("QualifiedIdentifier");
-	qualifiedIdentifiers.add("java");
-	qualifiedIdentifiers.add("lang");
-	
-	GNode javaLang = GNode.create("ImportDeclaration", null, 
-				      qualifiedIdentifiers, null);
-
-	cppTree.add(0, javaLang);
-
-    }
 
     // Creates corresponding CPP import nodes
     // TODO: Printer will add appropriate syntax
@@ -156,9 +133,12 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     public void translateImportNode (GNode n) {
 
 	GNode importNode  = n;
-	cppTree.add(importNode);
+	importDeclarations.add(importNode);
 
+	
     }
+
+    GNode importDeclarations = GNode.create("ImportDeclarations");
 
 
     // ------------------------------------------
@@ -187,14 +167,14 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
 	GNode hNode = GNode.create("HeaderDeclaration"); 
 
+	GNode typedef = buildTypedef(n);
+	hNode.addNode(typedef);
+
 	GNode dataLayout = buildDataLayout(n);
 	hNode.addNode(dataLayout);
 
 	GNode vtable = buildVTable(n);
 	hNode.addNode(vtable);
-
-	GNode typedef = buildTypedef(n);
-	hNode.addNode(typedef);
 
 	return hNode;
     }
@@ -203,6 +183,9 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     // @param n ClassDeclaration node from Java AST
     public GNode buildDataLayout(GNode n) {
 	// Nodes are created "inside out" from the leaves up
+
+
+	// FIXME: Somehow, DataLayouts and VTables are getting added twice.
        
 	// Populate our Data Layout with information
     	GNode dataDeclarationList = GNode.create("StructureDeclarationList");
@@ -232,6 +215,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     // Build CPP VTable nodes to create struct __Class_VT { }
     // @param n ClassDeclaration node from Java AST
     public GNode buildVTable(GNode n) {
+
+
 	// Nodes are created "inside out" from the leaves up
 
 	// Populate vtable with information
@@ -308,16 +293,21 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	// NOTE: ccNode is now nameed "ClassBody" and must use it's visitor
 	GNode ccNode = n;
 	buildImplementation(ccNode);
+	cppTree.add(importDeclarations);
 	cppTree.add(ccNode);
 
     }
 
     // Build ccNode to hold info for the class.cc file
-    // @param n ccNode, which starts as a copy of the Java ClassBody node.  
+    // @param n ccNode, a copy of the Java ClassDeclaration node.  
     // @return Transformed ccNode, ready for the CPPPrinter
     // NOTE: Global variable thisClass to make "this" explicit
     String thisClass = "";
     public GNode buildImplementation(GNode n) {
+
+	// ERROR: n is fixed, can'tn.addNode(importDeclarations);
+	System.out.println("--- node " + n.getName() + " hasVariable() " 
+			   + n.hasVariable());
 
 	// TODO: translate method invocations using vtable
 
