@@ -291,14 +291,15 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
     // Build ccNode to hold info for the class.cc file
     // @param n ccNode, a copy of the Java ClassDeclaration node.  
-    // @return Transformed ccNode, ready for the CPPPrinter
+    // @return Transformed ClassDeclaration node, ready for the CPPPrinter
     // NOTE: Global variable thisClass to make "this" explicit
     String thisClass = "";
     public GNode buildImplementation(GNode n) {
 
-	// ERROR: n is fixed, can'tn.addNode(importDeclarations);
-	if(DEBUG) System.out.println("--- node " + n.getName() + 
-				     " hasVariable() " + n.hasVariable());
+	// FIXME: n is fixed, can'tn.addNode(importDeclarations);
+	// I wanted to put all import declarations under ClassDeclaration node.
+	// but no biggie
+	//	if(DEBUG) System.out.println("--- node " + n.getName() + " hasVariable() " + n.hasVariable());
 
 	// TODO: translate method invocations using vtable
 
@@ -306,7 +307,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	// What needs to be 'translated' in the printer?
 	// What needs to be translated here?
 	// This needs to be done with visit methods?
-	// Does order matter?
+	// Does order matter? yes
 
 	new Visitor () {
 
@@ -338,7 +339,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		   n.getNode(0).hasName("ThisExpression")) {
 		    
 		    primaryIdentifier = thisClass;
-		    System.out.println("\t--- primaryIdentifier = " + 
+		    if(DEBUG) System.out.println("\t--- primaryIdentifier = " + 
 				       primaryIdentifier);
 		}
 		else if(n.getNode(0).hasName("SelectionExpression")) {
@@ -381,8 +382,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		else if(n.getNode(0).hasName("PrimaryIdentifier")){
 		    // Do nothing
 		    primaryIdentifier = n.getNode(0).getString(0);
-		    System.out.println("\t--- primaryIdentifier = " 
-				       + primaryIdentifier);
+		    if(DEBUG) System.out.println("\t--- primaryIdentifier = " 
+						 + primaryIdentifier);
 		}
 		else { // catch all
 		    System.out.println("\t--- ERR: Encountered node " + 

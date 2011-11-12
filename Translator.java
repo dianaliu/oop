@@ -95,7 +95,7 @@ public class Translator extends xtc.util.Tool {
 	    runtime.console().pln("--- Begin translation").flush();
 	    
 	    // Create an array of AST trees to hold each dependency file
-	    // FIXME: Do not hardcode
+	    // FIXME: Do not hardcode size
 	    GNode[] trees = new GNode[100];  
 	    trees[0] = (GNode)node;
 	    
@@ -141,98 +141,102 @@ public class Translator extends xtc.util.Tool {
 			new LeafTransplant(clp, GNode.cast(trees[i]), DEBUG); 
 		    returned[i] = translator.getCPPTree();
 		    
-		    if(DEBUG) runtime.console().pln("--- Print CPP AST");
+		    if(DEBUG) runtime.console().pln("--- Print CPP AST " + i);
 		    if(DEBUG) runtime.console().format(returned[i]).pln().flush();
+		    if(DEBUG) 
+			runtime.console().pln("\t-----------------------").flush();
 		}
 	    }
 	    
-		runtime.console().pln("--- Finish cpp translation").flush();
-				
-		runtime.console().pln("--- Begin writing CPP file(s)").flush();
-			
-		// Run CPP printer on each CPP Tree and output to Code.cpp
-		try {		
-		    // Create an output directory
-		    boolean status = new File("output/").mkdir();
-
-		    for(int i = 0; i < returned.length; i++) {
-			if(returned[i] != null)
-			    {
-				// Name our file
-				GNode root = GNode.cast(returned[i]);
-				String fileName = "output/";
-				fileName += root.getString(root.size() - 1);
-				fileName += ".cpp";
-
-				PrintWriter fstream = new PrintWriter(fileName);
-				Printer cppCode = new Printer(fstream);
-				
-				new CPPPrinter( cppCode ).dispatch(returned[i]); 
-				cppCode.flush();
-				if(DEBUG) runtime.console().pln("--- Wrote " 
-								+ fileName);
-			    }
-		    }
-		    
-		    runtime.console().pln("--- Finish writing CPP file(s)").flush();
-		    runtime.console().pln("--- Finish translation").flush();
-		    
-		}
-		catch(Exception e) {
-		    System.err.println(e.getMessage());
-		}
-
-    } // end -translate
-
-
-    if(runtime.test("inherit")) {
-	DEBUG = true;
-	
-	runtime.console().pln("--- Begin translation").flush();
-	
-	// Create an array of AST trees to hold each dependency file
-	// FIXME: Do not hardcode
-	GNode[] trees = new GNode[100];
-	trees[0] = (GNode)node;
-	
-	runtime.console().pln("--- Begin dependency analysis").flush();
-	
-	// Analyze the main Java AST to find & resolve dependencies
-	DependencyResolver depResolver = new DependencyResolver();
-	depResolver.processDependencies(trees);
-	try {
-	    trees = depResolver.parseDependencies();
-	    trees[0] = (GNode)node;
-	}
-	catch (IOException e) {
-	    trees = null;
-	    System.out.println("IOException: " + e);
-	}
-	catch (ParseException e) {
-	    trees = null;
-	    System.out.println("ParseException: " + e);
-	}
-	
-	runtime.console().pln("--- Finish dependency analysis").flush();
+	    runtime.console().pln("--- Finish cpp translation").flush();
+	    
+	    runtime.console().pln("--- Begin writing CPP file(s)").flush();
+	    
+	    // Run CPP printer on each CPP Tree and output to Code.cpp
+	    try {		
+		// Create an output directory
+		boolean status = new File("output/").mkdir();
 		
-	runtime.console().pln("--- Begin inheritance analysis").flush();
+		// TODO: Clear directory if not empty
+		
+		for(int i = 0; i < returned.length; i++) {
+		    if(returned[i] != null)
+			{
+			    // Name our file
+			    GNode root = GNode.cast(returned[i]);
+			    String fileName = "output/";
+			    fileName += root.getString(root.size() - 1);
+			    fileName += ".cpp";
+			    
+			    PrintWriter fstream = new PrintWriter(fileName);
+			    Printer cppCode = new Printer(fstream);
+			    
+			    new CPPPrinter( cppCode ).dispatch(returned[i]); 
+			    cppCode.flush();
+			    if(DEBUG) runtime.console().pln("--- Wrote " 
+							    + fileName);
+			}
+		}
+		
+		runtime.console().pln("--- Finish writing CPP file(s)").flush();
+		runtime.console().pln("--- Finish translation").flush();
+		
+	    }
+	    catch(Exception e) {
+		System.err.println(e.getMessage());
+	    }
+	    
+	} // end -translate
 	
-	// Parse all classes to create vtables and data layouts
-	final ClassLayoutParser clp = new ClassLayoutParser(trees, DEBUG);
 	
-	runtime.console().pln("--- Finish inheritance analysis").flush();
-    } // end -inherit
+	if(runtime.test("inherit")) {
+	    DEBUG = true;
+	    
+	    runtime.console().pln("--- Begin translation").flush();
+	    
+	    // Create an array of AST trees to hold each dependency file
+	    // FIXME: Do not hardcode
+	    GNode[] trees = new GNode[100];
+	    trees[0] = (GNode)node;
+	    
+	    runtime.console().pln("--- Begin dependency analysis").flush();
+	    
+	    // Analyze the main Java AST to find & resolve dependencies
+	    DependencyResolver depResolver = new DependencyResolver();
+	    depResolver.processDependencies(trees);
+	    try {
+		trees = depResolver.parseDependencies();
+		trees[0] = (GNode)node;
+	    }
+	    catch (IOException e) {
+		trees = null;
+		System.out.println("IOException: " + e);
+	    }
+	    catch (ParseException e) {
+		trees = null;
+		System.out.println("ParseException: " + e);
+	    }
+	    
+	    runtime.console().pln("--- Finish dependency analysis").flush();
+	    
+	    runtime.console().pln("--- Begin inheritance analysis").flush();
+	    
+	    // Parse all classes to create vtables and data layouts
+	    final ClassLayoutParser clp = new ClassLayoutParser(trees, DEBUG);
+	    
+	    runtime.console().pln("--- Finish inheritance analysis").flush();
+	} // end -inherit
+	
+    } // end process
     
-} // end process
     
-
     /**
      * Run the translator with the specified command line arguments.
      *
      * @param args The command line arguments.
      */
     public static void main(String[] args) {
-		new Translator().run(args);
+	new Translator().run(args);
     }
     
 }
