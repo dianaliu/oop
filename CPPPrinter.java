@@ -2383,6 +2383,17 @@ public class CPPPrinter extends Visitor {
 		endExpression(prec);
 	}
 	
+	/** Visit the specified expression. */
+	public void visitExpression(GNode n) {
+		final int prec1 = startExpression(10);
+		final int prec2 = enterContext();
+		printer.p(n.getNode(0));
+		exitContext(prec2);
+		
+		printer.p(' ').p(n.getString(1)).p(' ').p(n.getNode(2));
+		endExpression(prec1);
+	}
+	
 	public Object unableToVisit(Node node) {
 		System.out.println( "Could not visit node of type: " + node.getName() );
 		for( Object o : node ) if ( o instanceof GNode ) printer.p((GNode)o);

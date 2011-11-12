@@ -202,6 +202,18 @@ public class Translator extends xtc.util.Tool {
 			if(DEBUG) 
 				runtime.console().pln("--- Finish cpp translation").flush();
 			
+			if(DEBUG){
+				runtime.console().pln("--- Begin tree barf").flush();
+				for(int i = 0; i < returned.length; i++) {
+					if(returned[i] != null)
+					{
+						runtime.console().format(returned[i]).pln().flush();
+					}
+				}
+				runtime.console().pln("--- End tree barf").flush();
+			}
+				
+			
 			
 			if(DEBUG) 
 				runtime.console().pln("--- Begin printing cpp tree(s)").flush();

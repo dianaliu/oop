@@ -19,7 +19,6 @@ import java.util.ArrayList;
 
 public class ClassLayoutParser extends Visitor {
 	
-	
     public static boolean DEBUG = false;
 	
     GNode classTree; // Contains nodes of type Class, VTable, and Data
@@ -87,7 +86,7 @@ public class ClassLayoutParser extends Visitor {
 		// --- Place vt/dl setup here: --- 
 		
 		//currentHeaderNode = GNode.create((GNode)parent.getNode(0)); //copy the header node from the parent
-		currentHeaderNode = deepCopy( (GNode)parent.getNode(0) );
+		currentHeaderNode = inheritHeader( (GNode)parent.getNode(0) );
 		
 		//STUFF WE NEED TO DO EVENTUALLY:
 		//add the virtual methods and data fields from the parents here -- DONE with the above parent header copy
@@ -146,7 +145,7 @@ public class ClassLayoutParser extends Visitor {
     // @param parentVTable
     int overridesMethod(String methodName, GNode currentVTable) {
 		// Search current VTable to see if overriden and at what index
-		for(int i = 0; i < currentVTable.size(); i++) {
+		for(int i = 1; i < currentVTable.size(); i++) { //start at one to ignore __isa
 			if(methodName.equals(currentVTable.getNode(i).get(1).toString())) return i; //string comparison, return indexof
 		}
 		
@@ -183,7 +182,7 @@ public class ClassLayoutParser extends Visitor {
 		String newFieldName = newField.getNode(2).getNode(0).get(0).toString();
 		String currentComparisonField;
 		for(int i = 0; i < currentDL.size(); i++) {
-			currentComparisonField = currentDL.getNode(i).getNode(2).getNode(0).get(0).toString(); //just TRUST ME on this...
+			currentComparisonField = currentDL.getNode(i).getNode(2).getNode(0).get(0).toString(); //this is the comparison field name
 			if( newFieldName.equals(currentComparisonField) ) return i;
 		}
 		
@@ -212,6 +211,19 @@ public class ClassLayoutParser extends Visitor {
 		}.dispatch(n);
 		return retVal;
 	}
+	
+	// Using the currently set global className, copies the parents header and makes necessary changes
+	// @param parentHeader A node representing the parent classes header structure
+	GNode inheritHeader( GNode parentHeader ) {
+		//FIXME: make those necessary changes
+		GNode copy = deepCopy( parentHeader );
+		GNode copyVT = (GNode)copy.getNode(0);
+		for( int i = 1; i < copyVT.size(); i++ ) { //start at one to ignore Class __isa;
+			copyVT.getNode(i).getNode(2).getNode(0).getNode(0).set(0, className);
+		}
+		GNode copyDL = (GNode)copy.getNode(1);
+		return copy;
+	}
 			
 	//Creates a new type node, either primitive or a 'qualified' class name
 	//@param type The type that the new node should specify
@@ -219,9 +231,9 @@ public class ClassLayoutParser extends Visitor {
 		GNode retVal = GNode.create("Type");
 		GNode typeSpecifier;
 		if( type.equals("int") || type.equals("float") || type.equals("boolean") ) { //testing for primitive, obvs needs to be expanded
-			typeSpecifier = GNode.create("PrimitiveType");
+			typeSpecifier = GNode.create( "PrimitiveType" );
 		} else {
-			typeSpecifier = GNode.create("QualifiedIdentifier"); //separating 'qualified' class names from primitives just seems safer for now...
+			typeSpecifier = GNode.create( "QualifiedIdentifier" ); //separating 'qualified' class names from primitives just seems safer for now...
 		}
 		typeSpecifier.add(type);
 		retVal.add(typeSpecifier);
@@ -247,9 +259,8 @@ public class ClassLayoutParser extends Visitor {
 		//We create a new node that represents the class header information (vtable and data layout) 
 		//NOTE: this is the ONLY time it should be manually created, because Object inherits from no one
 		GNode classHeaderDeclaration = GNode.create("ClassHeaderDeclaration");
-		//classHeaderDeclaration.add( GNode.create("VTableDeclaration"));
 		classHeaderDeclaration.add( objectClassVirtualTable() );
-		classHeaderDeclaration.add( GNode.create("DataLayoutDeclaration"));
+		classHeaderDeclaration.add( objectClassDataLayout() );
 		objectNode.add(classHeaderDeclaration );
 		
 		// FIXME: all following statements need to be replaced with the nodal hardcoded implementation
@@ -272,22 +283,12 @@ public class ClassLayoutParser extends Visitor {
 		classTree.add(classNode);
 		classTree.add(arrayNode);
 		classTree.add(integerNode);
-		
-		
-		//initGrimmVTables();
-		//initGrimmDataLayout();
     }
 	
 	// Creates a hard-coded virtual table for the object class.
 	GNode objectClassVirtualTable() {
 		/*
-		 struct __Object_VT {
-		 Class __isa;
-		 int32_t (*hashCode)(Object);
-		 bool (*equals)(Object, Object);
-		 Class (*getClass)(Object);
-		 String (*toString)(Object);
-		 
+		 TODO: CONSTRUCTOR
 		 __Object_VT()
 		 : __isa(__Object::__class()),
 		 hashCode(&__Object::hashCode),
@@ -297,11 +298,29 @@ public class ClassLayoutParser extends Visitor {
 		 }
 		 */
 		GNode retVal = GNode.create("VTableDeclaration");
-		retVal.add( createSkeletonDataField( "Class", "__isa" ) );
-		retVal.add( createSkeletonVirtualMethodDeclaration( "int32_t", "hashCode", new String[]{"Object"} ));
-		retVal.add( createSkeletonVirtualMethodDeclaration( "bool", "equals", new String[]{"Object","Object"} ));
-		retVal.add( createSkeletonVirtualMethodDeclaration( "Class", "getClass", new String[]{"Object"} ));
-		retVal.add( createSkeletonVirtualMethodDeclaration( "String", "toString", new String[]{"Object"} ));
+		retVal.add( createSkeletonDataField( "Class", "__isa" ) ); //Class __isa;
+		retVal.add( createSkeletonVirtualMethodDeclaration( "int32_t", "hashCode", new String[]{"Object"} )); //int32_t (*hashCode)(Object);
+		retVal.add( createSkeletonVirtualMethodDeclaration( "bool", "equals", new String[]{"Object","Object"} )); //bool (*equals)(Object, Object);
+		retVal.add( createSkeletonVirtualMethodDeclaration( "Class", "getClass", new String[]{"Object"} )); //Class (*getClass)(Object);
+		retVal.add( createSkeletonVirtualMethodDeclaration( "String", "toString", new String[]{"Object"} )); //String (*toString)(Object);
+		//retVal.add( initializeVTConstructor( retVal ) );
+		return retVal;
+	}
+	
+	// Initializes a brand new virtual table constructor for the specified VTable
+	// This should only produce valid results for the base Object class, there is no inheritance analysis
+	// @param vTable The vTable to create a constructor for 
+	GNode initializeVTConstructor( GNode vTable ) {
+		GNode retVal = GNode.create("VTableConstructor");		
+
+		return retVal;
+	}
+	
+	//Creates a hard-coded data layout for the object class.
+	GNode objectClassDataLayout() {
+		GNode retVal = GNode.create("DataLayoutDeclaration");
+		retVal.add( createSkeletonDataField( "__Object_VT*", "__vptr" ) );
+		retVal.add( createSkeletonStaticDataField( "__Object_VT", "__vtable" ) );
 		return retVal;
 	}
 	
@@ -328,13 +347,29 @@ public class ClassLayoutParser extends Visitor {
 	// @param name the name of the data field
 	GNode createSkeletonDataField( String type, String name ) {
 		GNode retVal = GNode.create( "FieldDeclaration" );
-		retVal.add(null); //null value for Modifiers()
+		retVal.add(GNode.create("Modifiers")); //empty value for Modifiers()
 		retVal.add( createTypeNode( type ) );
-		GNode declr = GNode.create("Declarator"); //
+		GNode declrs = GNode.create("Declarators");
+		GNode declr = GNode.create("Declarator");
 		declr.add( name );
 		declr.add( null ); 
 		declr.add( null ); //need to fill in these nulls for printer compatibility
-		retVal.add( declr );
+		declrs.add( declr );
+		retVal.add( declrs );
+		return retVal;
+	}
+	
+	// Creates a new STATIC data field with the specified information
+	// Used to force display of the primitive Grimm types, which are prewritten and #included
+	// @param type The type of the data field 
+	// @param name the name of the data field
+	GNode createSkeletonStaticDataField( String type, String name ) {
+		GNode retVal = createSkeletonDataField( type, name ); //just create a standard data field
+		GNode modifiers = GNode.create("Modifiers");
+		GNode staticMod = GNode.create("Modifier"); //then add the static keyword
+		staticMod.add("static");
+		modifiers.add(staticMod);
+		retVal.set(0,modifiers);
 		return retVal;
 	}
 	
