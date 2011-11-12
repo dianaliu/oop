@@ -183,9 +183,6 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     // @param n ClassDeclaration node from Java AST
     public GNode buildDataLayout(GNode n) {
 	// Nodes are created "inside out" from the leaves up
-
-
-	// FIXME: Somehow, DataLayouts and VTables are getting added twice.
        
 	// Populate our Data Layout with information
     	GNode dataDeclarationList = GNode.create("StructureDeclarationList");
