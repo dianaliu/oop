@@ -151,16 +151,17 @@ public class Translator extends xtc.util.Tool {
 		runtime.console().pln("--- Begin writing CPP file(s)").flush();
 			
 		// Run CPP printer on each CPP Tree and output to Code.cpp
-		// FIXME: Support multiple outputs
-		try{
-		    //		    PrintWriter fstream = new PrintWriter("Code.cpp");
-		    //		    Prainter cppCode = new Printer(fstream);
-		    
+		try {		
+		    // Create an output directory
+		    boolean status = new File("output/").mkdir();
+
 		    for(int i = 0; i < returned.length; i++) {
 			if(returned[i] != null)
 			    {
+				// Name our file
 				GNode root = GNode.cast(returned[i]);
-				String fileName = root.getString(root.size() - 1);
+				String fileName = "output/";
+				fileName += root.getString(root.size() - 1);
 				fileName += ".cpp";
 
 				PrintWriter fstream = new PrintWriter(fileName);
@@ -168,11 +169,12 @@ public class Translator extends xtc.util.Tool {
 				
 				new CPPPrinter( cppCode ).dispatch(returned[i]); 
 				cppCode.flush();
+				if(DEBUG) runtime.console().pln("--- Wrote " 
+								+ fileName);
 			    }
 		    }
 		    
 		    runtime.console().pln("--- Finish writing CPP file(s)").flush();
-		    
 		    runtime.console().pln("--- Finish translation").flush();
 		    
 		}
