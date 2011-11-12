@@ -28,11 +28,11 @@ public class ClassLayoutParser extends Visitor {
     // @param n node for a class declaration
     public ClassLayoutParser(GNode[] ast, boolean db) {
 		DEBUG = db;
-		if(DEBUG) System.out.println("--- Begin Class Layout Parser\n\n");
+		if(DEBUG) System.out.println("--- Begin Class Layout Parser\n");
 		initGrimmTypes();
 		parseAllClasses(ast);
 		if(DEBUG) printClassTree();
-		if(DEBUG) System.out.println("--- End Class Layout Parser\n\n");
+		if(DEBUG) System.out.println("--- End Class Layout Parser\n");
     }
     
     // Traverses all dependencies to find and add all classes
@@ -72,15 +72,15 @@ public class ClassLayoutParser extends Visitor {
 		//Now we need a super class -- every node but object has one, either explicitly or Object by default
 		GNode parent = null; 
 		if(n.get(3) != null) { // Extends something
-			String extendedClass = (String)(n.getNode(3).getNode(0).getNode(0).get(0)); // String name of Parent Class
-			parent = getClass(extendedClass); // Append new class as child of Parent
+		    String extendedClass = (String)(n.getNode(3).getNode(0).getNode(0).get(0)); // String name of Parent Class
+		    parent = getClass(extendedClass); // Append new class as child of Parent
 		}
 		else { 
-			parent = getClass("Object"); // Doesn't extend, add to root (Object)
+		    parent = getClass("Object"); // Doesn't extend, add to root (Object)
 		}
 		
 		if(DEBUG) System.out.println( "Visiting new class: " + className + " extends " + parent.getProperty("name") );
-		 
+		
 		//Building the vtables and data layout
 		
 		// --- Place vt/dl setup here: --- 
@@ -153,38 +153,38 @@ public class ClassLayoutParser extends Visitor {
 	public void visitFieldDeclaration(GNode n) {
 		int overrideIndex = overridesField(n, (GNode)currentHeaderNode.getNode(1) );
 		if( overrideIndex >= 0 ) {
-			System.out.println( "overriding field: " + n.getNode(2).getNode(0).get(0).toString() );
-			currentHeaderNode.getNode(1).set(overrideIndex, n); //add the data field to the classes' data layout declaration
-			//FIXME: is additional processing needed for field overrides? like type checking? 
+		    System.out.println( "overriding field: " + n.getNode(2).getNode(0).get(0).toString() );
+		    currentHeaderNode.getNode(1).set(overrideIndex, n); //add the data field to the classes' data layout declaration
+		    //FIXME: is additional processing needed for field overrides? like type checking? 
 		}
 		else {
-			System.out.println( "adding field: " + n.getNode(2).getNode(0).get(0).toString() );
-			currentHeaderNode.getNode(1).add(n); //add the data field to the classes' data layout declaration
+		    System.out.println( "adding field: " + n.getNode(2).getNode(0).get(0).toString() );
+		    currentHeaderNode.getNode(1).add(n); //add the data field to the classes' data layout declaration
 		}
 		//FIXME: add overriding of data fields 
 	}
+    
+    // [INTERNAL]
+    // Determines if a new data field declaration has already been declared (by name)
+    // @param newField the new field to check
+    // @param currentDL a node containing the current data layout
+    int overridesField(GNode newField, GNode currentDL) {
+	// Search current data layout to see if overriden and at what index
+	String newFieldName = newField.getNode(2).getNode(0).get(0).toString();
+	String currentComparisonField;
+	for(int i = 0; i < currentDL.size(); i++) {
+	    currentComparisonField = currentDL.getNode(i).getNode(2).getNode(0).get(0).toString(); //just TRUST ME on this...
+	    if( newFieldName.equals(currentComparisonField) ) return i;
+	}
 	
-	// [INTERNAL]
-	// Determines if a new data field declaration has already been declared (by name)
-	// @param newField the new field to check
-	// @param currentDL a node containing the current data layout
-	int overridesField(GNode newField, GNode currentDL) {
-		// Search current data layout to see if overriden and at what index
-		String newFieldName = newField.getNode(2).getNode(0).get(0).toString();
-		String currentComparisonField;
-		for(int i = 0; i < currentDL.size(); i++) {
-			currentComparisonField = currentDL.getNode(i).getNode(2).getNode(0).get(0).toString(); //just TRUST ME on this...
-			if( newFieldName.equals(currentComparisonField) ) return i;
-		}
-		
-		// If not overriden, return -1
-		return -1;
+	// If not overriden, return -1
+	return -1;
     }
-	
-	
-	// ---------------------------------
-	//      Prior implementation:
-	// ---------------------------------
+    
+    
+    // ---------------------------------
+    //      Prior implementation:
+    // ---------------------------------
     
     // Adds VTable node to child 0 of a Class node.
     // Actual structure is kept in property "vtable" as an Arraylist
@@ -198,58 +198,58 @@ public class ClassLayoutParser extends Visitor {
     
     public void addVTable(GNode n, GNode child, GNode parent) {
 		
-		// Need to clear out array before starting, 
-		// since it's a global variable
-		if(!childVTableList.isEmpty()) childVTableList.clear();
-		
-		// VTable[0] = isa
-		childVTableList.add(0, getClass(getName(parent)));
-		
-		// 1. Inherit all of parent's methods
-		final ArrayList parentVTable = 
+	// Need to clear out array before starting, 
+	// since it's a global variable
+	if(!childVTableList.isEmpty()) childVTableList.clear();
+	
+	// VTable[0] = isa
+	childVTableList.add(0, getClass(getName(parent)));
+	
+	// 1. Inherit all of parent's methods
+	final ArrayList parentVTable = 
 	    (ArrayList) (parent.getNode(0).getProperty("vtable"));
-		
-		for(int i = 1; i < parentVTable.size(); i++)
+	
+	for(int i = 1; i < parentVTable.size(); i++)
 	    {
      		childVTableList.add(parentVTable.get(i)); 
 	    }
-		
-		// 2. Visit AST MethodDeclarations under ClassDeclaration.
-		// Override and extend methods as needed.
-		/*
-		new Visitor() {
-			
-			public void visitMethodDeclaration(GNode n) {
-				String methodName = n.get(3).toString();
-				int overrideIndex = overrides(methodName, parentVTable);
-				
-				if(overrideIndex > 0) {
-					// overrides, must replace
-					childVTableList.add(overrideIndex, n);
-				}
-				else { //extended, append to list
-					childVTableList.add(n);
-				}
-			}
-			
-			public void visit(GNode n) {
-				// Need to override visit to work for GNodes
-				for( Object o : n) {
-					if (o instanceof Node) dispatch((GNode)o);
-				}
-			}
-			
-		}.dispatch(n);*/
-		
-		// Make VTable node and attach list
-		GNode childVTableNode = GNode.create("VTable");
-		childVTableNode.setProperty("vtable", childVTableList);
-		
-		// Add VTable node to Child at index 0
-		child.add(0, childVTableNode);
-		
-		if(DEBUG) printVTable(child);
-		
+	
+	// 2. Visit AST MethodDeclarations under ClassDeclaration.
+	// Override and extend methods as needed.
+	/*
+	  new Visitor() {
+	  
+	  public void visitMethodDeclaration(GNode n) {
+	  String methodName = n.get(3).toString();
+	  int overrideIndex = overrides(methodName, parentVTable);
+	  
+	  if(overrideIndex > 0) {
+	  // overrides, must replace
+	  childVTableList.add(overrideIndex, n);
+	  }
+	  else { //extended, append to list
+	  childVTableList.add(n);
+	  }
+	  }
+	  
+	  public void visit(GNode n) {
+	  // Need to override visit to work for GNodes
+	  for( Object o : n) {
+	  if (o instanceof Node) dispatch((GNode)o);
+	  }
+	  }
+	  
+	  }.dispatch(n);*/
+	
+	// Make VTable node and attach list
+	GNode childVTableNode = GNode.create("VTable");
+	childVTableNode.setProperty("vtable", childVTableList);
+	
+	// Add VTable node to Child at index 0
+	child.add(0, childVTableNode);
+	
+	if(DEBUG) printVTable(child);
+	
     }
     
 	
@@ -266,52 +266,52 @@ public class ClassLayoutParser extends Visitor {
     ArrayList childDataStructure = new ArrayList();
     public void addDataLayout(GNode n, GNode child, GNode parent) {
 		
-		// Need to clear out array before starting, 
-		// since it's a global variable
-		if(!childDataStructure.isEmpty()) childDataStructure.clear();
-		
-		// DataLayout[0] = __vptr
-		childDataStructure.add(0, getVTable( child.getProperty("name").toString())); 
-		
-		// Only want to visit the Constructor
-		GNode constructorDeclaration = (GNode) n.getNode(5).getNode(0);
-		
-		// Visit FieldDeclarations and pull out/save relevant information
-		new Visitor() {
-			
-			// FIXME: There are more things we need from the constructor
+	// Need to clear out array before starting, 
+	// since it's a global variable
+	if(!childDataStructure.isEmpty()) childDataStructure.clear();
+	
+	// DataLayout[0] = __vptr
+	childDataStructure.add(0, getVTable( child.getProperty("name").toString())); 
+	
+	// Only want to visit the Constructor
+	GNode constructorDeclaration = (GNode) n.getNode(5).getNode(0);
+	
+	// Visit FieldDeclarations and pull out/save relevant information
+	new Visitor() {
+	    
+	    // FIXME: There are more things we need from the constructor
       	    public void visitConstructorDeclaration(GNode n) {
-				childDataStructure.add(1, n); // Constructor is always 1
-				visit(n);
-			}
-			
-			public void visitFieldDeclaration(GNode n) {
-				childDataStructure.add(n);
-				visit(n);
-			}
-			
-			public void visitExpressionStatement(GNode n) {
-				childDataStructure.add(n);
-				visit(n);
-			}
-			
-			public void visit(GNode n) {
-				// Need to override visit to work for GNodes
-				for( Object o : n) {
-					if (o instanceof Node) dispatch((GNode)o);
-				}
-			}
-			
-		}.dispatch(constructorDeclaration);
-		
-		// Create DataLayout node and attach list
-		GNode childData = GNode.create("DataLayout");
-		childData.setProperty("data", childDataStructure);
-		
-		// Add DataLayout node to Child at index 1
-		child.add(1, childData); 
-		
-		if(DEBUG) printDataLayout(child);
+		childDataStructure.add(1, n); // Constructor is always 1
+		visit(n);
+	    }
+	    
+	    public void visitFieldDeclaration(GNode n) {
+		childDataStructure.add(n);
+		visit(n);
+	    }
+	    
+	    public void visitExpressionStatement(GNode n) {
+		childDataStructure.add(n);
+		visit(n);
+	    }
+	    
+	    public void visit(GNode n) {
+		// Need to override visit to work for GNodes
+		for( Object o : n) {
+		    if (o instanceof Node) dispatch((GNode)o);
+		}
+	    }
+	    
+	}.dispatch(constructorDeclaration);
+	
+	// Create DataLayout node and attach list
+	GNode childData = GNode.create("DataLayout");
+	childData.setProperty("data", childDataStructure);
+	
+	// Add DataLayout node to Child at index 1
+	child.add(1, childData); 
+	
+	if(DEBUG) printDataLayout(child);
     }
     
     
@@ -323,42 +323,42 @@ public class ClassLayoutParser extends Visitor {
     // Returns the name of a class
     // @param n A Class node 
 	public String getName(GNode n) {
-		return n.getStringProperty("name");
-		
-    }
-	
+	    return n.getStringProperty("name");
+	    
+	}
+    
     // Returns a Class node from the classTree
     // @param sc name of the Class desired
     public GNode getClass(String sc) {
 		
-		// Declared final to be accessible from inner Visitor classes
-		final String s = sc;
+	// Declared final to be accessible from inner Visitor classes
+	final String s = sc;
+	
+	return (GNode)( new Visitor() {
 		
-		return (GNode)( new Visitor() {
-			
-			public GNode visitClass(GNode n) {
-				
-				// Found the class
-				if( getName(n).equals(s) ) {
-					return n;
-				}
-				
-				// Keep Searching
-				for( Object o : n) {
-					if (o instanceof Node) {
-						GNode returnValue = (GNode)dispatch((GNode)o);
-						if( returnValue != null ) return returnValue;
-					}
-				}
-				return null;
+		public GNode visitClass(GNode n) {
+		    
+		    // Found the class
+		    if( getName(n).equals(s) ) {
+			return n;
+		    }
+		    
+		    // Keep Searching
+		    for( Object o : n) {
+			if (o instanceof Node) {
+			    GNode returnValue = (GNode)dispatch((GNode)o);
+			    if( returnValue != null ) return returnValue;
 			}
-			
-			public void visit(GNode n) { // override visit for GNodes
-				for( Object o : n) {
-					if (o instanceof Node) dispatch((GNode)o);
-				}
-			}
-			
+		    }
+		    return null;
+		}
+		
+		public void visit(GNode n) { // override visit for GNodes
+		    for( Object o : n) {
+			if (o instanceof Node) dispatch((GNode)o);
+		    }
+		}
+		
 	    }.dispatch(classTree));
     }
     

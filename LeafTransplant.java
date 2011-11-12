@@ -82,31 +82,25 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     // --------- Begin CPP Translation  ---------
     // ------------------------------------------
 
+
     public void createCPPTree() {
-	// We separate the Java AST into 3 stages for translation:
-	// ImportDeclaration(s), ClassDeclaration, and ClassBody nodes.
+	// We add nodes to the CPP AST in 3 stages:
+	// ImportDeclaration(s), ClassDeclaration - for header, 
+	// and ClassDeclaration - for body nodes.
 
 	// TODO: Vtable lookups at method invocation
 
 	new Visitor() {
 
 	    public void visitImportDeclaration(GNode n) {
-		// There may be 1+ ImportDeclarations  
-		// Call method to add import nodes
-		
-		// FIXME: What to name these methods?
-		// Build and add import node to cpp tree
-		translateImportNode(n);
-
-
+       		// Add import node to cpp tree
+		addImportNode(n);
 	    }
 
 	    public void visitClassDeclaration(GNode n) {
-		// Call method to create header file. Anything else?
-
 		// Build and add header node
 		translateClassDeclaration(n);
-
+		// Build and add implementation node
    		translateClassBody(n);
 	    }
 	    
@@ -119,30 +113,30 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	    }
 	    
 	}.dispatch(javaTree);
+
+
+	cppTree.add(className);
     }
 
     // ------------------------------------------
     // ----- Translate ImportDeclarations  ------
     // ------------------------------------------
 
-
+    // Global variable required to ensure placement of ImportDeclarations 
+    // at beginning of CPP AST
+    GNode importDeclarations = GNode.create("ImportDeclarations");
 
     // Creates corresponding CPP import nodes
     // TODO: Printer will add appropriate syntax
     // @param n ImportDeclaration node from Java AST
-    public void translateImportNode (GNode n) {
+    public void addImportNode (GNode n) {
 
 	GNode importNode  = n;
 	importDeclarations.add(importNode);
-
-	
     }
 
-    GNode importDeclarations = GNode.create("ImportDeclarations");
-
-
     // ------------------------------------------
-    // ------------- Build hNode ----------------
+    // -------- Build HeaderDeclaration ---------
     // ------------------------------------------
 
 
@@ -303,8 +297,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     public GNode buildImplementation(GNode n) {
 
 	// ERROR: n is fixed, can'tn.addNode(importDeclarations);
-	System.out.println("--- node " + n.getName() + " hasVariable() " 
-			   + n.hasVariable());
+	if(DEBUG) System.out.println("--- node " + n.getName() + 
+				     " hasVariable() " + n.hasVariable());
 
 	// TODO: translate method invocations using vtable
 

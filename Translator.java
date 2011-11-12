@@ -102,6 +102,7 @@ public class Translator extends xtc.util.Tool {
 	    runtime.console().pln("--- Begin dependency analysis").flush();
 	    
 	    // Analyze the main Java AST to find & resolve dependencies
+	    // TODO: Only create ASTs for those Classes used & imported
 	    DependencyResolver depResolver = new DependencyResolver();
 	    depResolver.processDependencies(trees);
 	    try {
@@ -135,17 +136,16 @@ public class Translator extends xtc.util.Tool {
 		new LeafTransplant(clp, GNode.cast(trees[0]), DEBUG);
 	    
 	    for(int i = 0; i < trees.length; i++) {
-		if(trees[i] != null)
-		    {
-			translator = 
-			    new LeafTransplant(clp, GNode.cast(trees[i]), DEBUG); 
-			returned[i] = translator.getCPPTree();
-			
-			if(DEBUG) runtime.console().pln("--- Print CPP AST");
-			if(DEBUG) runtime.console().format(returned[i]).pln().flush();
-		    }
+		if(trees[i] != null) {
+		    translator = 
+			new LeafTransplant(clp, GNode.cast(trees[i]), DEBUG); 
+		    returned[i] = translator.getCPPTree();
+		    
+		    if(DEBUG) runtime.console().pln("--- Print CPP AST");
+		    if(DEBUG) runtime.console().format(returned[i]).pln().flush();
+		}
 	    }
-
+	    
 		runtime.console().pln("--- Finish cpp translation").flush();
 				
 		runtime.console().pln("--- Begin writing CPP file(s)").flush();
@@ -153,20 +153,28 @@ public class Translator extends xtc.util.Tool {
 		// Run CPP printer on each CPP Tree and output to Code.cpp
 		// FIXME: Support multiple outputs
 		try{
-		    PrintWriter fstream = new PrintWriter("Code.cpp");
-		    Printer cppCode = new Printer(fstream);
+		    //		    PrintWriter fstream = new PrintWriter("Code.cpp");
+		    //		    Prainter cppCode = new Printer(fstream);
 		    
 		    for(int i = 0; i < returned.length; i++) {
 			if(returned[i] != null)
 			    {
+				GNode root = GNode.cast(returned[i]);
+				String fileName = root.getString(root.size() - 1);
+				fileName += ".cpp";
+
+				PrintWriter fstream = new PrintWriter(fileName);
+				Printer cppCode = new Printer(fstream);
+				
 				new CPPPrinter( cppCode ).dispatch(returned[i]); 
+				cppCode.flush();
 			    }
 		    }
 		    
 		    runtime.console().pln("--- Finish writing CPP file(s)").flush();
 		    
 		    runtime.console().pln("--- Finish translation").flush();
-		    cppCode.flush();
+		    
 		}
 		catch(Exception e) {
 		    System.err.println(e.getMessage());

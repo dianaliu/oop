@@ -385,7 +385,8 @@ public class CPPPrinter extends Visitor {
 		if (lineUp) printer.line(1);
 		
 		for (Object o : n) {
-			printer.p((Node)o);
+		    if(o instanceof Node) printer.p((Node)o);
+		    else if(o instanceof String);
 		}
 	}
 	
@@ -658,16 +659,13 @@ public class CPPPrinter extends Visitor {
 		printer.pln().indent().p("// VTable for ").pln(className);
 		printer.indent().p("struct __").p(className).pln("_VT {");
 		printer.incr();
-		printer.indent().pln("Class __isa;");
-		printer.indent().p("// All methods for").p(className).pln();
+		printer.indent().p("Class __isa;").pln();
 		for( Object o : n.getNode(2).getNode(0) ) {
 		    // Visits virtual method declarations
 		    printer.indent().p((GNode)o);
 		}
-
+		printer.indent().pln("};");
 		printer.decr();
-		printer.pln("};");
-
 	    }
 	    else {
 		printer.p("// Uncaught node ").pln(n.getNode(2).getNode(0).getName());
@@ -1365,6 +1363,7 @@ public class CPPPrinter extends Visitor {
     // ----------------------------------
 
     public void visitImportDeclarations(GNode n) {
+	printer.pln("// ------------ begin CC file --------------");
 	// has 0-n children ImportDeclaration
 	for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
 		
@@ -1389,6 +1388,8 @@ public class CPPPrinter extends Visitor {
 	if(n.get(2) != null) { // Star import
 	    printer.p(".").p(n.getString(2)).p(";");
 	}
+
+	printer.pln();
 
     }
 
@@ -1415,28 +1416,31 @@ public class CPPPrinter extends Visitor {
     final int prec = startExpression(160);
    
     if (1 == n.size()) {
-	String qualID = n.getString(0);
-	if("String".equals(qualID))
-	    qualID = "__String";
+	String s = n.getString(0);
 
-	printer.p(qualID);  // right place?
-    } else {
-      for (Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
-        printer.p(Token.cast(iter.next()));
-        if (iter.hasNext()) printer.p('.');
-      }
+	if("String".equals(s)) s = "__String";
+	else if ("boolean".equals(s)) s = "bool";
+	else if ("int".equals(s)) s = "int32_t";
+
+	printer.p(s);  // right place?
+    } 
+    else {
+	for (Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
+	    printer.p(Token.cast(iter.next()));
+	    if (iter.hasNext()) printer.p('.');
+	}
     }
-
+    
     endExpression(prec);
   }
 
     public void visitClassDeclaration(GNode n) {
 	// TODO: Lol, not so hacky!
 	// tell printer which file to print to. 
-	printer.pln().pln().pln("// ------------ begin CC file --------------");
+
 	// Commenting out, since .h and .cc are one file
-	printer.pln("// #include <iostream>").pln();
-	printer.pln("// #include \"java_lang.h\"").pln();
+	printer.pln("// #include <iostream>");
+	printer.pln("// #include \"java_lang.h\"");
 	printer.pln("using namespace java::lang;").pln();
 	
 
@@ -1494,23 +1498,25 @@ public class CPPPrinter extends Visitor {
 	//COPIED FROM JAVA PRINTER:
 	/** Visit the specified basic for control. */
 	public void visitBasicForControl(GNode n) {
-		printer.p(n.getNode(0));
-		if (null != n.get(1)) printer.p(n.getNode(1)).p(' ');
-		
-		final int prec1 = enterContext(PREC_BASE);
-		printer.p(n.getNode(2)).p("; ");
-		exitContext(prec1);
-		
-		if (null != n.get(3)) {
-			final int prec2 = enterContext(PREC_BASE);
-			formatAsTruthValue(n.getNode(3));
-			exitContext(prec2);
-		}
-		printer.p("; ");
-		
-		final int prec3 = enterContext(PREC_BASE);
-		printer.p(n.getNode(4));
-		exitContext(prec3);
+
+	    printer.p(n.getNode(0));
+	    if (null != n.get(1)) printer.p(n.getNode(1)).p(' ');
+	    
+	    final int prec1 = enterContext(PREC_BASE);
+	    printer.p(n.getNode(2)).p("; ");
+	    exitContext(prec1);
+	    
+	    if (null != n.get(3)) {
+		final int prec2 = enterContext(PREC_BASE);
+		formatAsTruthValue(n.getNode(3));
+		exitContext(prec2);
+	    }
+	    printer.p("; ");
+	    
+	    final int prec3 = enterContext(PREC_BASE);
+	    printer.p(n.getNode(4));
+	    exitContext(prec3);
+	 
 	}
 	
 	/** Visit the specified switch statement node. */
@@ -2210,24 +2216,26 @@ public class CPPPrinter extends Visitor {
 	
     public void visitConstructorDeclaration(GNode n) {
 	// TODO
-	printer.p("// --- Constructor for ").pln(n.getString(2));
+	printer.pln();
+
 	if(0 != n.getNode(0).size()) {
 	    // Modifiers
-	    for (Object o : n.getNode(0)) printer.p((Node)o);
+	    for (Object o : n.getNode(0)) printer.p((Node)o).p(" ");
 	}
 	if(null != n.getNode(1)) {
+	    // IDK what node 1 holdes
 	    for (Object o : n) printer.p((Node)o);
 	}
 
 	// Class name
 	printer.p(n.getString(2));
 	
-	if(0 != n.getNode(3).size()) {
-	    // Formal Parameters
-	    for (Object o : n) printer.p((Node)o);
-	}
-
+	// Formal Parameters
+	if(0 != n.getNode(3).size()) for (Object o : n) printer.p((Node)o);
+	else printer.p("()");
+	  
 	if(null!= n.getNode(4)) {
+	    // IDK what node 4 holds
 	    for (Object o : n) printer.p((Node)o);
 	}
 
@@ -2235,11 +2243,9 @@ public class CPPPrinter extends Visitor {
 	    // Block
 	    for (Object o : n) printer.p((Node)o);
 	}
-
-
-
+	else printer.p("{}");
 	
-	
+	printer.pln();
     }
 
     public void visitThrowsClause(GNode n) {
@@ -2368,12 +2374,24 @@ public class CPPPrinter extends Visitor {
 
 	/** Visit the specified call expression. */
 	public void visitCallExpression(GNode n) {
-
+	    
 	    // TODO: Modify AST to include CallingClass node
 	    final int prec = startExpression(160);
-	    if (null != n.get(0)) printer.p(n.getNode(0)).p("::");
-	    else printer.p(n.getNode(0)).p("__this->_vptr->");
-	    printer.p(n.getNode(1)).p(n.getString(2)).p(n.getNode(3));
+	    
+	    // Callling instance
+	    if (null == n.getNode(0)) 
+		printer.p("__this->_vptr->");	    
+	    else if (n.getNode(0).hasName("ThisExpression")) 
+		printer.p("__this->_vptr->");
+	    else printer.p(n.getNode(0)).p("::");
+	   
+	    // method name
+	    printer.p(n.getString(2));
+
+	    // arguments
+	    if(n.getNode(3).size() > 0)printer.p(n.getNode(3));
+	    else printer.p("()");
+
 	    endExpression(prec);
 	}
 	
@@ -2389,7 +2407,7 @@ public class CPPPrinter extends Visitor {
 	    // TODO: How to get calling class?
 	    final int prec = startExpression(160);
 	    if (null != n.get(0)) printer.p(n.getNode(0)).p('.');
-	    printer.p("__this->__vptr->");
+	    printer.p("__this->_vptr->");
 	    endExpression(prec);
 	}
 	
