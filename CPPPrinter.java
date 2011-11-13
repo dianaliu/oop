@@ -1,4 +1,4 @@
-/*
+*
  * xtc - The eXTensible Compiler
  * Copyright (C) 2004-2008 Robert Grimm
  *
@@ -2236,7 +2236,7 @@ public class CPPPrinter extends Visitor {
 	
 	
     public void visitConstructorDeclaration(GNode n) {
-	// TODO
+	// FIXME: Error visiting when testing with Grimm's code
 	printer.pln();
 
 	if(0 != n.getNode(0).size()) {
