@@ -1,4 +1,4 @@
-*
+/**
  * xtc - The eXTensible Compiler
  * Copyright (C) 2004-2008 Robert Grimm
  *
@@ -1461,6 +1461,8 @@ public class CPPPrinter extends Visitor {
 	for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
     }
 
+    // Version A
+    /**
     public void visitExpression(GNode n) {
 	printer.indent();
 	for(Object o : n ) {
@@ -1468,6 +1470,7 @@ public class CPPPrinter extends Visitor {
 	    else if (o instanceof String) printer.p((String)o);
 	}
     }
+    */
 
 
     public void visitDataLayoutDeclaration(GNode n) {
@@ -2705,6 +2708,18 @@ public class CPPPrinter extends Visitor {
 		final int prec = startExpression(160);
 		printer.p(n.getNode(0)).p(n.getString(1));
 		endExpression(prec);
+	}
+	
+    // Version B
+	/** Visit the specified expression. */
+	public void visitExpression(GNode n) {
+		final int prec1 = startExpression(10);
+		final int prec2 = enterContext();
+		printer.p(n.getNode(0));
+		exitContext(prec2);
+		
+		printer.p(' ').p(n.getString(1)).p(' ').p(n.getNode(2));
+		endExpression(prec1);
 	}
 	
 	public Object unableToVisit(Node node) {

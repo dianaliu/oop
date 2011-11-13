@@ -1,4 +1,8 @@
-/* This program is free software; you can redistribute it and/or
+/*
+ * xtc - The eXTensible Compiler
+ * Copyright (C) 2011 Robert Grimm
+ *
+ * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * version 2 as published by the Free Software Foundation.
  *
@@ -229,14 +233,13 @@ public class Translator extends xtc.util.Tool {
 	
     } // end process
     
-    
     /**
      * Run the translator with the specified command line arguments.
      *
      * @param args The command line arguments.
      */
     public static void main(String[] args) {
-	new Translator().run(args);
+		new Translator().run(args);
     }
     
 }
