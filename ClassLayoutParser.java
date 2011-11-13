@@ -320,6 +320,8 @@ public class ClassLayoutParser extends Visitor {
 	GNode objectClassDataLayout() {
 		GNode retVal = GNode.create("DataLayoutDeclaration");
 		retVal.add( createSkeletonDataField( "__Object_VT*", "__vptr" ) );
+		//retVal.add( GNode.create( "DataFieldList" ) );
+		//retVal.add( GNode.create( "StaticMethodList" ) );
 		retVal.add( createSkeletonStaticDataField( "__Object_VT", "__vtable" ) );
 		return retVal;
 	}
