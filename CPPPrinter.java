@@ -1990,6 +1990,10 @@ public class CPPPrinter extends Visitor {
 		endExpression(prec);
 	}
 	
+	//------------------------------------------------------
+	//                      NEW METHODS
+	//------------------------------------------------------
+	
 	public void visitHeaderDeclaration(GNode n) {
 		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
 	}
@@ -2011,12 +2015,6 @@ public class CPPPrinter extends Visitor {
 		printer.p('(').p(n.getNode(2)).p(");").pln();	
 	}
 	
-	public void visitVirtualMethodHeaderDeclaration(GNode n) {
-		printer.indent().p(n.getNode(0)).p(' ');
-		printer.p(' ').p(n.getString(1));
-		printer.p('(').p(n.getNode(2)).p(");").pln();	
-	}
-	
 	public void visitMethodPointersList( GNode n ) {
 		printer.incr().indent().pln();
 		for(Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
@@ -2027,7 +2025,20 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	public void visitMethodHeaderList( GNode n ) {
-		
+		printer.pln();
+		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
+		printer.pln();
+	}
+	
+	public void visitVirtualMethodHeader(GNode n) {
+		printer.indent().p("static ").p(n.getNode(0));
+		printer.p(' ').p(n.getString(1));
+		printer.p('(').p(n.getNode(2)).p(");").pln();	
+	}
+	
+	public void visitDataFieldList( GNode n ) {
+		printer.pln();
+		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
 	}
 	
 	public void visitMethodPointer( GNode n ) {
@@ -2037,7 +2048,6 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	public void visitClassISAPointer( GNode n ) {
-		//__isa(__Object::__class())
 		printer.p("__isa(").p(n.getString(0)).p("::__class())");
 	}
 	
@@ -2051,6 +2061,10 @@ public class CPPPrinter extends Visitor {
 		isOpenLine = true;
 		printer.p(n.getNode(5)).pln();
 	}
+	
+	//----------------------------------------------------------
+	//                   END NEW METHODS
+	//----------------------------------------------------------
 	
 	//
 	// ---------------------- copied from java printer!

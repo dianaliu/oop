@@ -46,7 +46,7 @@ public class ClassLayoutParser extends Visitor {
 	
 	
 	// ----------------------------------
-	//    Tree Processing
+	//         Tree Processing
 	// ----------------------------------
 	
 	//Visitor method to dispatch this visitor on a tree
@@ -119,7 +119,6 @@ public class ClassLayoutParser extends Visitor {
 			formalParameters.set(i, formalParameters.getNode(i).getNode(1) ); //this kills the parameter name
 		}
 		formalParameters.add(0, createTypeNode( className ) );
-		//FIXME: redefine the explicit THIS for the correct type?
 		methodSignature.add(formalParameters); //parameter types
 		
 		//Override check here -- if overrides, use vtdecl.set(overrideIndex, methodSig) else just add it
@@ -128,17 +127,39 @@ public class ClassLayoutParser extends Visitor {
 		if(overrideIndex >= 0) {
 			if(DEBUG) System.out.println( "overriding method: " + methodName );
 			currentHeaderNode.getNode(0).set(overrideIndex, methodSignature); // overrides, must replace
-			//FIXME: modify constructor as well
+
+			//changing the constructor too
+			int index = currentHeaderNode.getNode(0).size()-1;
+			GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index).getNode(4);
+			GNode newPtr = GNode.create( "MethodPointer" );
+			newPtr.add( n.get(3) ); //method name
+			newPtr.add( createTypeNode( "__"+className ) ); //target
+			newPtr.add( GNode.create( "FormalParameters" ) );
+			vtConstructorPtrList.set( overrideIndex, newPtr );
 		}
 		else {
 			if(DEBUG) System.out.println( "adding method: " + methodName );
-			int index = currentHeaderNode.getNode(0).size()-2; //add it before the constructor, which is last
+			int index = currentHeaderNode.getNode(0).size()-1; //add it before the constructor, which is last(index+1)
 			currentHeaderNode.getNode(0).add(index, methodSignature); //extended, add the method signature to the vtable declaration
-			//FIXME: modify the constructor as well
+			
+			//adding it to the constructor too
+			GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index+1).getNode(4);
+			GNode newPtr = GNode.create( "MethodPointer" );
+			newPtr.add( n.get(3) ); //method name
+			newPtr.add( createTypeNode( "__"+className ) ); //target
+			newPtr.add( GNode.create( "FormalParameters" ) );
+			vtConstructorPtrList.add( newPtr );
+			
+			//adding it to the data layout
+			GNode dataLayoutMethList = (GNode)currentHeaderNode.getNode(1).getNode(2);
+			GNode hdr = GNode.create( "VirtualMethodHeader" );
+			hdr.add( n.get(2) ); //return type
+			hdr.add( n.get(3) ); //method name
+			hdr.add( formalParameters ); //params
+			dataLayoutMethList.add( hdr );
 		}
 		
 		//FIXME: also add to the data layout as static methods
-		//FIXME: VTABLE CONSTRUCTOR
 		//FIXME: FINAL: name mangling
 	}
 	
@@ -163,23 +184,21 @@ public class ClassLayoutParser extends Visitor {
 	//Visits the field declarations in a class, and adds them to the vtable.
 	//@param n FieldDeclaration node from a Java AST.
 	public void visitFieldDeclaration(GNode n) {
-		int overrideIndex = overridesField(n, (GNode)currentHeaderNode.getNode(1) );
+		int overrideIndex = overridesField(n, (GNode)currentHeaderNode.getNode(1).getNode(1) );
 		if( overrideIndex >= 0 ) {
 			System.out.println( "overriding field: " + n.getNode(2).getNode(0).get(0).toString() );
-			currentHeaderNode.getNode(1).set(overrideIndex, n); //add the data field to the classes' data layout declaration
-			//FIXME: is additional processing needed for field overrides? like type checking? 
+			currentHeaderNode.getNode(1).getNode(1).set(overrideIndex, n); //add the data field to the classes' data layout declaration
 		}
 		else {
 			System.out.println( "adding field: " + n.getNode(2).getNode(0).get(0).toString() );
-			currentHeaderNode.getNode(1).add(n); //add the data field to the classes' data layout declaration
+			currentHeaderNode.getNode(1).getNode(1).add(n); //add the data field to the classes' data layout declaration
 		}
-		//FIXME: add overriding of data fields 
 	}
 	
 	// [INTERNAL]
 	// Determines if a new data field declaration has already been declared (by name)
 	// @param newField the new field to check
-	// @param currentDL a node containing the current data layout
+	// @param currentDL a node containing the current data layout field list
 	int overridesField(GNode newField, GNode currentDL) {
 		// Search current data layout to see if overriden and at what index
 		String newFieldName = newField.getNode(2).getNode(0).get(0).toString();
@@ -348,8 +367,8 @@ public class ClassLayoutParser extends Visitor {
 	GNode objectClassDataLayout() {
 		GNode retVal = GNode.create("DataLayoutDeclaration");
 		retVal.add( createSkeletonDataField( "__Object_VT*", "__vptr" ) );
-		//retVal.add( GNode.create( "DataFieldList" ) );
-		//retVal.add( GNode.create( "StaticMethodList" ) );
+		retVal.add( GNode.create( "DataFieldList" ) );
+		retVal.add( GNode.create( "MethodHeaderList" ) );
 		retVal.add( createSkeletonStaticDataField( "__Object_VT", "__vtable" ) );
 		return retVal;
 	}
