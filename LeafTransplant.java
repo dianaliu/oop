@@ -385,13 +385,23 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    if(DEBUG) System.out.println("\t--- primaryIdentifier = " 
 						 + primaryIdentifier);
 		}
+		else if(n.getNode(0).hasName("SuperExpression")) {
+		    GNode pI = GNode.create("PrimaryIdentifier");
+		   
+		    GNode vtList = clp.getVTable(thisClass);
+		    // TODO: Ask rob for getter.
+		    String superClass = "SUPERDUPER";
+		    pI.add(0, superClass);
+		    n.set(0, pI);
+		}
 		else { // catch all
-		    System.out.println("\t--- ERR: Encountered node " + 
+		    System.out.println("\t--- ERR: Uncaught node " + 
 				       n.getNode(0).toString());
 		}
 		
+		visit(n);
 	    }// End visitCall Expression
-
+	    
 	    public void visit(GNode n) {
 		// Need to override visit to work for GNodes
 		for( Object o : n) {
@@ -404,14 +414,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	return n;
     }
 
-
-    // ------------------------------------------
-    // ------------- Getter Methods  ------------
-    // ------------------------------------------
-    
-    public GNode getCPPTree() { return cppTree; }
-    
-
+ 
     // ------------------------------------------
     // ----------- Internal Methods  ------------
     // ------------------------------------------
@@ -423,40 +426,12 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	return (GNode)GNode.create( kPrimID ).add(contents);
     }
 
-    GNode translateMethodDeclaration (GNode n) {
-	//Java:MethodDeclaration() -> CPP:FunctionDefinition()
-	// Function name:
-	// Return type:
-	// Parameters:
-	GNode fncDef = GNode.create(kFuncDef);
-	{
-	    fncDef.add(0, null);
-		    GNode declSpef = GNode.create(kDeclSpef);
-		    {
-			if( "main".equals(n.get(3)) ) declSpef.add( GNode.create(kInt) );
-			else declSpef.add( n.get(2) ); //add return type (adding a java type)
-		    }
-		    fncDef.add(1, declSpef);
-			GNode fncDeclarator = GNode.create(kFuncDecltor);
-			{
-			    // FIXME: = Done in Printer?
-			    GNode simpDecl = (GNode)GNode.create(kSimpDecl).add( "__" + className + "::" +  n.get(3));  //method name
-			    fncDeclarator.add(0, simpDecl);
-			    fncDeclarator.add(1, n.get(4));
-			}
-			fncDef.add(2, fncDeclarator);
-			fncDef.add(3, null);
-			fncDef.add(4, n.get(7));  
-			// ^ NOTE: we are adding a java code block instead of a C compound statement
-		}
 
-
-		return fncDef;
-    } // end translateMethodDeclaration
-
+   // ------------------------------------------
+    // ------------- Getter Methods  ------------
+    // ------------------------------------------
     
-
-
-
+    public GNode getCPPTree() { return cppTree; }
+    
 
 }
