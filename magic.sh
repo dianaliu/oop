@@ -7,12 +7,22 @@
 
  echo  Test Script: Compares Java output to translated CPP output.
 
- # 0. Make output directory
+ # 0. Make/clean output directory
 if [ ! -d "output" ]
        then
            mkdir "output"
 	   echo "Created directory output/"
       else
+	   echo "Found existing directory output/"
+           read -p "rm all files in output/ (y/n)?" choice
+           case "$choice" in 
+             y|Y ) echo "rm-ing all files in output/"
+		   rm output/*;;
+             n|N ) echo "please rename existing output/ and try again"
+		   exit 1;;
+             * ) echo "invalid";;
+           esac
+
            echo "Files will write to output/"
 fi
 
@@ -31,11 +41,19 @@ function failure()
  # Is input guarenteed to be a single .java file?
  for var in "$@"
          do
-         # 2. Compile and run Java files. If errors, display & exit.
+         # 2. Compile and run Java files.
          cp $var "output/$var"
-         javac -d "output/" "output/$var" || failure "--- ERR: Java compile time error"
+
+	 cd output/
+         javac $var || failure "--- ERR: Java compile time error"
          # 3. Save output from Java files
-	 java "output/$var" > "output/jOut.txt" || failure "--- ERR: Java runtime error"
+	 j=java
+	 fileName=${var%.$j} # remove .java 
+	 cd ..
+
+	 java -cp output/ $fileName > "output/jOut.txt" || failure "--- ERR: Java runtime error"
+	 echo "--- Successfully compiled and ran $var"
+
 
          javaInput=("${javaInput[@]}" "$var")   
  done 
@@ -47,24 +65,27 @@ function failure()
  #	 java -jar midterm-translator.jar -translate -debug ${javaFiles[0]}
  done
  
- # 5. Get outputted CPP files from output/
- cppOutput=()
+ # 5. Get .cpp files from output/
  cd output/
- for file in 'dir -d *.cpp' ; do
+
+ cppOutput=()
+ for file in *.cpp ; do
 	cppOutput=("${cppOutput[@]}" "$file")
  done
 
- # 6. Compile and run CPP files. If errors, display & exit.
- # FIXME: How to compile all cpp files?
- # g++ cppOutput() || failure "--- ERR: CPP compile time error"
+ # 6. Compile CPP files. Form string for cpp arguments
+ allCPP=""
+ for((i=0; i < ${#cppOutput[@]}; i++))
+ do
+     allCPP="${allCPP} ${cppOutput[i]}"
+ done
+  g++ $allCPP || failure "--- ERR: CPP compile time error"
 
- # 7. Save output from CPP files
- # ./a.out > "cOut.txt" || failure "--- ERR: CPP runtime error"
+ # 7. Run and save output from CPP files
+  ./a.out > "cOut.txt" || failure "--- ERR: CPP runtime error"
 
  # 8. Compare Java and CPP output
- pass=0
  if diff jOut.txt cOut.txt > /dev/null ; then
- 	pass=${pass+1}
 	echo "Success! Outputs were the same."
  else 
  	echo "Bummer. Outputs were different."
@@ -78,3 +99,5 @@ function failure()
  # echo "Number of translations that passed: ${pass}"
  # echo "Out of: ${#javaInput[@]}"
  read -p "End of program - Press Enter to quit."
+
+
