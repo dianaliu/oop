@@ -1,4 +1,8 @@
 - ABOUT
 Final project for http://cs.nyu.edu/rgrimm/teaching/fa11-oop/ by Diana, Hernel, Kirim, and Rob.
 
+To run using test script (once functional):
+   cd xtc/
+   cp src/xtc/oop/magic.sh magic.sh
+   source magic.sh JAVAFILE
 
