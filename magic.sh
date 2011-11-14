@@ -37,8 +37,7 @@ function failure()
 #    read -p "Try again - Press Enter to quit."
 }
 
- # FIXME: Assumes .java files, what if directory? 
- # Is input guarenteed to be a single .java file?
+ # FIXME: Assumes single .java file input. Consider files, dir, and import statements.
  for var in "$@"
          do
          # 2. Compile and run Java files.
