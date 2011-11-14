@@ -183,7 +183,8 @@ public class Translator extends xtc.util.Tool {
 		}
 		
 		runtime.console().pln("--- Finish writing CPP file(s)").flush();
-		runtime.console().pln("--- Finish translation").flush();
+		// Also print cpp output to console?
+		runtime.console().pln("--- Finish translation. See output/").flush();
 		
 	    }
 	    catch(Exception e) {
