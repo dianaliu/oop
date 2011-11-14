@@ -17,6 +17,7 @@
  * USA.
  */
 package xtc.oop;
+import xtc.oop.LeafTransplant;
 
 import xtc.parser.ParseException;
 import xtc.parser.Result;
@@ -43,7 +44,7 @@ import java.io.Reader;
 
 import java.util.ArrayList;
 
-import xtc.oop.LeafTransplant;
+
 
 
 public class Translator extends xtc.util.Tool {
@@ -98,50 +99,75 @@ public class Translator extends xtc.util.Tool {
 	    if(DEBUG) 
 		runtime.console().pln("--- Begin translation").flush();
 
-	    // Create an array of AST trees to hold each dependency file
-	    // FIXME: Do not hardcode
-	    GNode[] trees = new GNode[100];  
-	    trees[0] = (GNode)node;
 
 	    if(DEBUG) 
-		runtime.console().pln("--- Begin dependency analysis").flush();
-
-	    // Analyze the main Java AST to find & resolve dependencies
+			runtime.console().pln("--- Begin dependency analysis").flush();
+		// Create an array of AST trees to hold each dependency file
+	    // FIXME: Do not hardcode
+	    GNode[] trees = new GNode[500];  
+	    trees[0] = (GNode)node;
+	    // Analyze the main Java AST to find & resolve all imported dependencies
 	    DependencyResolver depResolver = new DependencyResolver();
 	    depResolver.processDependencies(trees);
 	    try {
-		trees = depResolver.parseDependencies();
-		trees[0] = (GNode)node;
+			trees = depResolver.parseDependencies();
+			trees[0] = (GNode)node;
 	    } 
 	    catch (IOException e) {
-		trees = null;
-		System.out.println("IOException: " + e);
+			trees = null;
+			System.out.println("IOException: " + e);
 	    }
 	    catch (ParseException e) {
-		trees = null;
-		System.out.println("ParseException: " + e);
+			trees = null;
+			System.out.println("ParseException: " + e);
 	    }	
-    
 	    if(DEBUG) 
-		runtime.console().pln("--- Finish dependency analysis").flush();
+			runtime.console().pln("--- Finish dependency analysis").flush();
+		//----------------------------------------------------------------------
 
 
 	    if(DEBUG) 
-		runtime.console().pln("--- Begin inheritance analysis").flush();
-
+			runtime.console().pln("--- Begin inheritance analysis").flush();
 	    // Parse all classes to create vtables and data layouts
 	    final ClassLayoutParser clp = new ClassLayoutParser(trees, DEBUG);
-	    
 	    if(DEBUG) 
-		runtime.console().pln("--- Finish inheritance analysis").flush();
-	   	 
+			runtime.console().pln("--- Finish inheritance analysis").flush();
+	   	//----------------------------------------------------------------------
+	   	
 
 	    if(DEBUG) 
-		runtime.console().pln("--- Begin cpp translation").flush();
-   
+			runtime.console().pln("--- Begin trimming dependencies").flush();
+		// Mark only the dependency files which are actually invoked
+		// trees = depResolver.trimDependencies(clp, trees);
+	    if(DEBUG) 
+			runtime.console().pln("--- Finished trimming dependencies").flush();
+	   	//----------------------------------------------------------------------
+	   	
+	   	
+	   	
+	   	
+	   	//FIXME: SymTable test; remove later
+	   	System.out.println("\nMESSING WITH THE SYMBOL TABLE\n");
+	   	TranslatorSymbolTable tst = new TranslatorSymbolTable("Global");
+	    System.out.println("Symbol identifier value : " + tst.getType("Global"));
+	   	System.out.println("Mangler:");
+	   	System.out.println(tst.symTable.toNameSpace("WheresMyCar", "Dude"));
+	   	System.out.println("UnMangler:");
+	   	//stem.out.println(tst.symTable.fromNameSpace("Dude(WheresMyCar)"));
+ 		//find all variable names and their types
+ 		tst.addSymbols(trees[0]);
+ 		tst.addSymbols(trees[1]);
+ 		
+ 		System.out.println("\nDONE MESSING WITH THE SYMBOL TABLE\n");
+	   	
+	   	
+	   	
+	   	
+	    if(DEBUG) 
+			runtime.console().pln("--- Begin cpp translation").flush();
 	    // Create a translator to output a cpp tree for each java ast
 	    // FIXME: Do not hardcode size
-	    GNode[] returned = new GNode[100];
+	    GNode[] returned = new GNode[500];
 	    LeafTransplant translator = 
 		new LeafTransplant(clp, GNode.cast(trees[0]));
 
@@ -150,13 +176,12 @@ public class Translator extends xtc.util.Tool {
 		    {
 	    		translator = 
 			    new LeafTransplant(clp, GNode.cast(trees[i])); 
-			returned[i] = translator.getTranslatedTree();
+				returned[i] = translator.getTranslatedTree();
 		    }
 	    }
-
 	    if(DEBUG) 
 		runtime.console().pln("--- Finish cpp translation").flush();
-	   
+	   	//----------------------------------------------------------------------
 
 	    if(DEBUG) 
 		runtime.console().pln("--- Begin printing cpp tree(s)").flush();
@@ -179,7 +204,7 @@ public class Translator extends xtc.util.Tool {
 
 			if(DEBUG) 
 			    runtime.console().pln("--- Finish translation").flush();
-			cppCode.flush();
+				cppCode.flush();
 	    }
 	    catch(Exception e) {
 	    	System.err.println(e.getMessage());
