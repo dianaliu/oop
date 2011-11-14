@@ -128,10 +128,13 @@ public class ClassLayoutParser extends Visitor {
 		if(overrideIndex >= 0) {
 			if(DEBUG) System.out.println( "overriding method: " + methodName );
 			currentHeaderNode.getNode(0).set(overrideIndex, methodSignature); // overrides, must replace
+			//FIXME: modify constructor as well
 		}
 		else {
 			if(DEBUG) System.out.println( "adding method: " + methodName );
-			currentHeaderNode.getNode(0).add(methodSignature); //extended, add the method signature to the vtable declaration
+			int index = currentHeaderNode.getNode(0).size()-2; //add it before the constructor, which is last
+			currentHeaderNode.getNode(0).add(index, methodSignature); //extended, add the method signature to the vtable declaration
+			//FIXME: modify the constructor as well
 		}
 		
 		//FIXME: also add to the data layout as static methods
@@ -145,7 +148,7 @@ public class ClassLayoutParser extends Visitor {
     // @param parentVTable
     int overridesMethod(String methodName, GNode currentVTable) {
 		// Search current VTable to see if overriden and at what index
-		for(int i = 1; i < currentVTable.size(); i++) { //start at one to ignore __isa
+		for(int i = 1; i < currentVTable.size()-1; i++) { //start at one to ignore __isa, end at size-1 to ignore constructor
 			if(methodName.equals(currentVTable.getNode(i).get(1).toString())) return i; //string comparison, return indexof
 		}
 		
@@ -204,7 +207,7 @@ public class ClassLayoutParser extends Visitor {
 				while( retVal.size() > 0 ) retVal.remove(0);
 				for( Object o : n ) {
 					if( o instanceof GNode ) retVal.add( visit((GNode)o) );
-					else retVal.add( o ); //FIXME: arbitrary objects added to the copy are still pointers...problem?
+					else retVal.add( o ); //arbitrary objects don't need to be copied because they would just be replaced
 				}
 				return retVal;
 			}
@@ -218,7 +221,9 @@ public class ClassLayoutParser extends Visitor {
 		//FIXME: make those necessary changes
 		GNode copy = deepCopy( parentHeader );
 		GNode copyVT = (GNode)copy.getNode(0);
-		for( int i = 1; i < copyVT.size(); i++ ) { //start at one to ignore Class __isa;
+		int size = copyVT.size();
+		copyVT.getNode(size-1).getNode(4).getNode(0).set(0, "__"+className ); //changing the Class __isa pointer in the constructor;
+		for( int i = 1; i < size-1; i++ ) { //start at one to ignore Class __isa, end at size-1 to ignore constructor
 			copyVT.getNode(i).getNode(2).getNode(0).getNode(0).set(0, className);
 		}
 		GNode copyDL = (GNode)copy.getNode(1);
@@ -261,7 +266,7 @@ public class ClassLayoutParser extends Visitor {
 		GNode classHeaderDeclaration = GNode.create("ClassHeaderDeclaration");
 		classHeaderDeclaration.add( objectClassVirtualTable() );
 		classHeaderDeclaration.add( objectClassDataLayout() );
-		objectNode.add(classHeaderDeclaration );
+		objectNode.add(classHeaderDeclaration);
 		
 		// FIXME: all following statements need to be replaced with the nodal hardcoded implementation
 		// ...which is going to be SO much fun...
@@ -287,23 +292,15 @@ public class ClassLayoutParser extends Visitor {
 	
 	// Creates a hard-coded virtual table for the object class.
 	GNode objectClassVirtualTable() {
-		/*
-		 TODO: CONSTRUCTOR
-		 __Object_VT()
-		 : __isa(__Object::__class()),
-		 hashCode(&__Object::hashCode),
-		 equals(&__Object::equals),
-		 getClass(&__Object::getClass),
-		 toString(&__Object::toString) {
-		 }
-		 */
+		
 		GNode retVal = GNode.create("VTableDeclaration");
 		retVal.add( createSkeletonDataField( "Class", "__isa" ) ); //Class __isa;
 		retVal.add( createSkeletonVirtualMethodDeclaration( "int32_t", "hashCode", new String[]{"Object"} )); //int32_t (*hashCode)(Object);
 		retVal.add( createSkeletonVirtualMethodDeclaration( "bool", "equals", new String[]{"Object","Object"} )); //bool (*equals)(Object, Object);
 		retVal.add( createSkeletonVirtualMethodDeclaration( "Class", "getClass", new String[]{"Object"} )); //Class (*getClass)(Object);
 		retVal.add( createSkeletonVirtualMethodDeclaration( "String", "toString", new String[]{"Object"} )); //String (*toString)(Object);
-		//retVal.add( initializeVTConstructor( retVal ) );
+		//FIXME: add correct constructor
+		retVal.add( initializeVTConstructor( retVal ) );
 		return retVal;
 	}
 	
@@ -311,8 +308,39 @@ public class ClassLayoutParser extends Visitor {
 	// This should only produce valid results for the base Object class, there is no inheritance analysis
 	// @param vTable The vTable to create a constructor for 
 	GNode initializeVTConstructor( GNode vTable ) {
-		GNode retVal = GNode.create("VTableConstructor");		
-
+		//FIXME: create the vtable constructor: 
+		// __Object_VT()
+		//: __isa(__Object::__class()),
+        //hashCode(&__Object::hashCode),
+        //equals(&__Object::equals),
+        //getClass(&__Object::getClass),
+        //toString(&__Object::toString) {
+		//}
+		
+		GNode retVal = GNode.create("VTConstructorDeclaration");		
+		retVal.add( GNode.create( "Modifiers" ) ); //empty modifiers
+		retVal.add( null ); //index 1 null
+		retVal.add( "__Object_VT" ); //name of constructor
+		retVal.add( GNode.create( "FormalParameters" ).add(null) ); //no parameters
+		final GNode methodPtrList = GNode.create( "MethodPointersList" );
+		methodPtrList.add( GNode.create( "ClassISAPointer" ).add( "__Object" ) );
+		new Visitor() {
+			public void visit( Node n ) {
+				for( Object o : n ) if (o instanceof GNode ) dispatch((GNode)o);
+			}
+			public void visitVirtualMethodDeclaration( GNode n ) {
+				GNode newPtr = GNode.create( "MethodPointer" );
+				//0 - method name
+				//1 - target Object
+				//2 - params if any
+				newPtr.add( n.get(1) );
+				newPtr.add( createTypeNode( "__Object" ) );
+				newPtr.add( GNode.create( "FormalParameters" ) );
+				methodPtrList.add( newPtr );
+			}
+		}.dispatch(vTable);
+		retVal.add( methodPtrList );
+		retVal.add( GNode.create( "Block" ) ); //empty code block
 		return retVal;
 	}
 	

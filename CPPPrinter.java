@@ -2011,6 +2011,47 @@ public class CPPPrinter extends Visitor {
 		printer.p('(').p(n.getNode(2)).p(");").pln();	
 	}
 	
+	public void visitVirtualMethodHeaderDeclaration(GNode n) {
+		printer.indent().p(n.getNode(0)).p(' ');
+		printer.p(' ').p(n.getString(1));
+		printer.p('(').p(n.getNode(2)).p(");").pln();	
+	}
+	
+	public void visitMethodPointersList( GNode n ) {
+		printer.incr().indent().pln();
+		for(Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
+			printer.indent().p( (GNode)iter.next() );
+			if(iter.hasNext() )printer.p( ", " ).pln();
+		}
+		printer.decr();
+	}
+	
+	public void visitMethodHeaderList( GNode n ) {
+		
+	}
+	
+	public void visitMethodPointer( GNode n ) {
+		//0 - meth name, 1-target, 2-params
+		//printer.p( n.getString(0) ).p('(').p(')');
+		printer.p(n.getString(0)).p("(&").p(n.getNode(1)).p("::").p(n.getString(0)).p(')');
+	}
+	
+	public void visitClassISAPointer( GNode n ) {
+		//__isa(__Object::__class())
+		printer.p("__isa(").p(n.getString(0)).p("::__class())");
+	}
+	
+	public void visitVTConstructorDeclaration(GNode n) { 
+		printer.indent().p(n.getNode(0));
+		if (null != n.get(1)) printer.p(n.getNode(1));
+		printer.p(n.getString(2)).p("() ");
+		if(null != n.get(4)) {
+			printer.p(": ").p(n.getNode(4));
+		}
+		isOpenLine = true;
+		printer.p(n.getNode(5)).pln();
+	}
+	
 	//
 	// ---------------------- copied from java printer!
 	//
