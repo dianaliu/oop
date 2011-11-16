@@ -20,7 +20,6 @@ SOURCE = \
 	ClassLayoutParser.java \
 	LeafTransplant.java \
 	CPPPrinter.java \
-	CAST.java \
 	DependencyResolver.java \
         TranslatorSymbolTable.java
 
