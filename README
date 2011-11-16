@@ -1,9 +1,8 @@
 - ABOUT
-Midterm project for http://cs.nyu.edu/rgrimm/teaching/fa11-oop/ by Diana, Hernel, Kirim, and Rob.
+Final project for http://cs.nyu.edu/rgrimm/teaching/fa11-oop/ by Diana, Hernel, Kirim, and Rob.
 
-- HOW TO RUN
-xtc/ directory should contain: midterm-translator.jar, Test.java, and testdependecies/
-
-Run with: java -jar midterm-translator.jar
-This runs our Translator with the -debug flag.
+To run using test script (once functional):
+   cd xtc/
+   cp src/xtc/oop/magic.sh magic.sh
+   source magic.sh JAVAFILE
 

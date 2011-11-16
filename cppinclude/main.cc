@@ -33,7 +33,7 @@ int main(void) {
   Object o = new __Object();
 
   std::cout << "o.toString() : "
-            << o->__vptr->toString(o)->data // o.toString()
+            << o->__vptr->toString(o) // o.toString()
             << std::endl;
 
   // Class k = o.getClass();
@@ -42,10 +42,10 @@ int main(void) {
 
   __rt::checkNotNull(k);
   std::cout << "k.getName()  : "
-            << k->__vptr->getName(k)->data // k.getName()
+            << k->__vptr->getName(k) // k.getName()
             << std::endl
             << "k.toString() : "
-            << k->__vptr->toString(k)->data // k.toString()
+            << k->__vptr->toString(k) // k.toString()
             << std::endl;
 
   // Class l = k.getClass();
@@ -54,10 +54,10 @@ int main(void) {
 
   __rt::checkNotNull(l);
   std::cout << "l.getName()  : "
-            << l->__vptr->getName(l)->data // l.getName()
+            << l->__vptr->getName(l) // l.getName()
             << std::endl
             << "l.toString() : "
-            << l->__vptr->toString(l)->data // l.toString()
+            << l->__vptr->toString(l) // l.toString()
             << std::endl;
 
   // if (k.equals(l)) { ... } else { ... }
@@ -94,25 +94,23 @@ int main(void) {
   }
 
   // HACK: Calling java.lang.Object.toString on k
-  std::cout << o->__vptr->toString((Object)k)->data << std::endl;
+  std::cout << o->__vptr->toString((Object)k) << std::endl;
 
   // int[] a = new int[5];
   __rt::Array<int32_t>* a = new __rt::Array<int32_t>(5);
 
   // a[2]
+  // Think of (*a)[2] as a->operator[](2).
   __rt::checkNotNull(a);
-  __rt::checkIndex(a, 2);
-  std::cout << "a[2]  : " << a->__data[2] << std::endl;
+  std::cout << "a[2]  : " << (*a)[2] << std::endl;
 
   // a[2] = 5;
   __rt::checkNotNull(a);
-  __rt::checkIndex(a, 2);
-  a->__data[2] = 5;
+  (*a)[2] = 5;
 
   // a[2]
   __rt::checkNotNull(a);
-  __rt::checkIndex(a, 2);
-  std::cout << "a[2]  : " << a->__data[2] << std::endl;
+  std::cout << "a[2]  : " << (*a)[2] << std::endl;
 
   // String[] ss = new String[5];
   __rt::Array<String>* ss = new __rt::Array<String>(5);
@@ -122,11 +120,10 @@ int main(void) {
 
   // ss[2] = "Hello";
   __rt::checkNotNull(ss);
-  __rt::checkIndex(ss, 2);
   __rt::checkStore(ss, s);
-  ss->__data[2] = s;
+  (*ss)[2] = s;
 
-  std::cout << "ss[2] : " << ss->__data[2]->data << std::endl;
+  std::cout << "ss[2] : " << (*ss)[2] << std::endl;
 
   // Done.
   std::cout << "--------------------------------------------------------------"

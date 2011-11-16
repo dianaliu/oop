@@ -49,24 +49,24 @@ import java.util.ArrayList;
 
 public class Translator extends xtc.util.Tool {
 	
-
+	
     public static boolean DEBUG = false;
-
+	
 	/** Create a new translator. */
     public Translator() {
 	    // Nothing to do.
 	}
     
     public String getName() {
-	    return "\n********** Java to C++ Translator";
+	    return "\n*** Java to C++ Translator";
 	}
     
     public String getCopy() {
-	    return "Diana, Hernel, & Robert Kirim **********";
+	    return "Diana, Hernel, & Robert Kirim ***";
 	}
 	
     public String getVersion() {
-		return "0.1";
+		return "0.2";
     }
     
     public void init() {
@@ -74,17 +74,18 @@ public class Translator extends xtc.util.Tool {
 	    runtime.
 		bool("printAST", "printAST", false, "Print Java AST.").
 		bool("debug", "debug", false, "Extra output for debugging").
+		bool("inherit", "inherit", false, "Test inheritance analysis, includes DEBUG flag.").
 		bool("translate", "translate", false, 
 		     "Translate Java code to C++ without inheritance.");
     }
-
+	
     public Node parse(Reader in, File file) throws IOException, ParseException {
 	    JavaFiveParser parser =
 		new JavaFiveParser(in, file.toString(), (int)file.length());
-		Result result = parser.pCompilationUnit(0);
-		return (Node)parser.value(result);
+	    Result result = parser.pCompilationUnit(0);
+	    return (Node)parser.value(result);
     }  
-           
+	
     public void process(Node node) {
 	if (runtime.test("printAST")) {
 	    runtime.console().format(node).pln().flush();
@@ -95,39 +96,37 @@ public class Translator extends xtc.util.Tool {
 	}
 	
 	if( runtime.test("translate") ) {
-	  
-	    if(DEBUG) 
-		runtime.console().pln("--- Begin translation").flush();
-
-
-	    if(DEBUG) 
-			runtime.console().pln("--- Begin dependency analysis").flush();
-		// Create an array of AST trees to hold each dependency file
-	    // FIXME: Do not hardcode
-	    GNode[] trees = new GNode[500];  
+	    
+	    runtime.console().pln("--- Begin translation").flush();
+	    
+	    // Create an array of AST trees to hold each dependency file
+	    // FIXME: Do not hardcode size
+	    GNode[] trees = new GNode[100];  
 	    trees[0] = (GNode)node;
-	    // Analyze the main Java AST to find & resolve all imported dependencies
+	    
+	    runtime.console().pln("--- Begin dependency analysis").flush();
+	    
+	    // Analyze the main Java AST to find & resolve dependencies
+	    // TODO: Only create ASTs for those Classes used & imported
 	    DependencyResolver depResolver = new DependencyResolver();
 	    depResolver.processDependencies(trees);
 	    try {
-			trees = depResolver.parseDependencies();
-			trees[0] = (GNode)node;
+		trees = depResolver.parseDependencies();
+		trees[0] = (GNode)node;
 	    } 
 	    catch (IOException e) {
-			trees = null;
-			System.out.println("IOException: " + e);
+		trees = null;
+		runtime.console().pln("IOException: " + e).flush();
 	    }
 	    catch (ParseException e) {
-			trees = null;
-			System.out.println("ParseException: " + e);
+		trees = null;
+		runtime.console().pln("ParseException: " + e).flush();
 	    }	
-	    if(DEBUG) 
-			runtime.console().pln("--- Finish dependency analysis").flush();
-		//----------------------------------------------------------------------
-
-
-	    if(DEBUG) 
-			runtime.console().pln("--- Begin inheritance analysis").flush();
+	    
+	    runtime.console().pln("--- Finish dependency analysis").flush();
+	    
+	    runtime.console().pln("--- Begin inheritance analysis").flush();
+	    
 	    // Parse all classes to create vtables and data layouts
 	    final ClassLayoutParser clp = new ClassLayoutParser(trees, DEBUG);
 	    if(DEBUG) 
@@ -169,48 +168,102 @@ public class Translator extends xtc.util.Tool {
 	    // FIXME: Do not hardcode size
 	    GNode[] returned = new GNode[500];
 	    LeafTransplant translator = 
-		new LeafTransplant(clp, GNode.cast(trees[0]));
-
+		new LeafTransplant(clp, GNode.cast(trees[0]), DEBUG);
+	    
 	    for(int i = 0; i < trees.length; i++) {
-	    	if(trees[i] != null)
-		    {
-	    		translator = 
-			    new LeafTransplant(clp, GNode.cast(trees[i])); 
-				returned[i] = translator.getTranslatedTree();
-		    }
+		if(trees[i] != null) {
+		    translator = 
+			new LeafTransplant(clp, GNode.cast(trees[i]), DEBUG); 
+		    returned[i] = translator.getCPPTree();
+		    
+		    if(DEBUG) runtime.console().pln("--- CPP AST #" + (i+1));
+		    if(DEBUG) runtime.console().format(returned[i]).pln().flush();
+		    if(DEBUG) 
+			runtime.console().pln("\t-----------------------").flush();
+		}
 	    }
-	    if(DEBUG) 
-		runtime.console().pln("--- Finish cpp translation").flush();
-	   	//----------------------------------------------------------------------
-
-	    if(DEBUG) 
-		runtime.console().pln("--- Begin printing cpp tree(s)").flush();
- 
+	    
+	    runtime.console().pln("--- Finish cpp translation").flush();
+	    
+	    runtime.console().pln("--- Begin writing CPP file(s)").flush();
+	    
 	    // Run CPP printer on each CPP Tree and output to Code.cpp
-	    // FIXME: Support multiple outputs
-	    try{
-			PrintWriter fstream = new PrintWriter("Code.cpp");
-			Printer cppCode = new Printer(fstream);
+	    try {		
+		// Create an output directory
+		boolean status = new File("output/").mkdir();
 		
-			for(int i = 0; i < returned.length; i++) {
-				if(returned[i] != null)
-				{
-		   		 	new CPPPrinter( cppCode ).dispatch(returned[i]); 
-		   		}
-		   	}
-
-			if(DEBUG) 
-			    runtime.console().pln("--- Finish printing cpp tree(s)").flush();
-
-			if(DEBUG) 
-			    runtime.console().pln("--- Finish translation").flush();
-				cppCode.flush();
+		// TODO: Clear directory if not empty
+		
+		for(int i = 0; i < returned.length; i++) {
+		    if(returned[i] != null)
+			{
+			    // Name our file
+			    GNode root = GNode.cast(returned[i]);
+			    String fileName = "output/";
+			    fileName += root.getString(root.size() - 1);
+			    fileName += ".cpp";
+			    
+			    PrintWriter fstream = new PrintWriter(fileName);
+			    Printer cppCode = new Printer(fstream);
+			    
+			    new CPPPrinter( cppCode ).dispatch(returned[i]); 
+			    cppCode.flush();
+			    if(DEBUG) runtime.console().pln("--- Wrote " 
+							    + fileName);
+			}
+		}
+		
+		runtime.console().pln("--- Finish writing CPP file(s)").flush();
+		// Also print cpp output to console?
+		runtime.console().pln("--- Finish translation. See output/").flush();
+		
 	    }
 	    catch(Exception e) {
-	    	System.err.println(e.getMessage());
+		System.err.println(e.getMessage());
 	    }
-	}
-    } // end translate
+	    
+	} // end -translate
+	
+	
+	if(runtime.test("inherit")) {
+	    DEBUG = true;
+	    
+	    runtime.console().pln("--- Begin translation").flush();
+	    
+	    // Create an array of AST trees to hold each dependency file
+	    // FIXME: Do not hardcode
+	    GNode[] trees = new GNode[100];
+	    trees[0] = (GNode)node;
+	    
+	    runtime.console().pln("--- Begin dependency analysis").flush();
+	    
+	    // Analyze the main Java AST to find & resolve dependencies
+	    DependencyResolver depResolver = new DependencyResolver();
+	    depResolver.processDependencies(trees);
+	    try {
+		trees = depResolver.parseDependencies();
+		trees[0] = (GNode)node;
+	    }
+	    catch (IOException e) {
+		trees = null;
+		System.out.println("IOException: " + e);
+	    }
+	    catch (ParseException e) {
+		trees = null;
+		System.out.println("ParseException: " + e);
+	    }
+	    
+	    runtime.console().pln("--- Finish dependency analysis").flush();
+	    
+	    runtime.console().pln("--- Begin inheritance analysis").flush();
+	    
+	    // Parse all classes to create vtables and data layouts
+	    final ClassLayoutParser clp = new ClassLayoutParser(trees, DEBUG);
+	    
+	    runtime.console().pln("--- Finish inheritance analysis").flush();
+	} // end -inherit
+	
+    } // end process
     
     /**
      * Run the translator with the specified command line arguments.
@@ -218,7 +271,7 @@ public class Translator extends xtc.util.Tool {
      * @param args The command line arguments.
      */
     public static void main(String[] args) {
-	new Translator().run(args);
+		new Translator().run(args);
     }
     
 }
