@@ -50,6 +50,7 @@ public class Translator extends xtc.util.Tool {
 	
 	
     public static boolean DEBUG = false;
+	public static boolean DEBUGBARF = false;
 	
 	/** Create a new translator. */
     public Translator() {
@@ -73,6 +74,7 @@ public class Translator extends xtc.util.Tool {
 	    runtime.
 		bool("printAST", "printAST", false, "Print Java AST.").
 		bool("debug", "debug", false, "Extra output for debugging").
+		bool("barf", "barf", false, "Translated Tree Output").
 		bool("inherit", "inherit", false, "Test inheritance analysis, includes DEBUG flag.").
 		bool("translate", "translate", false, 
 		     "Translate Java code to C++ without inheritance.");
@@ -92,6 +94,10 @@ public class Translator extends xtc.util.Tool {
 		
 		if(runtime.test("debug")) {
 			DEBUG = true;
+		}
+		
+		if(runtime.test("barf")) {
+			DEBUGBARF = true;
 		}
 		
 		if(runtime.test("inherit")) {
@@ -202,7 +208,7 @@ public class Translator extends xtc.util.Tool {
 			if(DEBUG) 
 				runtime.console().pln("--- Finish cpp translation").flush();
 			
-			if(DEBUG){
+			if(DEBUGBARF){
 				runtime.console().pln("--- Begin tree barf").flush();
 				for(int i = 0; i < returned.length; i++) {
 					if(returned[i] != null)

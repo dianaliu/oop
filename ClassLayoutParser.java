@@ -99,6 +99,7 @@ public class ClassLayoutParser extends Visitor {
 		// --- Place vt/dl finalization here: ---
 		// FIXME: change the types of explicit this's in the vmethod decls
 		newChildNode.add(currentHeaderNode);
+		newChildNode.setProperty( "parentClassNode", parent);
 		parent.addNode(newChildNode);
     }
 	
@@ -488,6 +489,14 @@ public class ClassLayoutParser extends Visitor {
 			
 	    }.dispatch(classTree));
     }
+	
+	//Returns a Class node representing the parent class of the specified class name
+	//@param sc name of the Class for which the parent is needed.
+	public GNode getSuperclass(String sc) {
+		GNode child = getClass(sc);
+		if (child.getProperty("name").equals("Object")) return null;
+		return (GNode)child.getProperty("parentClassNode");
+	}
     
 	
     // ----------------------------------------------------
@@ -511,6 +520,14 @@ public class ClassLayoutParser extends Visitor {
 		return classData;
     }
 	
+	//Returns the name of the super class of the specified class, or null if class name is Object (the root class)
+	//@param cN the Class name
+	public String getSuperclassName(String cN) {
+		GNode sooper = getSuperclass(cN);
+		if( sooper == null) return "Object";
+		return (String)sooper.getProperty("name");
+	}
+	
     // Prints a list of all classes
     public void printClassTree() {
 		
@@ -522,15 +539,15 @@ public class ClassLayoutParser extends Visitor {
 				}
 			}
 			
-			GNode parent = null;
 			public void visitClass(GNode n) {
 				System.out.print("Class " + n.getStringProperty("name"));
-				if( parent == null ) System.out.println( " is the root of the Class hierarchy." );
-				else System.out.println( " extends " + parent.getStringProperty("name"));
-				GNode temp = parent;
-				parent = n;
+				String superClass = getSuperclassName(n.getStringProperty("name"));
+				/*if( parent == null ) System.out.println( " is the root of the Class hierarchy." );
+				 else*/System.out.println( " extends " + superClass/*(superClass==null?superClass:"")*/);
+				//GNode temp = parent;
+				//parent = n;
 				visit(n);
-				parent = temp;
+				//parent = temp;
 			}
 			
 			public void visitVTableDeclaration(GNode n) {
