@@ -72,6 +72,9 @@ function failure()
 	cppOutput=("${cppOutput[@]}" "$file")
  done
 
+# 5.5 Copy Grimm's java_lang etc. files to output/
+ cp ../src/xtc/oop/include/* .
+
  # 6. Compile CPP files. Form string for cpp arguments
  allCPP=""
  for((i=0; i < ${#cppOutput[@]}; i++))
