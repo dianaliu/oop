@@ -1,0 +1,2 @@
+Dependency method invokation test: Returning an int
+ j = 2

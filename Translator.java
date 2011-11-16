@@ -129,16 +129,44 @@ public class Translator extends xtc.util.Tool {
 	    
 	    // Parse all classes to create vtables and data layouts
 	    final ClassLayoutParser clp = new ClassLayoutParser(trees, DEBUG);
-	    
-	    runtime.console().pln("--- Finish inheritance analysis").flush();
+	    if(DEBUG) 
+			runtime.console().pln("--- Finish inheritance analysis").flush();
+	   	//----------------------------------------------------------------------
+	   	
 
-
-	    
-	    runtime.console().pln("--- Begin cpp translation").flush();
-	    
+	    if(DEBUG) 
+			runtime.console().pln("--- Begin trimming dependencies").flush();
+		// Mark only the dependency files which are actually invoked
+		// trees = depResolver.trimDependencies(clp, trees);
+	    if(DEBUG) 
+			runtime.console().pln("--- Finished trimming dependencies").flush();
+	   	//----------------------------------------------------------------------
+	   	
+	   	
+	   	
+	   	
+	   	//FIXME: SymTable test; remove later
+	   	System.out.println("\nMESSING WITH THE SYMBOL TABLE\n");
+	   	TranslatorSymbolTable tst = new TranslatorSymbolTable("Global");
+	    System.out.println("Symbol identifier value : " + tst.getType("Global"));
+	   	System.out.println("Mangler:");
+	   	System.out.println(tst.symTable.toNameSpace("WheresMyCar", "Dude"));
+	   	System.out.println("UnMangler:");
+	   	//stem.out.println(tst.symTable.fromNameSpace("Dude(WheresMyCar)"));
+ 		//find all variable names and their types
+ 		tst.addSymbols(trees[0]);
+ 		tst.addSymbols(trees[1]);
+ 		
+ 		System.out.println("\nDONE MESSING WITH THE SYMBOL TABLE\n");
+	   	
+	   	
+	   	
+	   	
+	    if(DEBUG) 
+			runtime.console().pln("--- Begin cpp translation").flush();
 	    // Create a translator to output a cpp tree for each java ast
 	    // FIXME: Do not hardcode size
-	    GNode[] returned = new GNode[100];
+	    GNode[] returned = new GNode[500];
 	    LeafTransplant translator = 
 		new LeafTransplant(clp, GNode.cast(trees[0]), DEBUG);
 	    
@@ -156,14 +184,7 @@ public class Translator extends xtc.util.Tool {
 			runtime.console().pln("\t-----------------------").flush();
 		}
 	    }
-
-	    runtime.console().pln("--- Begin scope analysis").flush();
-
-	    ScopeParser sp = new ScopeParser(node, (Node)returned[0], DEBUG);
-
-	    runtime.console().pln("--- Finish scope analysis").flush();
 	    
-
 	    runtime.console().pln("--- Finish cpp translation").flush();
 	    
 	    runtime.console().pln("--- Begin writing CPP file(s)").flush();

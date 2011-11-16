@@ -21,7 +21,7 @@ SOURCE = \
 	LeafTransplant.java \
 	CPPPrinter.java \
 	DependencyResolver.java \
-	ScopeParser.java 
+        TranslatorSymbolTable.java
 
 
 JNI_SOURCE =
