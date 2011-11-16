@@ -20,7 +20,8 @@ SOURCE = \
 	ClassLayoutParser.java \
 	LeafTransplant.java \
 	CPPPrinter.java \
-	DependencyResolver.java
+	DependencyResolver.java \
+	ScopeParser.java 
 
 
 JNI_SOURCE =

@@ -33,6 +33,9 @@ import xtc.lang.CPrinter;
 import xtc.lang.JavaFiveParser;
 import xtc.lang.JavaPrinter;
 
+import xtc.util.SymbolTable;
+import xtc.util.SymbolTable.Scope;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -42,8 +45,6 @@ import java.io.IOException;
 import java.io.Reader;
 
 import java.util.ArrayList;
-
-import xtc.oop.LeafTransplant;
 
 
 public class Translator extends xtc.util.Tool {
@@ -130,7 +131,9 @@ public class Translator extends xtc.util.Tool {
 	    final ClassLayoutParser clp = new ClassLayoutParser(trees, DEBUG);
 	    
 	    runtime.console().pln("--- Finish inheritance analysis").flush();
-	    	    
+
+
+	    
 	    runtime.console().pln("--- Begin cpp translation").flush();
 	    
 	    // Create a translator to output a cpp tree for each java ast
@@ -145,13 +148,22 @@ public class Translator extends xtc.util.Tool {
 			new LeafTransplant(clp, GNode.cast(trees[i]), DEBUG); 
 		    returned[i] = translator.getCPPTree();
 		    
-		    if(DEBUG) runtime.console().pln("--- CPP AST #" + (i+1));
-		    if(DEBUG) runtime.console().format(returned[i]).pln().flush();
+		    if(DEBUG) 
+			runtime.console().pln("--- CPP AST #" + (i+1));
+		    if(DEBUG) 
+			runtime.console().format(returned[i]).pln().flush();
 		    if(DEBUG) 
 			runtime.console().pln("\t-----------------------").flush();
 		}
 	    }
+
+	    runtime.console().pln("--- Begin scope analysis").flush();
+
+	    ScopeParser sp = new ScopeParser(node, (Node)returned[0], DEBUG);
+
+	    runtime.console().pln("--- Finish scope analysis").flush();
 	    
+
 	    runtime.console().pln("--- Finish cpp translation").flush();
 	    
 	    runtime.console().pln("--- Begin writing CPP file(s)").flush();
@@ -184,7 +196,7 @@ public class Translator extends xtc.util.Tool {
 		
 		runtime.console().pln("--- Finish writing CPP file(s)").flush();
 		// Also print cpp output to console?
-		runtime.console().pln("--- Finish translation. See output/").flush();
+		runtime.console().pln("--- Finish translation. See xtc/output/").flush();
 		
 	    }
 	    catch(Exception e) {
