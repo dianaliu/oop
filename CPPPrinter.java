@@ -2030,7 +2030,7 @@ public class CPPPrinter extends Visitor {
 		printer.pln();
 	}
 	
-	public void visitVirtualMethodHeader(GNode n) {
+	public void visitStaticMethodHeader(GNode n) {
 		printer.indent().p("static ").p(n.getNode(0));
 		printer.p(' ').p(n.getString(1));
 		printer.p('(').p(n.getNode(2)).p(");").pln();	

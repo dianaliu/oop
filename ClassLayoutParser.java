@@ -152,7 +152,7 @@ public class ClassLayoutParser extends Visitor {
 			
 			//adding it to the data layout
 			GNode dataLayoutMethList = (GNode)currentHeaderNode.getNode(1).getNode(2);
-			GNode hdr = GNode.create( "VirtualMethodHeader" );
+			GNode hdr = GNode.create( "StaticMethodHeader" );
 			hdr.add( n.get(2) ); //return type
 			hdr.add( n.get(3) ); //method name
 			hdr.add( formalParameters ); //params
@@ -246,6 +246,12 @@ public class ClassLayoutParser extends Visitor {
 			copyVT.getNode(i).getNode(2).getNode(0).getNode(0).set(0, className);
 		}
 		GNode copyDL = (GNode)copy.getNode(1);
+		copyDL.set(0, createSkeletonDataField( "__"+className+"_VT*", "__vptr" )); //setting the right vtable pointer name
+		GNode statMethList = (GNode)copyDL.getNode(2);
+		for( Object o : statMethList ) { //changing the 'this' parameter types in the static data layout methods
+			((GNode)o).getNode(2).getNode(0).getNode(0).set(0, className); //ugh is that ugly or what?
+		}
+		copyDL.set(3, createSkeletonStaticDataField( "__"+className+"_VT", "__vtable" ));
 		return copy;
 	}
 			
@@ -368,7 +374,14 @@ public class ClassLayoutParser extends Visitor {
 		GNode retVal = GNode.create("DataLayoutDeclaration");
 		retVal.add( createSkeletonDataField( "__Object_VT*", "__vptr" ) );
 		retVal.add( GNode.create( "DataFieldList" ) );
-		retVal.add( GNode.create( "MethodHeaderList" ) );
+		GNode objMethHeaders = GNode.create( "MethodHeaderList" );
+		//TODO: add static methods
+		objMethHeaders.add( createSkeletonStaticMethodHeader( "int32_t", "hashCode", new String[]{"Object"} )); //int32_t (*hashCode)(Object);
+		objMethHeaders.add( createSkeletonStaticMethodHeader( "bool", "equals", new String[]{"Object","Object"} )); //bool (*equals)(Object, Object);
+		objMethHeaders.add( createSkeletonStaticMethodHeader( "Class", "getClass", new String[]{"Object"} )); //Class (*getClass)(Object);
+		objMethHeaders.add( createSkeletonStaticMethodHeader( "String", "toString", new String[]{"Object"} )); //String (*toString)(Object);
+		
+		retVal.add( objMethHeaders );
 		retVal.add( createSkeletonStaticDataField( "__Object_VT", "__vtable" ) );
 		return retVal;
 	}
@@ -380,6 +393,18 @@ public class ClassLayoutParser extends Visitor {
 	// @param parametersList The list of parameters for the method
 	GNode createSkeletonVirtualMethodDeclaration( String returnType, String methodName, String[] parameterTypes ) {
 		GNode retVal = GNode.create("VirtualMethodDeclaration");
+		retVal.add( createTypeNode( returnType ) );
+		retVal.add( methodName ); //method name is just a string still
+		GNode params = GNode.create("FormalParameters"); //node for a parameter list
+		for( String s : parameterTypes ) {
+			params.add( createTypeNode(s) );
+		}
+		retVal.add( params );
+		return retVal;
+	}
+	
+	GNode createSkeletonStaticMethodHeader( String returnType, String methodName, String[] parameterTypes ) {
+		GNode retVal = GNode.create("StaticMethodHeader");
 		retVal.add( createTypeNode( returnType ) );
 		retVal.add( methodName ); //method name is just a string still
 		GNode params = GNode.create("FormalParameters"); //node for a parameter list
@@ -520,5 +545,4 @@ public class ClassLayoutParser extends Visitor {
 		
 		System.out.println();
     }
-	
-}
+	}
