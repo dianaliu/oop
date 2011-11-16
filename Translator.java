@@ -46,11 +46,13 @@ import java.io.Reader;
 
 import java.util.ArrayList;
 
+import xtc.oop.LeafTransplant;
 
 public class Translator extends xtc.util.Tool {
 	
 	
     public static boolean DEBUG = false;
+	public static boolean DEBUGBARF = false;
 	
 	/** Create a new translator. */
     public Translator() {
@@ -74,6 +76,7 @@ public class Translator extends xtc.util.Tool {
 	    runtime.
 		bool("printAST", "printAST", false, "Print Java AST.").
 		bool("debug", "debug", false, "Extra output for debugging").
+		bool("barf", "barf", false, "Translated Tree Output").
 		bool("inherit", "inherit", false, "Test inheritance analysis, includes DEBUG flag.").
 		bool("translate", "translate", false, 
 		     "Translate Java code to C++ without inheritance.");
@@ -95,6 +98,10 @@ public class Translator extends xtc.util.Tool {
 	    DEBUG = true;
 	}
 	
+	if(runtime.test("barf")) {
+	    DEBUGBARF = true;
+	}
+
 	if( runtime.test("translate") ) {
 	    
 	    runtime.console().pln("--- Begin translation").flush();

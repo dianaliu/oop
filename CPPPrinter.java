@@ -2232,6 +2232,60 @@ public class CPPPrinter extends Visitor {
 
 	}
 	
+	public void visitMethodPointersList( GNode n ) {
+		printer.incr().indent().pln();
+		for(Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
+			printer.indent().p( (GNode)iter.next() );
+			if(iter.hasNext() )printer.p( ", " ).pln();
+		}
+		printer.decr();
+	}
+	
+	public void visitMethodHeaderList( GNode n ) {
+		printer.pln();
+		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
+		printer.pln();
+	}
+	
+	public void visitStaticMethodHeader(GNode n) {
+		printer.indent().p("static ").p(n.getNode(0));
+		printer.p(' ').p(n.getString(1));
+		printer.p('(').p(n.getNode(2)).p(");").pln();	
+	}
+	
+	public void visitDataFieldList( GNode n ) {
+		printer.pln();
+		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
+	}
+	
+	public void visitMethodPointer( GNode n ) {
+		//0 - meth name, 1-target, 2-params
+		//printer.p( n.getString(0) ).p('(').p(')');
+		printer.p(n.getString(0)).p("(&").p(n.getNode(1)).p("::").p(n.getString(0)).p(')');
+	}
+	
+	public void visitClassISAPointer( GNode n ) {
+		printer.p("__isa(").p(n.getString(0)).p("::__class())");
+	}
+	
+	public void visitVTConstructorDeclaration(GNode n) { 
+		printer.indent().p(n.getNode(0));
+		if (null != n.get(1)) printer.p(n.getNode(1));
+		printer.p(n.getString(2)).p("() ");
+		if(null != n.get(4)) {
+			printer.p(": ").p(n.getNode(4));
+		}
+		isOpenLine = true;
+		printer.p(n.getNode(5)).pln();
+	}
+	
+	//----------------------------------------------------------
+	//                   END NEW METHODS
+	//----------------------------------------------------------
+	
+	//
+	// ---------------------- copied from java printer!
+	//
     // ------------------------------------------------------
     // ------ Begin via JavaPrinter.  Thanks Grimm! ---------
     // ------------------------------------------------------
