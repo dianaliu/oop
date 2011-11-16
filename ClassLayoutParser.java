@@ -82,22 +82,8 @@ public class ClassLayoutParser extends Visitor {
 		if(DEBUG) System.out.println( "Visiting new class: " + className + " extends " + parent.getProperty("name") );
 		 
 		//Building the vtables and data layout
-		
-		// --- Place vt/dl setup here: --- 
-		
-		//currentHeaderNode = GNode.create((GNode)parent.getNode(0)); //copy the header node from the parent
 		currentHeaderNode = inheritHeader( (GNode)parent.getNode(0) );
-		
-		//STUFF WE NEED TO DO EVENTUALLY:
-		//add the virtual methods and data fields from the parents here -- DONE with the above parent header copy
-		//add (or rather, modify) the isa statement at vtable[0] -- will be done in Object forced init - no modification necessary
-		
-		// --- end setup -----------------
-		
-		visit(n);
-		
-		// --- Place vt/dl finalization here: ---
-		// FIXME: change the types of explicit this's in the vmethod decls
+		visit(n); // <-- VISITING ALL CHILDREN OF THIS CLASS (DATA FIELDS, METHODS, CONSTRUCTORS, ...)
 		newChildNode.add(currentHeaderNode);
 		newChildNode.setProperty( "parentClassNode", parent);
 		parent.addNode(newChildNode);
@@ -152,7 +138,7 @@ public class ClassLayoutParser extends Visitor {
 			vtConstructorPtrList.add( newPtr );
 			
 			//adding it to the data layout
-			GNode dataLayoutMethList = (GNode)currentHeaderNode.getNode(1).getNode(2);
+			GNode dataLayoutMethList = (GNode)currentHeaderNode.getNode(1).getNode(3);
 			GNode hdr = GNode.create( "StaticMethodHeader" );
 			hdr.add( n.get(2) ); //return type
 			hdr.add( n.get(3) ); //method name
@@ -213,6 +199,18 @@ public class ClassLayoutParser extends Visitor {
 		return -1;
     }
 	
+	// -----------------------------------
+	//       Constructor Processing
+	// -----------------------------------
+	
+	public void visitConstructorDeclaration(GNode n) {
+		System.out.println( "***constructor found in class " + className );
+		GNode constructorSignature = GNode.create("ConstructorHeader");
+		constructorSignature.add( n.get(2) ); //constructor name (just the class name)
+		constructorSignature.add( n.get(3) ); //parameters
+		currentHeaderNode.getNode(1).getNode(2).add(constructorSignature); //add the signature to the constructor list
+	}
+	
 
     // ----------------------------------------------------
     // ------------- Internal Methods --------------
@@ -248,11 +246,12 @@ public class ClassLayoutParser extends Visitor {
 		}
 		GNode copyDL = (GNode)copy.getNode(1);
 		copyDL.set(0, createSkeletonDataField( "__"+className+"_VT*", "__vptr" )); //setting the right vtable pointer name
-		GNode statMethList = (GNode)copyDL.getNode(2);
+		copyDL.set(2, GNode.create( "ConstructorHeaderList" ));//clear out the constructor list
+		GNode statMethList = (GNode)copyDL.getNode(3);
 		for( Object o : statMethList ) { //changing the 'this' parameter types in the static data layout methods
 			((GNode)o).getNode(2).getNode(0).getNode(0).set(0, className); //ugh is that ugly or what?
 		}
-		copyDL.set(3, createSkeletonStaticDataField( "__"+className+"_VT", "__vtable" ));
+		copyDL.set(4, createSkeletonStaticDataField( "__"+className+"_VT", "__vtable" ));
 		return copy;
 	}
 			
@@ -375,6 +374,7 @@ public class ClassLayoutParser extends Visitor {
 		GNode retVal = GNode.create("DataLayoutDeclaration");
 		retVal.add( createSkeletonDataField( "__Object_VT*", "__vptr" ) );
 		retVal.add( GNode.create( "DataFieldList" ) );
+		retVal.add( GNode.create( "ConstructorHeaderList" ));
 		GNode objMethHeaders = GNode.create( "MethodHeaderList" );
 		//TODO: add static methods
 		objMethHeaders.add( createSkeletonStaticMethodHeader( "int32_t", "hashCode", new String[]{"Object"} )); //int32_t (*hashCode)(Object);
@@ -557,9 +557,7 @@ public class ClassLayoutParser extends Visitor {
 			public void visitDataLayoutDeclaration(GNode n) {
 				System.out.println(" has data layout");
 			}
-			
 		}.dispatch(classTree);
-		
 		System.out.println();
     }
-	}
+}
