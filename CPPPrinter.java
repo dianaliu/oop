@@ -1444,10 +1444,15 @@ public class CPPPrinter extends Visitor {
 	//	for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
 	// DataLayoutDeclaration only has children FieldDeclaration
 
+	// Need stuff from Rob!
+
 	printer.indent().p("struct __").p(className).pln(" {");
 	printer.incr();
 	//	printer.indent().p("__").p(className).pln("* _vptr;");
 	//	printer.indent().p("// __").p(className).pln("();");
+
+
+	printer.indent().pln("static Class __class();");
 
 	//	printer.indent().p("// Values in DataLayout ").pln(className);
 	// FIXME: CLP needs to fix classes, add constructor, change order
