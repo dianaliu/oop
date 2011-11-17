@@ -517,7 +517,12 @@ public class CPPPrinter extends Visitor {
 		if( o instanceof GNode ) {
 		    GNode x = GNode.cast(o);
        
-		    if (x.hasName("TypedefSpecifier")) {}
+		    if (x.hasName("TypedefSpecifier")) {
+			// TODO: Rob, please wrap up the typedef node
+			//			printer.p("typedef __rt::Ptr<__").p(className);
+			//			printer.p("> ").p(className).p(";").pln();
+			
+		    }
 		    else if (x.hasName("PrimaryIdentifier")){}
 
 		    else printer.p(x);
@@ -640,6 +645,7 @@ public class CPPPrinter extends Visitor {
 		else if (o instanceof String) className = (String)o;
 		else ; // null
 	    }
+
 	   
 	    printer.pln();
 	    isLongDecl = true;
@@ -1001,7 +1007,9 @@ public class CPPPrinter extends Visitor {
 		printer.indent().p("struct __").p(className).pln("_VT;");
 		printer.pln();
 		printer.indent().pln("// Definition of type name");
-		printer.indent().p("typedef __").p(className).p("* ").p(className).pln(";");
+		// Integrating Smart Pointers
+		printer.indent().p("typedef __rt::Ptr<").p(className).p("> ").p(className).pln(";");
+		//		printer.indent().p("typedef __").p(className).p("* ").p(className).pln(";");
 		
 	    }
 	    
@@ -2261,8 +2269,17 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	public void visitConstructorHeaderList(GNode n) {
-		if(n.size() > 0) printer.pln();
-		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
+	    // FIXME: Hardcoding Constructor and Destructor here
+	    printer.pln();
+	    printer.indent().p("// The constructor").pln();
+	    printer.indent().p("__").p(className).p("();").pln();
+	    printer.pln();
+	    printer.indent().p("// The destructor").pln();
+	    printer.indent().p("static void __delete(__").p(className).p("*);").pln();
+	    printer.pln();
+
+	    if(n.size() > 0) printer.pln();
+	    for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
 	}
 	
 	public void visitConstructorHeader(GNode n) {
