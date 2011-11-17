@@ -1337,7 +1337,7 @@ public class CPPPrinter extends Visitor {
 		
     }
 
-    // TODO: always #include <iostream>
+
     // FIXME: Use tokens
     // @param n always has 3 children
     public void visitImportDeclaration(GNode n) {
@@ -2157,8 +2157,9 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	public void visitHeaderDeclaration(GNode n) {
-	    //	    printer.pln("#pragma once"); // only for .h file
+	    //	    printer.pln("#pragma once"); // once we separate .h file
 	    printer.pln("#include <iostream>");
+	    printer.pln("#include \"ptr.h\"");
 	    printer.pln("#include \"java_lang.h\"").pln();
 	    printer.pln("namespace java {");
 	    printer.incr();
@@ -2189,45 +2190,60 @@ public class CPPPrinter extends Visitor {
 	
 	public void visitVirtualMethodDeclaration(GNode n) {
 	    // TODO: Make it prettier!
-	    printer.indent();
-
-	    if("main".equals(n.getString(1))) return;
-
-	    // Return Type
-	    if(null != n.getNode(0)) {
-		printer.p(n.getNode(0));
-	    }
-
-	    // method name
-	    printer.p(" (*").p(n.getString(1)).p(")");
-
-
-	    // Formal Parameters
-	    if(null != n.getNode(2)) {
-		GNode fps = n.cast(n.getNode(2));
-		printer.p("(");
-		
-		for(Iterator<Object> iter = fps.iterator(); iter.hasNext(); ) {
-		    // Only print Identifier, variable name as well?
-		    printer.p( ((GNode)iter.next()).getNode(0) );
-		    if(iter.hasNext() )printer.p( ", " );
+	   
+	    if( ! "main".equals(n.getString(1))) {
+		printer.indent();
+		// Return Type
+		if(null != n.getNode(0)) {
+		    printer.p(n.getNode(0));
 		}
-		printer.p(")");
 		
-	    }
-	    
-	    
-	    printer.pln(';');
+		// method name
+		printer.p(" (*").p(n.getString(1)).p(")");
 
+		
+		// Formal Parameters
+
+		// Case __delete, pass raw pointer
+		if("__delete".equals(n.getString(1))) {
+		    printer.p("(__Object*)");
+		}
+		else if(null != n.getNode(2)) {
+		    GNode fps = n.cast(n.getNode(2));
+		    printer.p("(");
+		    
+		    for(Iterator<Object> iter = fps.iterator(); iter.hasNext();)
+			{
+			// Only print Identifier, variable name as well?
+			printer.p( ((GNode)iter.next()).getNode(0) );
+			if(iter.hasNext() )printer.p( ", " );
+		    }
+		    printer.p(")");
+		    
+		}
+		printer.pln(';');
+	    }
 	}
 	
 	public void visitMethodPointersList( GNode n ) {
 		printer.incr().indent().pln();
 		for(Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
+		    // ROB: Pls remove main method
+		    // add delete
 			printer.indent().p( (GNode)iter.next() );
-			if(iter.hasNext() )printer.p( ", " ).pln();
+			if(iter.hasNext())printer.p( ", " ).pln();
+		   
 		}
 		printer.decr();
+	}
+
+	public void visitMethodPointer( GNode n ) {
+		//0 - meth name, 1-target, 2-params
+
+      		printer.p(n.getString(0)).p("(&").p(n.getNode(1));
+		printer.p("::").p(n.getString(0)).p(')');
+
+	    
 	}
 	
 	public void visitMethodHeaderList( GNode n ) {
@@ -2237,9 +2253,11 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	public void visitStaticMethodHeader(GNode n) {
+	    if(! "main".equals(n.getString(1))) {
 		printer.indent().p("static ").p(n.getNode(0));
 		printer.p(' ').p(n.getString(1));
 		printer.p('(').p(n.getNode(2)).p(");").pln();	
+	    }
 	}
 	
 	public void visitConstructorHeaderList(GNode n) {
@@ -2257,25 +2275,31 @@ public class CPPPrinter extends Visitor {
 		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
 	}
 	
-	public void visitMethodPointer( GNode n ) {
-		//0 - meth name, 1-target, 2-params
-		//printer.p( n.getString(0) ).p('(').p(')');
-		printer.p(n.getString(0)).p("(&").p(n.getNode(1)).p("::").p(n.getString(0)).p(')');
-	}
+
 	
 	public void visitClassISAPointer( GNode n ) {
 		printer.p("__isa(").p(n.getString(0)).p("::__class())");
 	}
 	
 	public void visitVTConstructorDeclaration(GNode n) { 
-		printer.indent().p(n.getNode(0));
-		if (null != n.get(1)) printer.p(n.getNode(1));
-		printer.p(n.getString(2)).p("() ");
-		if(null != n.get(4)) {
-			printer.p(": ").p(n.getNode(4));
-		}
-		isOpenLine = true;
-		printer.p(n.getNode(5)).pln();
+
+	    printer.indent().p(n.getNode(0)).pln();
+
+	    if (null != n.get(1)) printer.indent().p(n.getNode(1));
+	
+	    // BUG: Ask rob to fix, always does __Object_VT
+	    printer.indent().p("__").p(className).p("_VT()");
+	    //	    printer.indent().p(n.getString(2)).p("() ");
+
+	    if(null != n.get(4)) {
+		// Print out MethodPointerList
+		printer.p(": ");
+		printer.p(n.getNode(4));
+	    }
+
+	    isOpenLine = true;
+	    printer.p(n.getNode(5)).pln();
+
 	}
     
     //----------------------------------------------------------
@@ -2496,12 +2520,11 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	public void visitFieldDeclaration(GNode n) {
-	    // FIXME: Extra space btwn Type ( n.getNode(1) ) and 
-	    // Declarator (n.getNode(2))
-	    //	       printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(' ').p(n.getNode(2)).p(';').pln();
-printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(n.getNode(2)).p(';').pln();
-		isDeclaration = true;
-		isOpenLine    = false;
+
+	    printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(" ");
+	    printer.p(n.getNode(2)).p(';').pln();
+	    isDeclaration = true;
+	    isOpenLine    = false;
 	}
 	
 	public void visitBlockDeclaration(GNode n) {
@@ -2604,7 +2627,7 @@ printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(n.getNode(2)).p(';').pln();
 		    printer.p(n.getNode(1));
 		}
 	    }
-	    printer.p(' ');
+	    //    printer.p(' ');
 	}
     
     public void visitInstantiatedType(GNode n) {
