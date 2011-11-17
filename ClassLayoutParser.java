@@ -123,7 +123,7 @@ public class ClassLayoutParser extends Visitor {
 		GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index).getNode(4);
 		GNode newPtr = GNode.create( "MethodPointer" );
 		newPtr.add( n.get(3) ); //method name
-		newPtr.add( createTypeNode( "__"+className ) ); //target
+		newPtr.add( createTypeNode( "__"+ className ) ); //target
 		newPtr.add( GNode.create( "FormalParameters" ) );
 		vtConstructorPtrList.set( overrideIndex, newPtr );
 	    }
@@ -136,7 +136,7 @@ public class ClassLayoutParser extends Visitor {
 		GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index+1).getNode(4);
 		GNode newPtr = GNode.create( "MethodPointer" );
 		newPtr.add( n.get(3) ); //method name
-		newPtr.add( createTypeNode( "__"+className ) ); //target
+		newPtr.add( createTypeNode( "__"+ className ) ); //target
 		newPtr.add( GNode.create( "FormalParameters" ) );
 		vtConstructorPtrList.add( newPtr );
 		
@@ -321,61 +321,64 @@ public class ClassLayoutParser extends Visitor {
 	// Creates a hard-coded virtual table for the object class.
 	GNode objectClassVirtualTable() {
 		
-		GNode retVal = GNode.create("VTableDeclaration");
-		retVal.add( createSkeletonDataField( "Class", "__isa" ) ); //Class __isa;
-		// For delete
-		//		retVal.add( createSkeletonVirtualMethodDeclaration("void", "__delete", new String[]{"__Object*"}) );
-		retVal.add( createSkeletonVirtualMethodDeclaration( "int32_t", "hashCode", new String[]{"Object"} )); //int32_t (*hashCode)(Object);
-		retVal.add( createSkeletonVirtualMethodDeclaration( "bool", "equals", new String[]{"Object","Object"} )); //bool (*equals)(Object, Object);
-		retVal.add( createSkeletonVirtualMethodDeclaration( "Class", "getClass", new String[]{"Object"} )); //Class (*getClass)(Object);
-		retVal.add( createSkeletonVirtualMethodDeclaration( "String", "toString", new String[]{"Object"} )); //String (*toString)(Object);
-		//FIXME: add correct constructor
-		retVal.add( initializeVTConstructor( retVal ) );
-		return retVal;
+	    GNode retVal = GNode.create("VTableDeclaration");
+	    retVal.add( createSkeletonDataField( "Class", "__isa" ) ); //Class __isa;
+	    // For delete, once we get mem mgmt
+	    //		retVal.add( createSkeletonVirtualMethodDeclaration("void", "__delete", new String[]{"__Object*"}) );
+	    retVal.add( createSkeletonVirtualMethodDeclaration( "int32_t", "hashCode", new String[]{"Object"} )); //int32_t (*hashCode)(Object);
+	    retVal.add( createSkeletonVirtualMethodDeclaration( "bool", "equals", new String[]{"Object","Object"} )); //bool (*equals)(Object, Object);
+	    retVal.add( createSkeletonVirtualMethodDeclaration( "Class", "getClass", new String[]{"Object"} )); //Class (*getClass)(Object);
+	    retVal.add( createSkeletonVirtualMethodDeclaration( "String", "toString", new String[]{"Object"} )); //String (*toString)(Object);
+	    //FIXME: add correct constructor
+	    retVal.add( initializeVTConstructor( retVal ) );
+	    return retVal;
 	}
-	
-	// Initializes a brand new virtual table constructor for the specified VTable
-	// This should only produce valid results for the base Object class, there is no inheritance analysis
-	// @param vTable The vTable to create a constructor for 
-	GNode initializeVTConstructor( GNode vTable ) {
-		//FIXME: create the vtable constructor: 
-		// __Object_VT()
-		//: __isa(__Object::__class()),
+    
+    // Initializes a brand new virtual table constructor for the specified VTable
+    // This should only produce valid results for the base Object class, there is no inheritance analysis
+    // @param vTable The vTable to create a constructor for 
+    GNode initializeVTConstructor( GNode vTable ) {
+	//FIXME: create the vtable constructor: 
+	// __Object_VT()
+	//: __isa(__Object::__class()),
         //hashCode(&__Object::hashCode),
         //equals(&__Object::equals),
         //getClass(&__Object::getClass),
         //toString(&__Object::toString) {
-		//}
-		
-	    GNode retVal = GNode.create("VTConstructorDeclaration");
-	    retVal.add( GNode.create( "Modifiers" ) ); //empty modifiers
-	    retVal.add( null ); //index 1 null
-	    
-	    // Proper className in vtable constructor
-	    //	    retVal.add("__" + className +  "_VT");
-	    retVal.add( "__Object_VT" ); //name of constructor
-	    retVal.add( GNode.create( "FormalParameters" ).add(null) ); //no parameters
-	    final GNode methodPtrList = GNode.create( "MethodPointersList" );
-	    methodPtrList.add( GNode.create( "ClassISAPointer" ).add( "__Object" ) );
-	    new Visitor() {
-		public void visit( Node n ) {
-		    for( Object o : n ) if (o instanceof GNode ) dispatch((GNode)o);
-		}
-		public void visitVirtualMethodDeclaration( GNode n ) {
-		    GNode newPtr = GNode.create( "MethodPointer" );
-		    //0 - method name
-		    //1 - target Object
-		    //2 - params if any
-		    newPtr.add( n.get(1) );
-		    newPtr.add( createTypeNode( "__Object" ) );
-		    newPtr.add( GNode.create( "FormalParameters" ) );
-		    methodPtrList.add( newPtr );
-		}
-	    }.dispatch(vTable);
-	    retVal.add( methodPtrList );
-	    retVal.add( GNode.create( "Block" ) ); //empty code block
-	    return retVal;
-	}
+	//}
+	
+	GNode retVal = GNode.create("VTConstructorDeclaration");
+	retVal.add( GNode.create( "Modifiers" ) ); //empty modifiers
+	retVal.add( null ); //index 1 null
+	
+	// FIXME ROB: Proper className in vtable constructor
+	//	    retVal.add("__" + className +  "_VT");
+	retVal.add( "__Object_VT" ); //name of constructor
+	retVal.add( GNode.create( "FormalParameters" ).add(null) ); //no parameters
+	final GNode methodPtrList = GNode.create( "MethodPointersList" );
+	methodPtrList.add( GNode.create( "ClassISAPointer" ).add( "__Object" ) );
+	new Visitor() {
+	    public void visit( Node n ) {
+		for( Object o : n ) if (o instanceof GNode ) dispatch((GNode)o);
+	    }
+	    public void visitVirtualMethodDeclaration( GNode n ) {
+		GNode newPtr = GNode.create( "MethodPointer" );
+		//0 - method name
+		//1 - target Object
+		//2 - params if any
+		// FIXME ROB: Special syntax for getClass
+		newPtr.add( n.get(1) );
+		// FIXME ROB: get className
+		//		newPtr.add( createTypeNode( "__" + className ) ); 
+		newPtr.add( createTypeNode( "__Object" ) ); 
+		newPtr.add( GNode.create( "FormalParameters" ) );
+		methodPtrList.add( newPtr );
+	    }
+	}.dispatch(vTable);
+	retVal.add( methodPtrList );
+	retVal.add( GNode.create( "Block" ) ); //empty code block
+	return retVal;
+    }
     
     //Creates a hard-coded data layout for the object class.
     GNode objectClassDataLayout() {
@@ -558,13 +561,6 @@ public class ClassLayoutParser extends Visitor {
 				//parent = temp;
 			}
 			
-			public void visitVTableDeclaration(GNode n) {
-				System.out.println(" has vtable");
-			}
-			
-			public void visitDataLayoutDeclaration(GNode n) {
-				System.out.println(" has data layout");
-			}
 		}.dispatch(classTree);
 		System.out.println();
     }
