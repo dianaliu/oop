@@ -1441,24 +1441,14 @@ public class CPPPrinter extends Visitor {
     }
 
     public void visitDataLayoutDeclaration(GNode n) {
-	//	for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
-	// DataLayoutDeclaration only has children FieldDeclaration
-
-	// Need stuff from Rob!
+	// TODO: 
 
 	printer.indent().p("struct __").p(className).pln(" {");
 	printer.incr();
-	//	printer.indent().p("__").p(className).pln("* _vptr;");
-	//	printer.indent().p("// __").p(className).pln("();");
-
 
 	printer.indent().pln("static Class __class();");
 
-	//	printer.indent().p("// Values in DataLayout ").pln(className);
-	// FIXME: CLP needs to fix classes, add constructor, change order
 	for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
-
-	//	printer.indent().p("static __").p(className).pln("_VT  __vtable");
 
 	printer.pln().decr();
 	printer.indent().pln("};");
@@ -2167,8 +2157,7 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	public void visitHeaderDeclaration(GNode n) {
-	    // FIXME: Included twice
-	    printer.pln("#pragma once");
+	    //	    printer.pln("#pragma once"); // only for .h file
 	    printer.pln("#include <iostream>");
 	    printer.pln("#include \"java_lang.h\"").pln();
 	    printer.pln("namespace java {");
@@ -2278,14 +2267,11 @@ public class CPPPrinter extends Visitor {
 		isOpenLine = true;
 		printer.p(n.getNode(5)).pln();
 	}
-	
-	//----------------------------------------------------------
-	//                   END NEW METHODS
-	//----------------------------------------------------------
-	
-	//
-	// ---------------------- copied from java printer!
-	//
+    
+    //----------------------------------------------------------
+    //                   END NEW METHODS
+    //----------------------------------------------------------
+    
     // ------------------------------------------------------
     // ------ Begin via JavaPrinter.  Thanks Grimm! ---------
     // ------------------------------------------------------
@@ -2704,12 +2690,12 @@ printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(n.getNode(2)).p(';').pln();
 	}
 	
 	public void visitFormalParameters(GNode n) {
-	    printer.p('(');
+
 	    for (Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
 		printer.p((Node)iter.next());
 		if (iter.hasNext()) printer.p(", ");
 	    }
-	    printer.p(')');
+
 	}
 	
 	public void visitFormalParameter(GNode n) {

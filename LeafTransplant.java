@@ -386,12 +386,14 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 						 + primaryIdentifier);
 		}
 		else if(n.getNode(0).hasName("SuperExpression")) {
+
+		    // Replace Java keyword super with actual class
 		    GNode pI = GNode.create("PrimaryIdentifier");
 		   
 		    GNode vtList = clp.getVTable(thisClass);
-		    // TODO: Ask rob for getter.
-		    String superClass = "SUPERDUPER";
-		    pI.add(0, superClass);
+		    GNode superNode = clp.getSuperclass(className);
+		    String superName = clp.getName(superNode);
+		    pI.add(0, superName);
 		    n.set(0, pI);
 		}
 		else { // catch all

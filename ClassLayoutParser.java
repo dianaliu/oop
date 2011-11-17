@@ -64,66 +64,66 @@ public class ClassLayoutParser extends Visitor {
 	String className; 
     public void visitClassDeclaration(GNode n) {
 		
-		//Setting up the new node for the class tree
-		className = n.get(1).toString();
-		GNode newChildNode = GNode.create("Class");
-		newChildNode.setProperty("name", className);
-		
-		//Now we need a super class -- every node but object has one, either explicitly or Object by default
-		GNode parent = null; 
-		if(n.get(3) != null) { // Extends something
-			String extendedClass = (String)(n.getNode(3).getNode(0).getNode(0).get(0)); // String name of Parent Class
-			parent = getClass(extendedClass); // Append new class as child of Parent
-		}
-		else { 
-			parent = getClass("Object"); // Doesn't extend, add to root (Object)
-		}
-		
-		if(DEBUG) System.out.println( "Visiting new class: " + className + " extends " + parent.getProperty("name") );
-		 
-		//Building the vtables and data layout
-		
-		// --- Place vt/dl setup here: --- 
-		
-		//currentHeaderNode = GNode.create((GNode)parent.getNode(0)); //copy the header node from the parent
-		currentHeaderNode = inheritHeader( (GNode)parent.getNode(0) );
-		
-		//STUFF WE NEED TO DO EVENTUALLY:
-		//add the virtual methods and data fields from the parents here -- DONE with the above parent header copy
-		//add (or rather, modify) the isa statement at vtable[0] -- will be done in Object forced init - no modification necessary
-		
-		// --- end setup -----------------
-		
-		visit(n);
-		
-		// --- Place vt/dl finalization here: ---
-		// FIXME: change the types of explicit this's in the vmethod decls
-		newChildNode.add(currentHeaderNode);
-		newChildNode.setProperty( "parentClassNode", parent);
-		parent.addNode(newChildNode);
+	//Setting up the new node for the class tree
+	className = n.get(1).toString();
+	GNode newChildNode = GNode.create("Class");
+	newChildNode.setProperty("name", className);
+	
+	//Now we need a super class -- every node but object has one, either explicitly or Object by default
+	GNode parent = null; 
+	if(n.get(3) != null) { // Extends something
+	    String extendedClass = (String)(n.getNode(3).getNode(0).getNode(0).get(0)); // String name of Parent Class
+	    parent = getClass(extendedClass); // Append new class as child of Parent
+	}
+	else { 
+	    parent = getClass("Object"); // Doesn't extend, add to root (Object)
+	}
+	
+	if(DEBUG) System.out.println( "Visiting new class: " + className + " extends " + parent.getProperty("name") );
+	
+	//Building the vtables and data layout
+	
+	// --- Place vt/dl setup here: --- 
+	
+	//currentHeaderNode = GNode.create((GNode)parent.getNode(0)); //copy the header node from the parent
+	currentHeaderNode = inheritHeader( (GNode)parent.getNode(0) );
+	
+	//STUFF WE NEED TO DO EVENTUALLY:
+	//add the virtual methods and data fields from the parents here -- DONE with the above parent header copy
+	//add (or rather, modify) the isa statement at vtable[0] -- will be done in Object forced init - no modification necessary
+	
+	// --- end setup -----------------
+	
+	visit(n);
+	
+	// --- Place vt/dl finalization here: ---
+	// FIXME: change the types of explicit this's in the vmethod decls
+	newChildNode.add(currentHeaderNode);
+	newChildNode.setProperty( "parentClassNode", parent);
+	parent.addNode(newChildNode);
     }
+    
+    // ----------------------------------
+    //    Virtual Method Processing
+    // ----------------------------------
+    
+    //Visits the method declarations in a class, adding them as virtual methods to the vtable
+    //@param n MethodDeclaration node from a Java AST
+    public void visitMethodDeclaration(GNode n) {
+	//new VirtualMethodDeclaration: (0) return type, (1) method name, (2) parameters
 	
-	// ----------------------------------
-	//    Virtual Method Processing
-	// ----------------------------------
+	GNode methodSignature = GNode.create("VirtualMethodDeclaration");
+	methodSignature.add(n.get(2)); //return type
+	methodSignature.add(n.get(3)); //method name
+	GNode formalParameters = deepCopy((GNode)n.getNode(4));
+	for( int i = 0; i < formalParameters.size(); i++ ) {
+	    formalParameters.set(i, formalParameters.getNode(i).getNode(1) ); //this kills the parameter name
+	}
+	formalParameters.add(0, createTypeNode( className ) );
+	methodSignature.add(formalParameters); //parameter types
 	
-	//Visits the method declarations in a class, adding them as virtual methods to the vtable
-	//@param n MethodDeclaration node from a Java AST
-	public void visitMethodDeclaration(GNode n) {
-		//new VirtualMethodDeclaration: (0) return type, (1) method name, (2) parameters
-		
-		GNode methodSignature = GNode.create("VirtualMethodDeclaration");
-		methodSignature.add(n.get(2)); //return type
-		methodSignature.add(n.get(3)); //method name
-		GNode formalParameters = deepCopy((GNode)n.getNode(4));
-		for( int i = 0; i < formalParameters.size(); i++ ) {
-			formalParameters.set(i, formalParameters.getNode(i).getNode(1) ); //this kills the parameter name
-		}
-		formalParameters.add(0, createTypeNode( className ) );
-		methodSignature.add(formalParameters); //parameter types
-		
-		//Override check here -- if overrides, use vtdecl.set(overrideIndex, methodSig) else just add it
-		String methodName = n.get(3).toString();
+	//Override check here -- if overrides, use vtdecl.set(overrideIndex, methodSig) else just add it
+	String methodName = n.get(3).toString();
 		int overrideIndex = overridesMethod(methodName, (GNode)currentHeaderNode.getNode(0) );
 		if(overrideIndex >= 0) {
 			if(DEBUG) System.out.println( "overriding method: " + methodName );
@@ -319,15 +319,15 @@ public class ClassLayoutParser extends Visitor {
 	// Creates a hard-coded virtual table for the object class.
 	GNode objectClassVirtualTable() {
 		
-		GNode retVal = GNode.create("VTableDeclaration");
-		retVal.add( createSkeletonDataField( "Class", "__isa" ) ); //Class __isa;
-		retVal.add( createSkeletonVirtualMethodDeclaration( "int32_t", "hashCode", new String[]{"Object"} )); //int32_t (*hashCode)(Object);
-		retVal.add( createSkeletonVirtualMethodDeclaration( "bool", "equals", new String[]{"Object","Object"} )); //bool (*equals)(Object, Object);
-		retVal.add( createSkeletonVirtualMethodDeclaration( "Class", "getClass", new String[]{"Object"} )); //Class (*getClass)(Object);
-		retVal.add( createSkeletonVirtualMethodDeclaration( "String", "toString", new String[]{"Object"} )); //String (*toString)(Object);
-		//FIXME: add correct constructor
-		retVal.add( initializeVTConstructor( retVal ) );
-		return retVal;
+	    GNode retVal = GNode.create("VTableDeclaration");
+	    retVal.add( createSkeletonDataField( "Class", "__isa" ) ); //Class __isa;
+	    retVal.add( createSkeletonVirtualMethodDeclaration( "int32_t", "hashCode", new String[]{"Object"} )); //int32_t (*hashCode)(Object);
+	    retVal.add( createSkeletonVirtualMethodDeclaration( "bool", "equals", new String[]{"Object","Object"} )); //bool (*equals)(Object, Object);
+	    retVal.add( createSkeletonVirtualMethodDeclaration( "Class", "getClass", new String[]{"Object"} )); //Class (*getClass)(Object);
+	    retVal.add( createSkeletonVirtualMethodDeclaration( "String", "toString", new String[]{"Object"} )); //String (*toString)(Object);
+	    //FIXME: add correct constructor
+	    retVal.add( initializeVTConstructor( retVal ) );
+	    return retVal;
 	}
 	
 	// Initializes a brand new virtual table constructor for the specified VTable
@@ -343,18 +343,19 @@ public class ClassLayoutParser extends Visitor {
         //toString(&__Object::toString) {
 		//}
 		
-		GNode retVal = GNode.create("VTConstructorDeclaration");		
-		retVal.add( GNode.create( "Modifiers" ) ); //empty modifiers
-		retVal.add( null ); //index 1 null
-		retVal.add( "__Object_VT" ); //name of constructor
-		retVal.add( GNode.create( "FormalParameters" ).add(null) ); //no parameters
-		final GNode methodPtrList = GNode.create( "MethodPointersList" );
-		methodPtrList.add( GNode.create( "ClassISAPointer" ).add( "__Object" ) );
-		new Visitor() {
-			public void visit( Node n ) {
-				for( Object o : n ) if (o instanceof GNode ) dispatch((GNode)o);
-			}
-			public void visitVirtualMethodDeclaration( GNode n ) {
+	    GNode retVal = GNode.create("VTConstructorDeclaration");		
+	    retVal.add( GNode.create( "Modifiers" ) ); //empty modifiers
+	    retVal.add( null ); //index 1 null
+	    // Name of constructor __Class_VT
+	    retVal.add( "__Object_VT" ); //name of constructor
+	    retVal.add( GNode.create( "FormalParameters" ).add(null) ); //no parameters
+	    final GNode methodPtrList = GNode.create( "MethodPointersList" );
+	    methodPtrList.add( GNode.create( "ClassISAPointer" ).add( "__Object" ) );
+	    new Visitor() {
+		public void visit( Node n ) {
+		    for( Object o : n ) if (o instanceof GNode ) dispatch((GNode)o);
+		}
+		public void visitVirtualMethodDeclaration( GNode n ) {
 				GNode newPtr = GNode.create( "MethodPointer" );
 				//0 - method name
 				//1 - target Object
