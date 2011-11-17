@@ -29,33 +29,28 @@ fi
   # 1. Get Java file(s) from command line and add to array javaInput
  javaInput=()
 
-function failure()
-{
-    echo "$@" >&2
-    # FIXME: Don't completely exit terminal
-    return 1
-#    read -p "Try again - Press Enter to quit."
-}
-
- # FIXME: Assumes single .java file input. Consider files, dir, and import statements.
+ # 2. Compile and run Java files.
  for var in "$@"
          do
-         # 2. Compile and run Java files.
-         cp $var "output/$var"
+         cp "$var" "output/"$var""
 
 	 cd output/
-         javac $var || failure "--- ERR: Java compile time error"
+
+	 echo "--- Received input file: $var"
+         javac $var || echo "--- ERR: Java compile time error"; cd ..; return 1;
+	     
          # 3. Save output from Java files
 	 j=java
 	 fileName=${var%.$j} # remove .java 
 	 cd ..
 
-	 java -cp output/ $fileName > "output/jOut.txt" || failure "--- ERR: Java runtime error"
+	 # FIXME: For some programs, exits without printing err below
+	 java -cp output/"$fileName" > "output/jOut.txt" || 
+	   echo "--- ERR: Java runtime error"; return 1;
+
 	 echo "--- Successfully compiled and ran $var"
-
-
          javaInput=("${javaInput[@]}" "$var")   
- done 
+done 
 
  # 4. Translate Java files
  for ((a=0; a < ${#javaInput[@]}; a++)) 
@@ -81,10 +76,10 @@ function failure()
  do
      allCPP="${allCPP} ${cppOutput[i]}"
  done
-  g++ $allCPP || failure "--- ERR: CPP compile time error"
+  g++ $allCPP || echo"--- ERR: CPP compile time error"; cd ..; return 1;
 
  # 7. Run and save output from CPP files
-  ./a.out > "cOut.txt" || failure "--- ERR: CPP runtime error"
+  ./a.out > "cOut.txt" || echo "--- ERR: CPP runtime error"; cd ..; return 1;
 
  # 8. Compare Java and CPP output
  if diff jOut.txt cOut.txt > /dev/null ; then
