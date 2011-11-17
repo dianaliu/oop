@@ -19,7 +19,7 @@ if [ ! -d "output" ]
              y|Y ) echo "rm-ing all files in output/"
 		   rm output/*;;
              n|N ) echo "please rename existing output/ and try again"
-		   exit 1;;
+		   return 1;;
              * ) echo "invalid";;
            esac
 
@@ -33,7 +33,7 @@ function failure()
 {
     echo "$@" >&2
     # FIXME: Don't completely exit terminal
-    exit 1
+    return 1
 #    read -p "Try again - Press Enter to quit."
 }
 
