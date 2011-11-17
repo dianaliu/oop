@@ -2242,8 +2242,18 @@ public class CPPPrinter extends Visitor {
 		printer.p('(').p(n.getNode(2)).p(");").pln();	
 	}
 	
+	public void visitConstructorHeaderList(GNode n) {
+		if(n.size() > 0) printer.pln();
+		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
+	}
+	
+	public void visitConstructorHeader(GNode n) {
+		printer.indent().p(n.getString(0));
+		printer.p('(').p(n.getNode(1)).p(");").pln();	
+	}
+	
 	public void visitDataFieldList( GNode n ) {
-		printer.pln();
+		if(n.size() > 0) printer.pln();
 		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
 	}
 	
