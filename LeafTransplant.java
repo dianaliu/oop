@@ -7,6 +7,7 @@ import xtc.tree.Visitor;
 import xtc.util.Runtime;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 
 /*
  * Builds a CPP AST tree using a Java AST tree
@@ -102,9 +103,10 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		translateClassDeclaration(n);
 		// Build and add implementation node
    		translateClassBody(n);
+       
 	    }
 	    
-
+	  
 	    public void visit(GNode n) {
 		// Need to override visit to work for GNodes
 		for( Object o : n) {
@@ -180,24 +182,25 @@ public class LeafTransplant extends Visitor implements CPPUtil {
        
 	// Populate our Data Layout with information
     	GNode dataDeclarationList = GNode.create("StructureDeclarationList");
-	// FIXME: This breaks printer?
-	dataDeclarationList.add(clp.getDataLayout(className));
+	GNode dl = clp.getDataLayout(className);
 
-	// ------------------------------------
+	// Copy data layout members to StructureDeclarationList
+	for (Iterator<?> iter = dl.iterator(); iter.hasNext(); ) {
+	    dataDeclarationList.add(iter.next());  
+	}
+
+	// -------------------------------------------------------------------
 
 	// Build the skeleton of the Data Layout struct
-	// FIXME: Printer should print __className
-	GNode structTypeDef = GNode.create("StructureTypeDefinition", 
-					      null, className, 
-					      dataDeclarationList, null);
+	GNode structTypeDef = 
+	    GNode.create("StructureTypeDefinition", "DataLayout", className, 
+			 dataDeclarationList, null);
        	
-	
-	GNode declarationSpecifiers = GNode.create("DeclarationSpecifiers", 
-						   structTypeDef);
+	//	GNode declarationSpecifiers = GNode.create("DeclarationSpecifiers", 
+	//						   structTypeDef);
 
 
-	GNode dataLayout = GNode.create("Declaration", null, 
-					declarationSpecifiers, null);
+	GNode dataLayout = GNode.create("Declaration", structTypeDef);
 
 
 	return dataLayout;
@@ -206,31 +209,28 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     // Build CPP VTable nodes to create struct __Class_VT { }
     // @param n ClassDeclaration node from Java AST
     public GNode buildVTable(GNode n) {
-
-
 	// Nodes are created "inside out" from the leaves up
 
-	// Populate vtable with information
-	// NOTE: The vtableList is not quite accurate at the moment and needs to
-	// be modified in ClassLayoutParser. But the logic below is correct.
 	GNode vtableDeclarationList = GNode.create("StructureDeclarationList");
-	// FIXME: This breaks printer?
-	vtableDeclarationList.add(clp.getVTable(className));
+	GNode vt = clp.getVTable(className);
 
-	// ------------------------------------
+	// Copy vtable members to StructureDeclarationList
+	for (Iterator<?> iter = vt.iterator(); iter.hasNext(); ) {
+	    vtableDeclarationList.add(iter.next());  
+	}
+	
+	// --------------------------------------------------------------------
 
 	// Build skeleton of VTable struct
-	// FIXME: Printer should print __className_VT
 	GNode vtableStructDefinition = 
-	    GNode.create("StructureTypeDefinition", null, className, 
+	    GNode.create("StructureTypeDefinition", "VTable", className, 
 			 vtableDeclarationList, null);
 
-	GNode vtableDeclarationSpecifiers = 
-	    GNode.create("DeclarationSpecifiers", vtableStructDefinition);
+	//	GNode vtableDeclarationSpecifiers = 
+	//	    GNode.create("DeclarationSpecifiers", vtableStructDefinition);
 
 	GNode vtable = 
-	    GNode.create("Declaration", null, 
-			 vtableDeclarationSpecifiers, null);
+	    GNode.create("Declaration", vtableStructDefinition);
        
 	return vtable;
     }
@@ -250,23 +250,30 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	GNode initializedDeclaratorList = 
 	    GNode.create("InitializedDeclaratorList", initializedDeclarator);
 	    
-	// ------------------------------------
+	// ----------------------------------------------------------------
 	    
 	GNode typedefSpecifier = GNode.create("TypedefSpecifier");
 	
-	// FIXME: Printer must print __className*
+	// removed * because Smart Pointers don't use *
+	// removed __ because need clean classname
 	GNode classIdentifier = 
-	    createPrimaryIdentifier( "__" + className + "*" );
-	
-	GNode typedefDeclarationSpecifiers = 
-	    GNode.create("DeclarationSpecifiers", typedefSpecifier, 
-			 classIdentifier);
-	
-	// ------------------------------------
+	    createPrimaryIdentifier(className);
 
+	GNode td = GNode.create("TypedefDeclaration", 
+				typedefSpecifier, classIdentifier);
+	
+	// ----------------------------------------------------------------
+
+	GNode forwardDeclaration = GNode.create("ForwardDeclaration", 
+						initializedDeclaratorList, td);
+
+	GNode typedef = GNode.create("Declaration", forwardDeclaration);
+
+	/**
 	GNode typedef = 
 	    GNode.create("Declaration", null, typedefDeclarationSpecifiers, 
 		     initializedDeclaratorList);
+	**/
 
 	return typedef;
     }
@@ -397,12 +404,30 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    n.set(0, pI);
 		}
 		else { // catch all
-		    System.out.println("\t--- ERR: Uncaught node " + 
+		    System.out.println("\t--- ERR: Untranslated node " + 
 				       n.getNode(0).toString());
 		}
 		
 		visit(n);
 	    }// End visitCall Expression
+
+
+	    public void visitFieldDeclaration(GNode n) {
+		// Translate Arrays - ned to get Type
+		if(null != n.getNode(2).getNode(0).getNode(2) && 
+		   n.getNode(2).getNode(0).getNode(2).hasName("ArrayInitializer")) 
+		    {
+
+			// Can't add Type to Declarators, Declarator, 
+			// or ArrayInitializer as fixed num children
+			// FUCK YOU, 
+
+			// Does this remove Type node from FieldDeclaration?
+
+			//			n.getNode(2).getNode(0).getNode(2).add(n.getNode(1));
+		    }
+	
+	    }
 	    
 	    public void visit(GNode n) {
 		// Need to override visit to work for GNodes
