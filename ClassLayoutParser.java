@@ -477,28 +477,28 @@ public class ClassLayoutParser extends Visitor {
 			
 			public GNode visitClass(GNode n) {
 				
-				// Found the class
-				if( getName(n).equals(s) ) {
-					return n;
+			    // Found the class
+			    if( getName(n).equals(s) ) {
+				return n;
+			    }
+			    
+			    // Keep Searching
+			    for( Object o : n) {
+				if (o instanceof Node) {
+				    GNode returnValue = (GNode)dispatch((GNode)o);
+				    if( returnValue != null ) return returnValue;
 				}
-				
-				// Keep Searching
-				for( Object o : n) {
-					if (o instanceof Node) {
-						GNode returnValue = (GNode)dispatch((GNode)o);
-						if( returnValue != null ) return returnValue;
-					}
-				}
-				return null;
+			    }
+			    return null;
 			}
 			
 			public void visit(GNode n) { // override visit for GNodes
-				for( Object o : n) {
-					if (o instanceof Node) dispatch((GNode)o);
-				}
+			    for( Object o : n) {
+				if (o instanceof Node) dispatch((GNode)o);
+			    }
 			}
 			
-	    }.dispatch(classTree));
+		    }.dispatch(classTree));
     }
 	
 	//Returns a Class node representing the parent class of the specified class name
