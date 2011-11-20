@@ -333,10 +333,11 @@ public class ClassLayoutParser extends Visitor {
 		retVal.add( createSkeletonDataField( "Class", "__isa" ) ); //Class __isa;
 		// For delete
 		//		retVal.add( createSkeletonVirtualMethodDeclaration("void", "__delete", new String[]{"__Object*"}) );
-		retVal.add( createSkeletonVirtualMethodDeclaration( "int32_t", "hashCode", new String[]{"Object"} )); //int32_t (*hashCode)(Object);
-		retVal.add( createSkeletonVirtualMethodDeclaration( "bool", "equals", new String[]{"Object","Object"} )); //bool (*equals)(Object, Object);
-		retVal.add( createSkeletonVirtualMethodDeclaration( "Class", "getClass", new String[]{"Object"} )); //Class (*getClass)(Object);
-		retVal.add( createSkeletonVirtualMethodDeclaration( "String", "toString", new String[]{"Object"} )); //String (*toString)(Object);
+		retVal.add( createSkeletonVirtualMethodDeclaration( "int32_t", "hashCode", new String[]{"Object"} ));      // int32_t x (*hashCode)(Object);
+		retVal.add( createSkeletonVirtualMethodDeclaration( "bool", "equals", new String[]{"Object","Object"} )); // bool (*equals)(Object , Object);
+		retVal.add( createSkeletonVirtualMethodDeclaration( "Class", "getClass", new String[]{"Object"} ));      // Class (*getClass)(Object);
+		retVal.add( createSkeletonVirtualMethodDeclaration( "String", "toString", new String[]{"Object"} ));    // String (*toString)
+		(Object);
 		retVal.add( initializeVTConstructor( retVal ) ); //adding the constructor
 		return retVal;
 	}
