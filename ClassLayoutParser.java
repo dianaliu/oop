@@ -476,7 +476,7 @@ public class ClassLayoutParser extends Visitor {
 		return (GNode)( new Visitor() {
 			
 			public GNode visitClass(GNode n) {
-				
+			    
 			    // Found the class
 			    if( getName(n).equals(s) ) {
 				return n;

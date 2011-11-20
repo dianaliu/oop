@@ -45,7 +45,7 @@ fi
 	 cd ..
 
 	 # FIXME: For some programs, exits without printing err below
-	 java -cp output/"$fileName" > "output/jOut.txt" || 
+	 java -cp . output/"$fileName" > "output/jOut.txt" || 
 	   echo "--- ERR: Java runtime error"; return 1;
 
 	 echo "--- Successfully compiled and ran $var"

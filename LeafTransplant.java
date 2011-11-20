@@ -360,6 +360,24 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    // nodes? Is this if needed?
 		    if("System".equals(primaryIdentifier)) {
 			
+			// Change any + to >>
+			new Visitor () {
+			    
+			    public void visitAdditiveExpression(GNode n) {
+				if("+".equals(n.getString(1))) {
+				    n.set(1, "<<");
+				}
+			    }
+
+			    public void visit(GNode n) {
+				// Need to override visit to work for GNodes
+				for( Object o : n) {
+				    if (o instanceof Node) dispatch((GNode)o);
+				}
+			    }
+
+			}.dispatch(n); // end Visitor
+
 			if( "println".equals(n.getString(2)) ) {
 			    GNode strOut = GNode.create(kStrmOut);
 			    strOut.add(0, GNode.create( kPrimID ).add(0, "std::cout") );

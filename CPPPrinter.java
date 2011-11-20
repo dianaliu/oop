@@ -467,7 +467,6 @@ public class CPPPrinter extends Visitor {
 	
 	/** Visit the specified declaration node. */
 	public void visitDeclaration(GNode n) {
-	    System.out.println("size of node Declaration = " + n.size());
 	    printer.p(n.getNode(0));
 	    /*
 		boolean nested = isNested;
@@ -1571,45 +1570,58 @@ public class CPPPrinter extends Visitor {
 	/** Visit the specified expression statement node. */
 	public void visitExpressionStatement(GNode n) {
 
-	    // Search ExpressionStatement to see if it has a SubscriptExpression
-	    GNode subscript = (GNode) ( new Visitor() {
-
-		    boolean found = false;
-		    GNode foundNode = null;
-		    
-		    public GNode visitSubscriptExpression(GNode n) {
-			found = true;
-			foundNode =  n;
-			return foundNode;
-			// What if not found?
-		    }
-		    	       
-		    public GNode visit(GNode n) { // override visit for GNodes
-			for( Object o : n) {
-			    if (o instanceof Node) dispatch((GNode)o);
+	    // If primary identifier other than std:; must check not null
+	    for( Object o : n) {
+		if (o instanceof Node) {
+		    new Visitor() {
+			public void visitPrimaryIdentifier(GNode n) {
+			    if(!n.getString(0).startsWith("std")) {
+				printer.indent().p("__rt::checkNotNull(");
+				printer.p(n).p(");").pln();
+			    }
 			}
+			
+			public void visit(GNode n) {
+			    for( Object o : n) {
+				if (o instanceof Node) dispatch((GNode)o);
+			    }
+			}
+			
+		    }.dispatch(n);
 
-			if(found == false) return null;
-			else return foundNode;
-		    }
-		    
-		}.dispatch(n) );
+		} // end if
+	    } // end for loop
 
-	    if(null != subscript) {
-		
-		printer.indent().p("__rt::checkNotNull(").p(subscript.getNode(0)).p(");").pln();
-		
-		if(subscript.getNode(1).hasName("PrimaryIdentifier")) {
-		    printer.indent().p("__rt::checkStore(");
-		    printer.p(subscript.getNode(0)).p(",");
-		    printer.p(subscript.getNode(1)).p(");").pln();
-		}
-	    }
+	    // Separate Visitor to get order right
+	    for( Object o : n) {
+		if (o instanceof Node) {
+		    new Visitor() {
+			public void visitSubscriptExpression(GNode n) {
+			    if(n.getNode(1).hasName("PrimaryIdentifier")) {
+				printer.indent().p("__rt::checkStore(");
+				printer.p(n.getNode(0)).p(",");
+				printer.p(n.getNode(1)).p(");").pln();
+			    }
+			}
+			
+			public void visit(GNode n) {
+			    for( Object o : n) {
+				if (o instanceof Node) dispatch((GNode)o);
+			    }
+			}
+			
+		    }.dispatch(n);
+
+		} // end if
+	    } // end for loop
 	    
+
+
 	    // Continue like normal
 	    boolean nested = startStatement(STMT_ANY, n);
 	    printer.indent().p(n.getNode(0)).pln(';');
 	    endStatement(nested);
+
 	}
     
 	/** Visit the specified empty statement node. */
@@ -2122,10 +2134,16 @@ public class CPPPrinter extends Visitor {
 	/** Visit the specified primary identifier node. */
 	public void visitPrimaryIdentifier(GNode n) {
 	    // For all variables, check not null?
-	    // FIXME: remove the ones for arrays
+	    // NO - std::cout and std::end lis a primary identifier....
+	    // Also, in TypedefDeclaration, but I think we overrode?
+
+
+		// do normal stuff
 		int prec = startExpression(160);
 		printer.p(n.getString(0));
 		endExpression(prec);
+
+
 	}
 	
 	/** Visit the specified statement as exprression node. */
