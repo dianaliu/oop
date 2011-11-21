@@ -1598,32 +1598,15 @@ public class CPPPrinter extends Visitor {
 		    new Visitor() {
 			public void visitPrimaryIdentifier(GNode n) {
 			    if(!n.getString(0).startsWith("std")) {
-				printer.indent().p("// __rt::checkNotNull(");
+				printer.indent().p(" __rt::checkNotNull(");
 				printer.p(n).p(");").pln();
 			    }
 			}
-			
-			public void visit(GNode n) {
-			    for( Object o : n) {
-				if (o instanceof Node) dispatch((GNode)o);
-			    }
-			}
-			
-		    }.dispatch(n);
 
-		} // end if
-	    } // end for loop
-
-	    // Separate Visitor to get order right
-	    for( Object o : n) {
-		if (o instanceof Node) {
-		    new Visitor() {
 			public void visitSubscriptExpression(GNode n) {
-			    if(n.getNode(1).hasName("PrimaryIdentifier")) {
-				printer.indent().p("// __rt::checkStore(");
-				printer.p(n.getNode(0)).p(",");
-				printer.p(n.getNode(1)).p(");").pln();
-			    }
+			    printer.indent().p("__rt::checkIndex(").p(n.getNode(0)).p(", ");
+			    printer.p(n.getNode(1)).p(");").pln();
+
 			}
 			
 			public void visit(GNode n) {
@@ -1632,10 +1615,11 @@ public class CPPPrinter extends Visitor {
 			    }
 			}
 			
-		    }.dispatch(n);
+		    }.dispatch(GNode.cast(o));
 
 		} // end if
 	    } // end for loop
+
 	    
 
 
@@ -2090,11 +2074,21 @@ public class CPPPrinter extends Visitor {
 	/** Visit the specified subscript expression node. */
 	public void visitSubscriptExpression(GNode n) {
 		int prec1  = startExpression(160);
-
-		
-		printer.p("(*").p(n.getNode(0)).p(")");
 		int prec2  = enterContext(PREC_BASE);
+
+
+
+		printer.p(n.getNode(0)).p("->__data");
 		printer.p('[').p(n.getNode(1)).p(']');
+		if(is_output) {
+		    printer.p("->data");
+		}
+		// I desperately need Type around Primary Identifier
+		//		else {
+		//		    printer.p("(*").p(n.getNode(0)).p(")");
+		//		    printer.p('[').p(n.getNode(1)).p(']');
+		//		}
+		
 		exitContext(prec2);
 		endExpression(prec1);
 	}
@@ -2738,7 +2732,8 @@ public class CPPPrinter extends Visitor {
 	    // arguments
 	    // FIXME: Know when to pass self, etc. as arguments
 	    if(n.getNode(3).size() > 0) printer.p(n.getNode(3));
-	    else if ("toString".equals(n.getString(2))) 
+	    else if ("toString".equals(n.getString(2)) ||
+		     "getClass".equals(n.getString(2))) 
 		printer.p("(").p(n.getNode(0)).p(")");
 	    else printer.p("()");
 		
@@ -3045,9 +3040,33 @@ public class CPPPrinter extends Visitor {
 		endExpression(prec);
 	}
 	
-    // Version B
 	/** Visit the specified expression. */
 	public void visitExpression(GNode n) {
+
+	    if(n.getNode(2).hasName("PrimaryIdentifier")) {
+
+		    for( Object o : n) {
+			if (o instanceof Node) {
+			    new Visitor() {
+				public void visitSubscriptExpression(GNode n) {
+				    printer.indent().p(" __rt::checkStore(");
+				    printer.p(n.getNode(0)).p(",");
+	
+				}
+				
+				public void visit(GNode n) {
+				    for( Object o : n) {
+					if (o instanceof Node) dispatch((GNode)o);
+				    }
+				}
+				
+			    }.dispatch(GNode.cast(o));
+			    
+			} // end if
+		    } // end for loop
+		    printer.p(n.getNode(2)).p(");").pln();
+		}
+
 		final int prec1 = startExpression(10);
 		final int prec2 = enterContext();
 		printer.p(n.getNode(0));

@@ -318,6 +318,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
 	new Visitor () {
 
+	    // QUERY: At FieldDeclaration, can we copy Type to subsequent 
+	    // PrimaryIdentifiers?
 	    public void visitConstructorDeclaration(GNode n) {
 		// Get .this' Class for explicit method invocation
 		// FIXME: In Java AST, the instance name is not stored.
