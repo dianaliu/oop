@@ -8,10 +8,6 @@ public class Demo {
 	Demo d = new Demo();
 	System.out.println("d.toString() = " + d.toString());
 
-	Demo da = new Demo[2];
-	da[0]  = new Demo();
-	da[1] = new Demo();
-
 	// Can only print type Strings lol bc don't know Type in Expressions
 	
 	String s = "soo";
