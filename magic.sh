@@ -1,9 +1,6 @@
 #!/bin/bash  
 
- clear
- source setup.sh
- make
- clear
+clear
 
  echo  Test Script: Compares Java output to translated CPP output.
 
@@ -26,33 +23,37 @@ if [ ! -d "output" ]
            echo "Files will write to output/"
 fi
 
+  
   # 1. Get Java file(s) from command line and add to array javaInput
  javaInput=()
 
- # 2. Compile and run Java files.
+ # 2. Compile and run Java file.
  for var in "$@"
          do
          cp "$var" "output/"$var""
 
-	 cd output/
-
 	 echo "--- Received input file: $var"
-         javac $var || echo "--- ERR: Java compile time error"; cd ..; return 1;
-	     
+         javac "output/$var" ||echo "--- ERR: Java compile time error" return 1;
+	 echo "--- Compiled $var"
          # 3. Save output from Java files
 	 j=java
 	 fileName=${var%.$j} # remove .java 
-	 cd ..
+
 
 	 # FIXME: For some programs, exits without printing err below
-	 java -cp . output/"$fileName" > "output/jOut.txt" || 
-	   echo "--- ERR: Java runtime error"; return 1;
+	 java -cp output/ "$fileName" > "output/j.txt" || 
+	   echo "--- ERR: Java runtime error" return 1;
 
-	 echo "--- Successfully compiled and ran $var"
+	 echo "--- Ran $var and saved output to output/j.txt"
+
          javaInput=("${javaInput[@]}" "$var")   
 done 
 
  # 4. Translate Java files
+
+ source setup.sh
+ make
+
  for ((a=0; a < ${#javaInput[@]}; a++)) 
 	do
          java xtc.oop.Translator -translate ${javaInput[a]}
@@ -76,25 +77,28 @@ done
  do
      allCPP="${allCPP} ${cppOutput[i]}"
  done
-  g++ $allCPP || echo"--- ERR: CPP compile time error"; cd ..; return 1;
+  g++ $allCPP java_lang.cc || echo"--- ERR: CPP compile time error" cd .. return 1;
+  echo "--- Compiled $allCPP java_lang.cc"
 
  # 7. Run and save output from CPP files
-  ./a.out > "cOut.txt" || echo "--- ERR: CPP runtime error"; cd ..; return 1;
+  ./a.out > "c.txt" || echo "--- ERR: CPP runtime error" cd .. return 1;
+    echo "--- Ran $allCPP java_lang.cc Output is saved to output/c.txt"
+
 
  # 8. Compare Java and CPP output
- if diff jOut.txt cOut.txt > /dev/null ; then
-	echo "Success! Outputs were the same."
+    echo "--------------------------------------------------------------------"
+ if diff j.txt c.txt  > /dev/null ; then
+	echo "--- Pass! Outputs were the same."
  else 
- 	echo "Bummer. Outputs were different."
+ 	echo "--- Fail. Outputs were different."
+	echo "--- See diff --side-by-side below::"
+	diff j.txt c.txt --side-by-side
  fi
+    echo "--------------------------------------------------------------------"
 
- # Not necessary, but return to xtc/  
+ #  Return to xtc/  
  cd ..
 
-
- # FIXME: Isn't there just one output file?
- # echo "Number of translations that passed: ${pass}"
- # echo "Out of: ${#javaInput[@]}"
  read -p "End of program - Press Enter to quit."
 
 

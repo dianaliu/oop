@@ -6,7 +6,7 @@ public class Demo {
     public static void main (String[] args) {
 
 	Demo d = new Demo();
-	System.out.println("d.toString() = " + d.toString());
+	//	System.out.println("d.toString() = " + d.toString());
 
 	// Can only print type Strings lol bc don't know Type in Expressions
 	
@@ -20,7 +20,7 @@ public class Demo {
 	    System.out.println("ss = " + ss[i]);
 	}
 
-	System.out.println(ss.getClass());
+	//	System.out.println(ss.getClass());
 	System.out.println("ss[1] = " + ss[1]);
 
 
