@@ -26,23 +26,23 @@ public class ClassLayoutParser extends Visitor {
     // Constructor - initializes the CLP instance and begins processing
     // @param n node for a class declaration
     public ClassLayoutParser(GNode[] ast, boolean db) {
-		DEBUG = db;
-		if(DEBUG) System.out.println("--- Begin Class Layout Parser\n");
-		
-		//preinitialize the hardcoded Grimm types
-		initGrimmTypes();
-		
-		//parse all classes to be translated
-		for(int i = 0; i < ast.length; i++) {
-			if(ast[i] != null) {
-				this.dispatch(ast[i]);
-			}
-		}
-		
-		if(DEBUG) printClassTree();
-		if(DEBUG) System.out.println("--- End Class Layout Parser\n");
-    }
+	DEBUG = db;
+	if(DEBUG) System.out.println("--- Begin Class Layout Parser\n");
 	
+	//preinitialize the hardcoded Grimm types
+	initGrimmTypes();
+	
+	//parse all classes to be translated
+	for(int i = 0; i < ast.length; i++) {
+	    if(ast[i] != null) {
+		this.dispatch(ast[i]);
+	    }
+	}
+	
+	if(DEBUG) printClassTree();
+	if(DEBUG) System.out.println("--- End Class Layout Parser\n");
+    }
+    
 	// ----------------------------------
 	//         Tree Processing
 	// ----------------------------------
@@ -206,6 +206,7 @@ public class ClassLayoutParser extends Visitor {
 	public void visitConstructorDeclaration(GNode n) {
 	    System.out.println( "***constructor found in class " + className );
 	    GNode constructorSignature = GNode.create("ConstructorHeader");
+	    //	    constructorSignature.add(className);
 	    constructorSignature.add( n.get(2) ); //constructor name (just the class name)
 	    constructorSignature.add( n.get(3) ); //parameters
 	    currentHeaderNode.getNode(1).getNode(2).add(constructorSignature); //add the signature to the constructor list
@@ -259,7 +260,9 @@ public class ClassLayoutParser extends Visitor {
 		
 		GNode copyDL = (GNode)copy.getNode(1);
 		copyDL.set(0, createSkeletonDataField( "__"+className+"_VT*", "__vptr" )); //setting the right vtable pointer name
-		copyDL.set(2, GNode.create( "ConstructorHeaderList" ));//clear out the constructor list
+		GNode constructorList = GNode.create("ConstructorHeaderList");
+		constructorList.add(0, className);
+		copyDL.set(2, constructorList);//clear out the constructor list
 		GNode statMethList = (GNode)copyDL.getNode(3);
 		for( Object o : statMethList ) { //changing the 'this' parameter types in the static data layout methods
 			((GNode)o).getNode(2).getNode(0).getNode(0).set(0, className); //ugh is that ugly or what?
@@ -383,7 +386,9 @@ public class ClassLayoutParser extends Visitor {
 		GNode retVal = GNode.create("DataLayoutDeclaration");
 		retVal.add( createSkeletonDataField( "__Object_VT*", "__vptr" ) );
 		retVal.add( GNode.create( "DataFieldList" ) ); //simple node to contain the data fields
-		retVal.add( GNode.create( "ConstructorHeaderList" ) ); //simple node to contain constructors
+		GNode constructorList =  GNode.create("ConstructorHeaderList");
+		constructorList.add(0, className);
+		retVal.add( constructorList); //simple node to contain constructors
 		GNode objMethHeaders = GNode.create( "MethodHeaderList" ); //simple node to contain method headers
 		//adding static methods:
 		objMethHeaders.add( createSkeletonStaticMethodHeader( "int32_t", "hashCode", new String[]{"Object"} ) ); //int32_t (*hashCode)(Object);

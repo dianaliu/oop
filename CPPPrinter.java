@@ -664,6 +664,13 @@ public class CPPPrinter extends Visitor {
 		else ; // do nothing
 	    }
 	   
+	    // Hardcoding class
+	    if("DataLayout".equals(n.getString(0)))  {
+		printer.pln();
+		printer.indent().p("static Class __class();").pln();
+		printer.pln();
+	    }
+	    
 	    isLongDecl = true;
 
 	    printer.decr();
@@ -721,6 +728,7 @@ public class CPPPrinter extends Visitor {
 	    printer.p((GNode)o);
 	}
 	printer.decr();
+
 	
     }
 	
@@ -1343,7 +1351,14 @@ public class CPPPrinter extends Visitor {
 		
 		printer.indent().p("for (").p(n.getNode(0)).p(')');
 		prepareNested();
-		printer.p(n.getNode(1));
+		// For safety, add {} around single line 
+		// ExpressionStatements
+		if( n.getNode(1).hasName("ExpressionStatement") ) {
+		    printer.pln('{').incr();
+		    printer.p(n.getNode(1));
+		    printer.decr().indent().p('}').pln();
+		}
+		else printer.p(n.getNode(1)); // Block, {} automatic 
 		
 		endStatement(nested);
 	}
@@ -1460,8 +1475,15 @@ public class CPPPrinter extends Visitor {
     }
 	
     public void visitNewClassExpression(GNode n) {
-		// TODO: 
-		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
+
+	
+	for(Object o : n ) {
+	    if( o instanceof GNode ) {
+		if(GNode.cast(o).hasName("QualifiedIdentifier")) 
+		    printer.p("new __");
+		printer.p((GNode)o);
+	    }
+	}
     }
 
     public void visitExtension(GNode n) {
@@ -1576,7 +1598,7 @@ public class CPPPrinter extends Visitor {
 		    new Visitor() {
 			public void visitPrimaryIdentifier(GNode n) {
 			    if(!n.getString(0).startsWith("std")) {
-				printer.indent().p("__rt::checkNotNull(");
+				printer.indent().p("// __rt::checkNotNull(");
 				printer.p(n).p(");").pln();
 			    }
 			}
@@ -1598,7 +1620,7 @@ public class CPPPrinter extends Visitor {
 		    new Visitor() {
 			public void visitSubscriptExpression(GNode n) {
 			    if(n.getNode(1).hasName("PrimaryIdentifier")) {
-				printer.indent().p("__rt::checkStore(");
+				printer.indent().p("// __rt::checkStore(");
 				printer.p(n.getNode(0)).p(",");
 				printer.p(n.getNode(1)).p(");").pln();
 			    }
@@ -2141,6 +2163,8 @@ public class CPPPrinter extends Visitor {
 		// do normal stuff
 		int prec = startExpression(160);
 		printer.p(n.getString(0));
+		// FIXME: Temporarily need ->data for Strings in output
+
 		endExpression(prec);
 
 
@@ -2221,6 +2245,23 @@ public class CPPPrinter extends Visitor {
 		
 	    for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
 		
+
+
+	    // Before exiting namespace java::lang, write constructors for
+	    // Class and Class_VT
+	    // FIXME: Hardcoding for now - only works for empty constructors
+	    printer.indent().pln("// Empty constructors for class and vt");
+	    String cn = n.getNode(0).getNode(0).getNode(0).getNode(0).getNode(1).getString(0);
+	    printer.incr().indent();
+	    printer.p("__").p(cn).p("::__").p(cn);
+	    printer.p("() :  __vptr(&__vtable) {").pln();
+	    printer.indent().p("}").pln();
+	    
+	    printer.indent().p("__").p(cn).p("_VT __").p(cn);
+	    printer.p("::__vtable;").pln();
+
+	    printer.decr();
+
 	    printer.decr();
 	    printer.indent().pln("}");
 	    printer.decr();
@@ -2231,12 +2272,27 @@ public class CPPPrinter extends Visitor {
 	public void visitImplementationDeclaration(GNode n) {
 		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
 	}
+
+    // FIXME: global variable to selectively ->data Strings.  
+    // not needed in future versions
+    public static boolean is_output = false;
 	
 	public void visitStreamOutputList(GNode n) {
 		for(Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
-			printer.p( (GNode)iter.next() );
-			if(iter.hasNext() )printer.p( " << " );
+		    GNode nxt = (GNode)iter.next();
+		    
+		    printer.p(nxt);
+		    // FIXME: Hardcoding ->data for String, 
+		    // not needed in later versions
+		    is_output = true;
+			
+		    if(iter.hasNext() )printer.p( " << " );
 		}
+		// TODO: Add logic for concatenation vs addition
+		// This is operator method overloading!
+		// Currently some +'s are incorrect
+
+		is_output = false;
 	}
 
 
@@ -2291,18 +2347,20 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	public void visitMethodPointer( GNode n ) {
-		//0 - meth name, 1-target, 2-params
+	    //0 - meth name, 1-Type, 2-params
+	
+	    // Don't need to change order
 
-      		printer.p(n.getString(0)).p("(&").p(n.getNode(1));
-		printer.p("::").p(n.getString(0)).p(')');
+	    printer.p(n.getString(0));
+	    printer.p("(").p(n.getNode(3));
+	    printer.p("&__Object::").p(n.getString(0)).p(")");
 		
-	    
-	}
+       	}
 	
 	public void visitMethodHeaderList( GNode n ) {
 		printer.pln();
 		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
-		printer.pln();
+
 	}
 	
 	public void visitStaticMethodHeader(GNode n) {
@@ -2314,8 +2372,13 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	public void visitConstructorHeaderList(GNode n) {
-		if(n.size() > 0) printer.pln();
-		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
+
+	    // FIXME: Hardcoding empty Constructor, since it's empty now
+	    printer.indent().p("// Constructor").pln();
+	    printer.indent().p("__").p(n.getString(0)).p("();").pln();
+
+	    if(n.size() > 0) printer.pln();
+	    for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
 	}
 	
 	public void visitConstructorHeader(GNode n) {
@@ -2331,7 +2394,10 @@ public class CPPPrinter extends Visitor {
 	
 	
 	public void visitClassISAPointer( GNode n ) {
-		printer.p("__isa(").p(n.getString(0)).p("::__class())");
+	    // FIXME: Should always call Object's class?
+	    printer.p(" __isa(__Object::__class())");
+
+	    //		printer.p("__isa(").p(n.getString(0)).p("::__class())");
 	}
 	
 	public void visitVTConstructorDeclaration(GNode n) { 
@@ -2339,7 +2405,7 @@ public class CPPPrinter extends Visitor {
 		
 	    if (null != n.get(1)) printer.indent().p(n.getNode(1));
 		
-	    // BUG: Ask rob to fix, always does __Object_VT
+
 	    printer.indent().p("__").p(className).p("_VT()");
 	    //	    printer.indent().p(n.getString(2)).p("() ");
 		
@@ -2670,7 +2736,10 @@ public class CPPPrinter extends Visitor {
 	    printer.p("->__vptr->").p(n.getString(2));
 		
 	    // arguments
-	    if(n.getNode(3).size() > 0)printer.p(n.getNode(3));
+	    // FIXME: Know when to pass self, etc. as arguments
+	    if(n.getNode(3).size() > 0) printer.p(n.getNode(3));
+	    else if ("toString".equals(n.getString(2))) 
+		printer.p("(").p(n.getNode(0)).p(")");
 	    else printer.p("()");
 		
 	    endExpression(prec);
@@ -2940,6 +3009,7 @@ public class CPPPrinter extends Visitor {
 	public void visitStringLiteral(GNode n) {
 		final int prec = startExpression(160);
 		printer.p("__rt::literal(").p(n.getString(0)).p(")");
+		if(is_output) printer.p("->data");
 		endExpression(prec);
 	}
 	

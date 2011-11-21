@@ -383,10 +383,12 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 			    strOut.add(0, GNode.create( kPrimID ).add(0, "std::cout") );
 			    // Add all arguments to System.out.println
 			    for(int i = 0; i < n.getNode(3).size(); i++) {
-				strOut.add(1, n.getNode(3).get(i) ); 
+				// removed addindex 1
+				strOut.add(n.getNode(3).get(i) ); 
 			    }
 			    
-			    strOut.add(2, GNode.create( kPrimID ).add(0, "std::endl") );
+			    // removed add index 2
+			    strOut.add(GNode.create( kPrimID ).add(0, "std::endl") );
 			    
 			    expressionStatement.set(0, strOut);
 			}
