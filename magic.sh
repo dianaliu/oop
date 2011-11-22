@@ -82,7 +82,7 @@ done
 
  # 7. Run and save output from CPP files
   ./a.out > "c.txt" || echo "--- ERR: CPP runtime error" cd .. return 1;
-    echo "--- Ran $allCPP java_lang.cc Output is saved to output/c.txt"
+    echo "--- Ran $allCPP java_lang.cc and saved output to output/c.txt"
 
 
  # 8. Compare Java and CPP output
@@ -91,14 +91,15 @@ done
 	echo "--- Pass! Outputs were the same."
  else 
  	echo "--- Fail. Outputs were different."
-	echo "--- See diff --side-by-side below::"
+	echo "--- See diff --side-by-side below:"
 	diff j.txt c.txt --side-by-side
  fi
     echo "--------------------------------------------------------------------"
 
  #  Return to xtc/  
  cd ..
+ return 0;
 
- read -p "End of program - Press Enter to quit."
+# read -p "End of program - Press Enter to quit."
 
 

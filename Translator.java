@@ -183,9 +183,9 @@ public class Translator extends xtc.util.Tool {
 			new LeafTransplant(clp, GNode.cast(trees[i]), DEBUG); 
 		    returned[i] = translator.getCPPTree();
 		    
-		    //		    if(DEBUG) 
+		    if(DEBUG) 
 		    runtime.console().pln("--- CPP AST #" + (i+1));
-		    //		    if(DEBUG) 
+		    if(DEBUG) 
 		    runtime.console().format(returned[i]).pln().flush();
 		    if(DEBUG) 
 			runtime.console().pln("\t-----------------------").flush();

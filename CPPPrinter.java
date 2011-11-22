@@ -1604,7 +1604,8 @@ public class CPPPrinter extends Visitor {
 			}
 
 			public void visitSubscriptExpression(GNode n) {
-			    printer.indent().p("__rt::checkIndex(").p(n.getNode(0)).p(", ");
+			    // Using 11/8 include files, not implemented yet
+			    printer.indent().p("// __rt::checkIndex(").p(n.getNode(0)).p(", ");
 			    printer.p(n.getNode(1)).p(");").pln();
 
 			}
@@ -2077,17 +2078,9 @@ public class CPPPrinter extends Visitor {
 		int prec2  = enterContext(PREC_BASE);
 
 
-
-		printer.p(n.getNode(0)).p("->__data");
+		printer.p("(*").p(n.getNode(0)).p(")");
 		printer.p('[').p(n.getNode(1)).p(']');
-		if(is_output) {
-		    printer.p("->data");
-		}
-		// I desperately need Type around Primary Identifier
-		//		else {
-		//		    printer.p("(*").p(n.getNode(0)).p(")");
-		//		    printer.p('[').p(n.getNode(1)).p(']');
-		//		}
+        
 		
 		exitContext(prec2);
 		endExpression(prec1);
@@ -2278,7 +2271,7 @@ public class CPPPrinter extends Visitor {
 		    printer.p(nxt);
 		    // FIXME: Hardcoding ->data for String, 
 		    // not needed in later versions
-		    is_output = true;
+		    //		    is_output = true;
 			
 		    if(iter.hasNext() )printer.p( " << " );
 		}
@@ -3004,7 +2997,7 @@ public class CPPPrinter extends Visitor {
 	public void visitStringLiteral(GNode n) {
 		final int prec = startExpression(160);
 		printer.p("__rt::literal(").p(n.getString(0)).p(")");
-		if(is_output) printer.p("->data");
+		//		if(is_output) printer.p("->data");
 		endExpression(prec);
 	}
 	
