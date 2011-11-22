@@ -1,7 +1,7 @@
 #About#
-This is the final project for <http://cs.nyu.edu/rgrimm/teaching/fa11-oop/> coded by Diana, Hernel, Kirim, and Rob.
+This is the final project for <http://cs.nyu.edu/rgrimm/teaching/fa11-oop/>, a Java to CPP translator coded by Diana, Hernel, Kirim, and Rob.
 
-##To run##
+##How to run##
     cd xtc/
     cp src/xtc/oop/magic.sh magic.sh
     source magic.sh JAVAFILE
@@ -14,4 +14,4 @@ This is the final project for <http://cs.nyu.edu/rgrimm/teaching/fa11-oop/> code
 - (Memory management using smart pointers)
 
 ##What does it not do?##
-- Our translator only supports a subset of the Java language. For more details, see <http://cs.nyu.edu/rgrimm/teaching/fa11-oop/#languages>.
+Our translator only supports a subset of the Java language. For more details, see <http://cs.nyu.edu/rgrimm/teaching/fa11-oop/#languages>.
