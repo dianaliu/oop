@@ -93,8 +93,7 @@ public class ClassLayoutParser extends Visitor {
 	// Visits the method declarations in a class, adding them as virtual methods to the vtable
 	// @param n MethodDeclaration node from a Java AST
 	public void visitMethodDeclaration(GNode n) {
-	    // FIXME: If a method is overloaded, vtable only stores the last
-	    // method encountered.  Do we need to change how we checkOverride?
+
 	    // new VirtualMethodDeclaration: (0) return type, (1) method name, (2) parameters
 	    
 	    GNode methodSignature = GNode.create("VirtualMethodDeclaration");
@@ -104,6 +103,7 @@ public class ClassLayoutParser extends Visitor {
 	    for( int i = 0; i < formalParameters.size(); i++ ) {
 			formalParameters.set(i, formalParameters.getNode(i).getNode(1) ); // this kills the parameter name
 	    }
+	    // FIXME: Only add this.Class as parameter for inherited methods
 	    formalParameters.add(0, createTypeNode( className ) );
 	    methodSignature.add(formalParameters); //parameter types
 	    
@@ -112,28 +112,31 @@ public class ClassLayoutParser extends Visitor {
 	    
 	    if ("main".equals(methodName)) return; // Don't want main method
 	    
-	    // CHanged @params to overridesMethod
 	    int overrideIndex = overridesMethod(n, (GNode)currentHeaderNode.getNode(0) );
 	    if(overrideIndex >= 0) {
-			if(DEBUG) System.out.println( "overriding method: " + methodName );
-			currentHeaderNode.getNode(0).set(overrideIndex, methodSignature); // overrides, must replace
-			
-			//changing the constructor too
-			int index = currentHeaderNode.getNode(0).size()-1;
-			GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index).getNode(4);
-			GNode newPtr = GNode.create( "vtMethodPointer" );
-			newPtr.add( n.get(3) ); //method name
-			newPtr.add( createTypeNode( "__"+className ) ); //target
-			newPtr.add( GNode.create( "FormalParameters" ) );
-			vtConstructorPtrList.set( overrideIndex, newPtr );
+		// FIXME: If overridden, don't pass self Class
+		// as parameter
+		if(DEBUG) System.out.println( "overriding method: " + methodName );
+		currentHeaderNode.getNode(0).set(overrideIndex, methodSignature); // overrides, must replace
+		
+		//changing the constructor too
+		int index = currentHeaderNode.getNode(0).size()-1;
+		GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index).getNode(4);
+		GNode newPtr = GNode.create( "vtMethodPointer" );
+		newPtr.add( n.get(3) ); //method name
+		newPtr.add( createTypeNode( "__"+className ) ); //target
+		newPtr.add( GNode.create( "FormalParameters" ) );
+		vtConstructorPtrList.set( overrideIndex, newPtr );
 	    }
 	    else {
-			if(DEBUG) System.out.println( "adding method: " + methodName );
-			int index = currentHeaderNode.getNode(0).size()-1; //add it before the constructor, which is last(index+1)
-			currentHeaderNode.getNode(0).add(index, methodSignature); //extended, add the method signature to the vtable declaration
-			
-			//adding it to the constructor too
-			GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index+1).getNode(4);
+		// FIXME: If  new method, don't pass self Class
+		// as parameter
+		if(DEBUG) System.out.println( "adding method: " + methodName );
+		int index = currentHeaderNode.getNode(0).size()-1; //add it before the constructor, which is last(index+1)
+		currentHeaderNode.getNode(0).add(index, methodSignature); //extended, add the method signature to the vtable declaration
+		
+		//adding it to the constructor too
+		GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index+1).getNode(4);
 			GNode newPtr = GNode.create( "vtMethodPointer" );
 			newPtr.add( n.get(3) ); //method name
 			newPtr.add( createTypeNode( "__"+className ) ); //target

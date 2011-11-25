@@ -2336,28 +2336,8 @@ public class CPPPrinter extends Visitor {
 		printer.decr();
 	}
 	
-    // KEEP
 	public void visitvtMethodPointer( GNode n ) {
-	    //0 - meth name, 1-Type, 2-params
-	
-	    // FIXME: Method Pointers are used with special structure in 
-	    // VTable, which is fine.  But they also appear if the 
-	    // class makes a new method
-	    // Is MethodPointersList unique to VTable or code?
-	    // For Example, if cpp header needs to pre-declare methods
-
-
-	    // WHOA problem is bigger than expected
-	    // in CPP ast, the method declaration actually yes, does need 
-	    // to go under vtable method pointer, but the structure is different
-	    // TODO: Test out diffeerent structures, params, etc.
-
-	    // BUT ALSO, method declarations are put under
-
-	    // FIXME: Restructure MethodPointer node for consistency
-	    // Our tree structure is wack for method overloading!
-	    // Lots of mucking in vtables!
-
+        
 	    printer.p(n.getString(0)); // print methodName
 	    if(n.size()>3 &&  n.getNode(3).hasName("PointerCast")) {
 		// This method is inherited
@@ -2369,13 +2349,12 @@ public class CPPPrinter extends Visitor {
 		printer.p("(").p(n.getNode(2)); // parameter
 		printer.p("&").p(n.getNode(1)).p("::").p(n.getString(0)).p(")");
 	    }
-	    
-		
+	    		
        	}
 
-    // FIXME: actual
     public void visitMethodPointersList( GNode n )  {
-	// FIXME:
+	// FIXME: Now it's not used?
+	// oh well, leave well enough alone.  it works!
 		printer.incr().indent().pln();
 		for(Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
 			    printer.indent().p((GNode)iter.next());
@@ -2385,9 +2364,9 @@ public class CPPPrinter extends Visitor {
 		printer.decr();
 	}
 	
-    // FIXME: actual
 	public void visitMethodPointer( GNode n ) {
-	    // FIXME:
+	    // FIXME: Not used now? SO CONFUSEd
+	    // oh well, leave them named vt
 
 	    printer.p(n.getString(0)); // print methodName
 
@@ -2614,11 +2593,11 @@ public class CPPPrinter extends Visitor {
 
 	// Is main method?
 	if("main".equals(n.getString(3))) {
-	    printer.p("int main()");
+	    printer.p("int32_t main()");
 	    // FIXME: For main, detect if any command line args
 	}
 	else {
-	    printer.indent().p(n.getNode(0));
+	    //	    printer.indent().p(n.getNode(0)); // Modifiers
 	    if (null != n.get(1)) printer.p(n.getNode(1)).p("1=");
 	    
 	    // Node 2 = return type
@@ -2626,11 +2605,11 @@ public class CPPPrinter extends Visitor {
 	    
 	    if (! "<init>".equals(n.get(3))) {
 		// Node 3 = method Name
-		printer.p(className).p("::").p(n.getString(3)).p(' ');
+		printer.p("__").p(className).p("::").p(n.getString(3)).p(' ');
 	    }
 
 	    // Formal Parameters
-	    printer.p(n.getNode(4));
+	    printer.p("(").p(n.getNode(4)).p(")");
 	}
 
 	if (null != n.get(5)) {
