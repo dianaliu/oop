@@ -33,7 +33,7 @@ fi
          cp "$var" "output/"$var""
 
 	 echo "--- Received input file: $var"
-         javac "output/$var" || echo"--- ERR: Java compile time error" || return 1;
+         javac "output/$var" || echo"--- ERR: Java compile time error" return 1;
 	 echo "--- Compiled $var"
          # 3. Save output from Java files
 	 j=java
@@ -41,7 +41,7 @@ fi
 
 
 	 # FIXME: For some programs, exits without printing err below
-	 java -cp output/ "$fileName" > "output/j.txt" || echo "--- ERR: Java runtime error" || return 1;
+	 java -cp output/ "$fileName" > "output/j.txt" || echo "--- ERR: Java runtime error" return 1;
 
 	 echo "--- Ran $var and saved output to output/j.txt"
 
@@ -77,11 +77,11 @@ done
      allCPP="${allCPP} ${cppOutput[i]}"
  done
  # This is the only or statement that works proper
-  g++ $allCPP java_lang.cc || echo"--- ERR: CPP compile time error"; cd ..; return 1;
+  g++ $allCPP java_lang.cc || echo"--- ERR: CPP compile time error" cd .. return 1;
   echo "--- Compiled $allCPP java_lang.cc"
 
  # 7. Run and save output from CPP files
-  ./a.out > "c.txt" || echo "--- ERR: CPP runtime error"; cd ..; return 1;
+  ./a.out > "c.txt" || echo "--- ERR: CPP runtime error" cd .. return 1;
     echo "--- Ran $allCPP java_lang.cc and saved output to output/c.txt"
 
 
