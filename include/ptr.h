@@ -20,11 +20,13 @@
 #pragma once
 
 #include <iostream>
+#include <cstring>
 
-#if 1
-#define TRACE(s) std::cout << s << std::endl;
+#if 0
+#define TRACE(addr) \
+  std::cout << __FUNCTION__ << ":" << __LINE__ << ":" << addr << std::endl
 #else
-#define TRACE(s)
+#define TRACE(addr)
 #endif
 
 namespace __rt {
@@ -32,43 +34,66 @@ namespace __rt {
   template<typename T>
   class Ptr {
     T* addr;
-
+    size_t* counter;
+    
   public:
-    Ptr(T* addr) : addr(addr) {
-      TRACE("Ptr: constructor");
+    typedef T value_t;
+
+    inline Ptr(T* addr = 0) : addr(addr), counter(new size_t(1)) {
+      TRACE(addr);
     }
 
-    Ptr(const Ptr& other) : addr(other.addr) {
-      TRACE("Ptr: copy constructor");
+    inline Ptr(const Ptr& other) : addr(other.addr), counter(other.counter) {
+      TRACE(addr);
+      ++(*counter);
     }
 
-    ~Ptr() {
-      TRACE("Ptr: destructor");
+    inline ~Ptr() {
+      TRACE(addr);
+      if (0 == --(*counter)) {
+        if (0 != addr) addr->__vptr->__delete(addr);
+        delete counter;
+      }
     }
 
-    Ptr& operator=(const Ptr& right) {
-      TRACE("Ptr: assignment operator");
+    inline Ptr& operator=(const Ptr& right) {
+      TRACE(addr);
       if (addr != right.addr) {
+        if (0 == --(*counter)) {
+          if (0 != addr) addr->__vptr->__delete(addr);
+          delete counter;
+        }
         addr = right.addr;
+        counter = right.counter;
+        ++(*counter);
       }
       return *this;
     }
 
-    T& operator*() const {
-      TRACE("Ptr: dereference");
-      return *addr;
+    inline T& operator*()  const { TRACE(addr); return *addr; }
+    inline T* operator->() const { TRACE(addr); return addr;  }
+    inline T* raw()        const { TRACE(addr); return addr;  }
+
+    template<typename U>
+    friend class Ptr;
+
+    template<typename U>
+    inline Ptr(const Ptr<U>& other)
+    : addr((T*)other.addr), counter(other.counter) {
+      TRACE(addr);
+      ++(*counter);
     }
 
-    T* operator->() const {
-      TRACE("Ptr: arrow");
-      return addr;
-    }
-
-    operator T*() const {
-      TRACE("Ptr: cast operator");
-      return addr;
+    template<typename U>
+    inline bool operator==(const Ptr<U>& other) const {
+      return addr == (T*)other.addr;
     }
     
+    template<typename U>
+    inline bool operator!=(const Ptr<U>& other) const {
+      return addr != (T*)other.addr;
+    }
+
   };
 
 }
