@@ -103,8 +103,11 @@ public class ClassLayoutParser extends Visitor {
 	    for( int i = 0; i < formalParameters.size(); i++ ) {
 			formalParameters.set(i, formalParameters.getNode(i).getNode(1) ); // this kills the parameter name
 	    }
-	    // FIXME: Only add this.Class as parameter for inherited methods
-	    formalParameters.add(0, createTypeNode( className ) );
+
+	    int over = overridesMethod(n, (GNode)currentHeaderNode.getNode(0) );
+	    // Don't want to pass thisClass if a method is new/overridden
+	    if(over > 0)
+		formalParameters.add(0, createTypeNode( className ) );
 	    methodSignature.add(formalParameters); //parameter types
 	    
 	    //Override check here -- if overrides, use vtdecl.set(overrideIndex, methodSig) else just add it
