@@ -77,8 +77,8 @@ done
      allCPP="${allCPP} ${cppOutput[i]}"
  done
  # This is the only or statement that works proper
-  g++ $allCPP java_lang.cc || { echo "--- ERR: CPP compile time error"; cd ..; return 1; }
-  echo "--- Compiled $allCPP java_lang.cc"
+  g++ $allCPP java_lang.cc ptr.cc || { echo "--- ERR: CPP compile time error"; cd ..; return 1; }
+  echo "--- Compiled $allCPP java_lang.cc ptr.cc"
 
  # 7. Run and save output from CPP files
   ./a.out > "c.txt" || { echo "--- ERR: CPP runtime error"; cd ..; return 1; }
