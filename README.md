@@ -5,3 +5,7 @@ This is the final project for <http://cs.nyu.edu/rgrimm/teaching/fa11-oop/> code
     cd xtc/
     cp src/xtc/oop/magic.sh magic.sh
     source magic.sh JAVAFILE
+
+##What does it do?##
+- Resolves dependencies in the same package
+- 

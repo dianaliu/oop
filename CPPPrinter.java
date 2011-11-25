@@ -2321,26 +2321,77 @@ public class CPPPrinter extends Visitor {
 	    }
 	}
 	
-	public void visitMethodPointersList( GNode n ) {
+
+    // KEEP
+	public void visitvtMethodPointersList( GNode n ) {
 		printer.incr().indent().pln();
 		for(Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
 		    // ROB: Pls remove main method
-		    // add delete
-			printer.indent().p( (GNode)iter.next() );
-			if(iter.hasNext())printer.p( ", " ).pln();
+		    // add delete for mem mgmt
+
+		    printer.indent().p((GNode)iter.next());
+		    if(iter.hasNext())printer.p( ", " ).pln();
 			
 		}
 		printer.decr();
 	}
 	
-	public void visitMethodPointer( GNode n ) {
+    // KEEP
+	public void visitvtMethodPointer( GNode n ) {
 	    //0 - meth name, 1-Type, 2-params
 	
-	    // Don't need to change order
+	    // FIXME: Method Pointers are used with special structure in 
+	    // VTable, which is fine.  But they also appear if the 
+	    // class makes a new method
+	    // Is MethodPointersList unique to VTable or code?
+	    // For Example, if cpp header needs to pre-declare methods
 
-	    printer.p(n.getString(0));
-	    printer.p("(").p(n.getNode(3));
-	    printer.p("&__Object::").p(n.getString(0)).p(")");
+
+	    // WHOA problem is bigger than expected
+	    // in CPP ast, the method declaration actually yes, does need 
+	    // to go under vtable method pointer, but the structure is different
+	    // TODO: Test out diffeerent structures, params, etc.
+
+	    // BUT ALSO, method declarations are put under
+
+	    // FIXME: Restructure MethodPointer node for consistency
+	    // Our tree structure is wack for method overloading!
+	    // Lots of mucking in vtables!
+
+	    printer.p(n.getString(0)); // print methodName
+	    if(n.size()>3 &&  n.getNode(3).hasName("PointerCast")) {
+		// This method is inherited
+		printer.p("(").p(n.getNode(3));
+		printer.p("&__Object::").p(n.getString(0)).p(")"); 
+	    }
+	    else {
+		// This method is overriden or new
+		printer.p("(").p(n.getNode(2)); // parameter
+		printer.p("&").p(n.getNode(1)).p("::").p(n.getString(0)).p(")");
+	    }
+	    
+		
+       	}
+
+    // FIXME: actual
+    public void visitMethodPointersList( GNode n )  {
+	// FIXME:
+		printer.incr().indent().pln();
+		for(Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
+			    printer.indent().p((GNode)iter.next());
+			    if(iter.hasNext())printer.p( ", " ).pln();
+			
+		}
+		printer.decr();
+	}
+	
+    // FIXME: actual
+	public void visitMethodPointer( GNode n ) {
+	    // FIXME:
+
+	    printer.p(n.getString(0)); // print methodName
+
+	    
 		
        	}
 	
