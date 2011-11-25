@@ -558,10 +558,10 @@ public class CPPPrinter extends Visitor {
 	printer.indent().p(n.getNode(0)).p(" ");
 
 	// If Smart Pointers...
-	// printer.p("__rt::Ptr<__").p(n.getNode(1)).p("> ");
-	// printer.p(n.getNode(1)).p(";").pln();
+        printer.p("__rt::Ptr<__").p(n.getNode(1)).p("> ");
+	printer.p(n.getNode(1)).p(";").pln();
 
-	printer.p("__").p(n.getNode(1)).p("* ").p(n.getNode(1)).p(";").pln();
+	//	printer.p("__").p(n.getNode(1)).p("* ").p(n.getNode(1)).p(";").pln();
 	printer.pln();
     }
 
@@ -1480,8 +1480,7 @@ public class CPPPrinter extends Visitor {
 	for(Object o : n ) {
 	    if( o instanceof GNode ) {
 		if(GNode.cast(o).hasName("QualifiedIdentifier")) 
-		    printer.p("new __");
-		printer.p((GNode)o);
+		    printer.p("new __").p((GNode)o).p("()");
 	    }
 	}
     }
@@ -1604,9 +1603,8 @@ public class CPPPrinter extends Visitor {
 			}
 
 			public void visitSubscriptExpression(GNode n) {
-			    // Using 11/8 include files, not implemented yet
-			    printer.indent().p("// __rt::checkIndex(").p(n.getNode(0)).p(", ");
-			    printer.p(n.getNode(1)).p(");").pln();
+			    //			    printer.indent().p(" __rt::checkIndex(").p(n.getNode(0)).p(", ");
+			    //			    printer.p(n.getNode(1)).p(");").pln();
 
 			}
 			
@@ -2381,6 +2379,7 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	public void visitStaticMethodHeader(GNode n) {
+	    // FIXME: Only print current Class as parameter, if inherited
 	    if(! "main".equals(n.getString(1))) {
 			printer.indent().p("static ").p(n.getNode(0));
 			printer.p(' ').p(n.getString(1));
@@ -2393,6 +2392,10 @@ public class CPPPrinter extends Visitor {
 	    // FIXME: Hardcoding empty Constructor, since it's empty now
 	    printer.indent().p("// Constructor").pln();
 	    printer.indent().p("__").p(n.getString(0)).p("();").pln();
+
+	    printer.indent().pln("// Destructor");
+	    printer.indent().p("static void __delete(__");
+	    printer.p(n.getString(0)).p("*);");
 
 	    if(n.size() > 0) printer.pln();
 	    for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
@@ -2486,6 +2489,7 @@ public class CPPPrinter extends Visitor {
     /** Visit the specified new array expression. */
     public void visitNewArrayExpression(GNode n) {
 	final int prec = startExpression(160);
+
 	printer.p(n.getNode(1)).p(n.getNode(2));
 	if (null != n.get(3)) printer.p(' ').p(n.getNode(3));
 	endExpression(prec);
@@ -2642,9 +2646,11 @@ public class CPPPrinter extends Visitor {
 
 	    if(null != n.get(2)) {
 		if ( n.getNode(2).hasName("ArrayInitializer") ||
-		     n.getNode(2).hasName("NewArrayExpression") ) {
+		     n.getNode(2).hasName("NewArrayExpression") || 
+		     n.getNode(2).hasName("NewClassExpression") ) {
 		    // supress var name
 		}
+	
 		else printer.p(n.getString(0)); // var name
 	    }
 	    else printer.p(n.getString(0)); // var name
@@ -2660,9 +2666,11 @@ public class CPPPrinter extends Visitor {
 	    if(null != n.get(2)) {
 		
 		if(n.getNode(2).hasName("ArrayInitializer") ||
-		   n.getNode(2).hasName("NewArrayExpression")) {
+		   n.getNode(2).hasName("NewArrayExpression") ||
+		   n.getNode(2).hasName("NewClassExpression")) {
 		    printer.p(n.getNode(2));
 		}
+	
 		else { printer.p(" = ").p(n.getNode(2)); }
 	    }
 	    
@@ -2680,21 +2688,35 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	public void visitFieldDeclaration(GNode n) {
+
+	    // Look for NewClassExpression to implement memroy mgmt
+
 	    // Look ahead for ArrayInitializer or NewArrayExpression translation
 	   
-	    GNode arrayNode = GNode.cast(n.getNode(2).getNode(0).getNode(2));
-	    if(null != arrayNode && (arrayNode.hasName("ArrayInitializer") || arrayNode.hasName("NewArrayExpression") ) )
+	    GNode declarationType = GNode.cast(n.getNode(2).getNode(0).getNode(2));
+
+	    if(null != declarationType && 
+	       declarationType.hasName("NewClassExpression")) {
+		printer.indent().p("__rt::Ptr<").p(n.getNode(1));
+		printer.p("> ");
+		printer.p(n.getNode(2).getNode(0).getString(0)); // var
+		printer.p(" = ");
+
+	    }
+	    else if(null != declarationType && (declarationType.hasName("ArrayInitializer") || declarationType.hasName("NewArrayExpression") ) )
 		{
 		    // Ugly, but there's no other way to get Type later on, as
 		    // Nodes are all generic
 
-		    printer.indent().p("__rt::Array<").p(n.getNode(1)).p(">* ");
-		    printer.p(n.getNode(2).getNode(0).getString(0)); // var
+		    // Adding mem mgmt:
+		    printer.indent().p("__rt::Ptr<");
+		    printer.p("__rt::Array<").p(n.getNode(1)).p("> >");
+		    printer.p(" ").p(n.getNode(2).getNode(0).getString(0));
 		    printer.p(" = ");
 		    printer.p("new __rt::Array<").p(n.getNode(1)).p(">");
 		}
 
-	    if(null != arrayNode && (arrayNode.hasName("ArrayInitializer") || arrayNode.hasName("NewArrayExpression") ) ) { /** don't print type here*/	}
+	    if(null != declarationType && (declarationType.hasName("ArrayInitializer") || declarationType.hasName("NewArrayExpression") || declarationType.hasName("NewClassExpression") ) ) { /** don't print type here*/	}
 	    else printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(" ");
 
 	    printer.p(n.getNode(2)).p(';').pln();
