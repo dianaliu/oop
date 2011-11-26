@@ -211,7 +211,7 @@ public class Translator extends xtc.util.Tool {
 			    // Since we run from xtc, outputs to xtc/output/
 			    String fileName = "output/";
 			    fileName += root.getString(root.size() - 1);
-			    fileName += ".cpp";
+			    fileName += ".cc";
 			    
 			    PrintWriter fstream = new PrintWriter(fileName);
 			    Printer cppCode = new Printer(fstream);

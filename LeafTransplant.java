@@ -426,7 +426,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    n.set(0, pI);
 		}
 		else { // catch all
-		    System.out.println("\t--- ERR: Untranslated node " + 
+		    System.out.println("\t---  Untranslated node " + 
 				       n.getNode(0).toString());
 		}
 		

@@ -63,7 +63,7 @@ done
  cd output/
 
  cppOutput=()
- for file in *.cpp ; do
+ for file in *.cc ; do
 	cppOutput=("${cppOutput[@]}" "$file")
  done
 
@@ -87,9 +87,14 @@ done
 
  # 8. Compare Java and CPP output
     echo "--------------------------------------------------------------------"
- if diff j.txt c.txt  > /dev/null ; then
+    
+    if diff j.txt c.txt  > /dev/null ; then
+	
 	echo "--- Pass! Outputs were the same."
- else 
+	echo "--- Output"
+	cat c.txt
+
+    else 
  	echo "--- Fail. Outputs were different."
 	echo "--- See diff --side-by-side below:"
 	diff j.txt c.txt --side-by-side
