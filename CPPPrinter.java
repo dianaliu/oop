@@ -2270,8 +2270,10 @@ public class CPPPrinter extends Visitor {
 		    // FIXME: Hardcoding ->data for String, 
 		    // not needed in later versions
 		    //		    is_output = true;
-			
-		    if(iter.hasNext() )printer.p( " << " );
+		
+		    printer.incr();
+		    if(iter.hasNext()) printer.pln().indent().p( " << " );
+		    printer.decr();
 		}
 		// TODO: Add logic for concatenation vs addition
 		// This is operator method overloading!

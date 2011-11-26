@@ -2,7 +2,7 @@
 
 clear
 
- echo  Test Script: Compares Java output to translated CPP output.
+ echo  "Test Script: Compares Java output to translated CPP output."
 
  # 0. Make/clean output directory
 if [ ! -d "output" ]
