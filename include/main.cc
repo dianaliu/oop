@@ -18,6 +18,7 @@
  */
 
 #include <iostream>
+#include <sstream>
 
 #include "java_lang.h"
 
@@ -62,7 +63,7 @@ int main(void) {
 
   // if (k.equals(l)) { ... } else { ... }
   __rt::checkNotNull(k);
-  if (k->__vptr->equals(k, (Object)l)) {
+  if (k->__vptr->equals(k, l)) {
     std::cout << "k.equals(l)" << std::endl;
   } else {
     std::cout << "! k.equals(l)" << std::endl;
@@ -71,7 +72,7 @@ int main(void) {
   // if (k.equals(l.getSuperclass())) { ... } else { ... }
   __rt::checkNotNull(k);
   __rt::checkNotNull(l);
-  if (k->__vptr->equals(k, (Object)l->__vptr->getSuperclass(l))) {
+  if (k->__vptr->equals(k, l->__vptr->getSuperclass(l))) {
     std::cout << "k.equals(l.getSuperclass())" << std::endl;
   } else {
     std::cout << "! k.equals(l.getSuperclass())" << std::endl;
@@ -94,10 +95,75 @@ int main(void) {
   }
 
   // HACK: Calling java.lang.Object.toString on k
-  std::cout << o->__vptr->toString((Object)k) << std::endl;
+  std::cout << o->__vptr->toString(k) << std::endl;
+
+  // An implicit upcast: o = k;
+  o = k;
+
+  // An explicit downcast: k = (Class)o;
+  k = __rt::java_cast<Class>(o);
+
+  // Having fun with strings.
+  std::cout << "--------------------------------------------------------------"
+            << "----------------"
+            << std::endl;
+
+  // String s1 = "Rose";
+  String s1 = __rt::literal("Rose");
+
+  // String s2 = "Robb";
+  String s2 = __rt::literal("Robb");
+
+  // s1.equals(o)
+  if (s1->__vptr->equals(s1, o)) {
+    std::cout << "s1.equals(o)" << std::endl;
+  } else {
+    std::cout << "! s1.equals(o)" << std::endl;
+  }
+
+  // s1.equals(s2)
+  if (s1->__vptr->equals(s1, s2)) {
+    std::cout << "s1.equals(s2)" << std::endl;
+  } else {
+    std::cout << "! s1.equals(s2)" << std::endl;
+  }
+
+  // s1.length() == s2.length()
+  if (s1->__vptr->length(s1) == s2->__vptr->length(s2)) {
+    std::cout << "s1.length() == s2.length()" << std::endl;
+  } else {
+    std::cout << "s1.length() != s2.length()" << std::endl;
+  }
+
+  // s1.charAt(1) == s2.charAt(1)
+  if (s1->__vptr->charAt(s1, 1) == s2->__vptr->charAt(s2, 1)) {
+    std::cout << "s1.charAt(1) == s2.charAt(1)" << std::endl;
+  } else {
+    std::cout << "s1.charAt(1) != s2.charAt(1)" << std::endl;
+  }
+
+  // s1.charAt(2) == s2.charAt(2)
+  if (s1->__vptr->charAt(s1, 2) == s2->__vptr->charAt(s2, 2)) {
+    std::cout << "s1.charAt(2) == s2.charAt(2)" << std::endl;
+  } else {
+    std::cout << "s1.charAt(2) != s2.charAt(2)" << std::endl;
+  }
+
+  // String s3 = s1 + " and " + s2;
+  std::ostringstream temp;
+  temp << s1 << " and " << s2;
+  String s3 = new java::lang::__String(temp.str());
+
+  // System.out.println(s3);
+  std::cout << s3 << std::endl;
+
+  // Having fun with arrays.
+  std::cout << "--------------------------------------------------------------"
+            << "----------------"
+            << std::endl;
 
   // int[] a = new int[5];
-  __rt::Array<int32_t>* a = new __rt::Array<int32_t>(5);
+  __rt::Ptr<__rt::Array<int32_t> > a = new __rt::Array<int32_t>(5);
 
   // a[2]
   // Think of (*a)[2] as a->operator[](2).
@@ -113,16 +179,14 @@ int main(void) {
   std::cout << "a[2]  : " << (*a)[2] << std::endl;
 
   // String[] ss = new String[5];
-  __rt::Array<String>* ss = new __rt::Array<String>(5);
+  __rt::Ptr<__rt::Array<String> > ss = new __rt::Array<String>(5);
 
-  // String s = "Hello";
-  String s = __rt::literal("Hello");
-
-  // ss[2] = "Hello";
+  // ss[2] = s2;
   __rt::checkNotNull(ss);
-  __rt::checkStore(ss, s);
-  (*ss)[2] = s;
+  __rt::checkStore(ss, s2);
+  (*ss)[2] = s2;
 
+  // System.out.println(ss[2]);
   std::cout << "ss[2] : " << (*ss)[2] << std::endl;
 
   // Done.

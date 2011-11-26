@@ -2300,7 +2300,8 @@ public class CPPPrinter extends Visitor {
 
 		// Case __delete, pass raw pointer
 		if("__delete".equals(n.getString(1))) {
-		    printer.p("(__Object*)");
+		    // void (*__delete)(__CLASS*);
+		    printer.p("(__").p(n.getNode(2)).p("*)");
 		}
 		else if(null != n.getNode(2)) {
 		    GNode fps = n.cast(n.getNode(2));
@@ -2337,15 +2338,18 @@ public class CPPPrinter extends Visitor {
 	public void visitvtMethodPointer( GNode n ) {
         
 	    printer.p(n.getString(0)); // print methodName
-	    if(n.size()>3 &&  n.getNode(3).hasName("PointerCast")) {
-		// This method is inherited
-		printer.p("(").p(n.getNode(3));
+
+	    if("__delete".equals(n.getString(0))) {
+		// FIXME: Hacky, but working delete method
+		printer.p("((").p(n.getNode(3).getNode(0)).p("(*)");
+		// to get __Demo* not just Demo
+		printer.p("(__").p(n.getNode(3).getNode(1)).p("*))");
 		printer.p("&__Object::").p(n.getString(0)).p(")"); 
 	    }
 	    else {
-		// This method is overriden or new
-		printer.p("(").p(n.getNode(2)); // parameter
-		printer.p("&").p(n.getNode(1)).p("::").p(n.getString(0)).p(")");
+		printer.p("(").p(n.getNode(3));
+		printer.p("&").p(n.getNode(1)).p("::");
+		printer.p(n.getString(0)).p(")");
 	    }
 	    		
        	}
@@ -2646,8 +2650,7 @@ public class CPPPrinter extends Visitor {
 
 	    if(null != n.get(2)) {
 		if ( n.getNode(2).hasName("ArrayInitializer") ||
-		     n.getNode(2).hasName("NewArrayExpression") || 
-		     n.getNode(2).hasName("NewClassExpression") ) {
+		     n.getNode(2).hasName("NewArrayExpression") ) {
 		    // supress var name
 		}
 	
@@ -2666,8 +2669,7 @@ public class CPPPrinter extends Visitor {
 	    if(null != n.get(2)) {
 		
 		if(n.getNode(2).hasName("ArrayInitializer") ||
-		   n.getNode(2).hasName("NewArrayExpression") ||
-		   n.getNode(2).hasName("NewClassExpression")) {
+		   n.getNode(2).hasName("NewArrayExpression")) {
 		    printer.p(n.getNode(2));
 		}
 	
@@ -2695,15 +2697,7 @@ public class CPPPrinter extends Visitor {
 	   
 	    GNode declarationType = GNode.cast(n.getNode(2).getNode(0).getNode(2));
 
-	    if(null != declarationType && 
-	       declarationType.hasName("NewClassExpression")) {
-		printer.indent().p("__rt::Ptr<").p(n.getNode(1));
-		printer.p("> ");
-		printer.p(n.getNode(2).getNode(0).getString(0)); // var
-		printer.p(" = ");
-
-	    }
-	    else if(null != declarationType && (declarationType.hasName("ArrayInitializer") || declarationType.hasName("NewArrayExpression") ) )
+	    if(null != declarationType && (declarationType.hasName("ArrayInitializer") || declarationType.hasName("NewArrayExpression") ) )
 		{
 		    // Ugly, but there's no other way to get Type later on, as
 		    // Nodes are all generic
@@ -2716,7 +2710,7 @@ public class CPPPrinter extends Visitor {
 		    printer.p("new __rt::Array<").p(n.getNode(1)).p(">");
 		}
 
-	    if(null != declarationType && (declarationType.hasName("ArrayInitializer") || declarationType.hasName("NewArrayExpression") || declarationType.hasName("NewClassExpression") ) ) { /** don't print type here*/	}
+	    if(null != declarationType && (declarationType.hasName("ArrayInitializer") || declarationType.hasName("NewArrayExpression") ) ) { /** don't print type here*/	}
 	    else printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(" ");
 
 	    printer.p(n.getNode(2)).p(';').pln();

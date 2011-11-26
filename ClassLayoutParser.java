@@ -101,13 +101,14 @@ public class ClassLayoutParser extends Visitor {
 	    methodSignature.add(n.get(3)); //method name
 	    GNode formalParameters = deepCopy((GNode)n.getNode(4));
 	    for( int i = 0; i < formalParameters.size(); i++ ) {
-			formalParameters.set(i, formalParameters.getNode(i).getNode(1) ); // this kills the parameter name
+		formalParameters.set(i, formalParameters.getNode(i).getNode(1) ); // this kills the parameter name
 	    }
 
 	    int over = overridesMethod(n, (GNode)currentHeaderNode.getNode(0) );
 	    // Don't want to pass thisClass if a method is new/overridden
 	    if(over > 0)
 		formalParameters.add(0, createTypeNode( className ) );
+
 	    methodSignature.add(formalParameters); //parameter types
 	    
 	    //Override check here -- if overrides, use vtdecl.set(overrideIndex, methodSig) else just add it
@@ -117,8 +118,6 @@ public class ClassLayoutParser extends Visitor {
 	    
 	    int overrideIndex = overridesMethod(n, (GNode)currentHeaderNode.getNode(0) );
 	    if(overrideIndex >= 0) {
-		// FIXME: If overridden, don't pass self Class
-		// as parameter
 		if(DEBUG) System.out.println( "overriding method: " + methodName );
 		currentHeaderNode.getNode(0).set(overrideIndex, methodSignature); // overrides, must replace
 		
@@ -129,30 +128,42 @@ public class ClassLayoutParser extends Visitor {
 		newPtr.add( n.get(3) ); //method name
 		newPtr.add( createTypeNode( "__"+className ) ); //target
 		newPtr.add( GNode.create( "FormalParameters" ) );
+		// FIXME: Add PointerCast to this Class, see below for ex.
 		vtConstructorPtrList.set( overrideIndex, newPtr );
 	    }
 	    else {
 		// FIXME: If  new method, don't pass self Class
-		// as parameter
+		// as parameter, use for calling class
 		if(DEBUG) System.out.println( "adding method: " + methodName );
 		int index = currentHeaderNode.getNode(0).size()-1; //add it before the constructor, which is last(index+1)
 		currentHeaderNode.getNode(0).add(index, methodSignature); //extended, add the method signature to the vtable declaration
 		
 		//adding it to the constructor too
 		GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index+1).getNode(4);
-			GNode newPtr = GNode.create( "vtMethodPointer" );
-			newPtr.add( n.get(3) ); //method name
-			newPtr.add( createTypeNode( "__"+className ) ); //target
-			newPtr.add( GNode.create( "FormalParameters" ) );
-			vtConstructorPtrList.add( newPtr );
-			
-			//adding it to the data layout
-			GNode dataLayoutMethList = (GNode)currentHeaderNode.getNode(1).getNode(3);
-			GNode hdr = GNode.create( "StaticMethodHeader" );
-			hdr.add( n.get(2) ); //return type
-			hdr.add( n.get(3) ); //method name
-			hdr.add( formalParameters ); //params
-			dataLayoutMethList.add( hdr );
+		// FIXME: Need to Flesh out for overriden as well?
+		GNode newPtr = GNode.create( "vtMethodPointer" );
+		newPtr.add( n.get(3) ); //method name
+		newPtr.add( createTypeNode( "__"+className ) ); //Calling Class
+		newPtr.add(formalParameters);
+		//	newPtr.add( GNode.create( "FormalParameters" ) );
+		// add Pointer cast node
+		GNode pCast = GNode.create("PointerCast");
+		pCast.add(n.getNode(2)); // return Type
+		// When it's a new method, you don't need to cast from this.Class
+		// Instead, for @ least one case, String(*)(String)
+		// I'm not sure what the general case is
+		pCast.add(n.getNode(2)); // return Type
+		//		pCast.add(createTypeNode(className)); // this Class
+		newPtr.add(pCast);
+		vtConstructorPtrList.add( newPtr );
+		
+		//adding it to the data layout
+		GNode dataLayoutMethList = (GNode)currentHeaderNode.getNode(1).getNode(3);
+		GNode hdr = GNode.create( "StaticMethodHeader" );
+		hdr.add( n.get(2) ); //return type
+		hdr.add( n.get(3) ); //method name
+		hdr.add( formalParameters ); //params
+		dataLayoutMethList.add( hdr );
 	    }
 		//FIXME: FINAL: name mangling
 	}
@@ -347,16 +358,16 @@ public class ClassLayoutParser extends Visitor {
 	// @return the complete virtual table for Object
 	GNode objectClassVirtualTable() {
 		
-		GNode retVal = GNode.create("VTableDeclaration");
-		retVal.add( createSkeletonDataField( "Class", "__isa" ) ); //Class __isa;
-		// For delete
-		retVal.add( createSkeletonVirtualMethodDeclaration("void", "__delete", new String[]{"__Object*"}) );
-		retVal.add( createSkeletonVirtualMethodDeclaration( "int32_t", "hashCode", new String[]{"Object"} ));      // int32_t x (*hashCode)(Object);
-		retVal.add( createSkeletonVirtualMethodDeclaration( "bool", "equals", new String[]{"Object","Object"} )); // bool (*equals)(Object , Object);
-		retVal.add( createSkeletonVirtualMethodDeclaration( "Class", "getClass", new String[]{"Object"} ));      // Class (*getClass)(Object);
-		retVal.add( createSkeletonVirtualMethodDeclaration( "String", "toString", new String[]{"Object"} ));    // String (*toString)(Object);
-		retVal.add( initializeVTConstructor( retVal ) ); //adding the constructor
-		return retVal;
+	    GNode retVal = GNode.create("VTableDeclaration");
+	    retVal.add( createSkeletonDataField( "Class", "__isa" ) ); //Class __isa;
+	    // For delete
+	    retVal.add( createSkeletonVirtualMethodDeclaration("void", "__delete", new String[]{"__Object*"}) );
+	    retVal.add( createSkeletonVirtualMethodDeclaration( "int32_t", "hashCode", new String[]{"Object"} ));      // int32_t x (*hashCode)(Object);
+	    retVal.add( createSkeletonVirtualMethodDeclaration( "bool", "equals", new String[]{"Object","Object"} )); // bool (*equals)(Object , Object);
+	    retVal.add( createSkeletonVirtualMethodDeclaration( "Class", "getClass", new String[]{"Object"} ));      // Class (*getClass)(Object);
+	    retVal.add( createSkeletonVirtualMethodDeclaration( "String", "toString", new String[]{"Object"} ));    // String (*toString)(Object);
+	    retVal.add( initializeVTConstructor( retVal ) ); //adding the constructor
+	    return retVal;
 	}
 	
 	// Initializes a brand new virtual table constructor for the specified VTable
