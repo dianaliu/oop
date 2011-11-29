@@ -677,6 +677,56 @@ public class CPPPrinter extends Visitor {
 	    printer.indent().pln("};").pln();
 	}
     
+
+    // Used to print out template specialization for arrays of custom types
+    public void visitArraySpecializations(GNode n) {
+	for (Iterator<?> iter = n.iterator(); iter.hasNext(); ) 
+	    printer.p(' ').p((Node)iter.next());
+    }
+
+    // FIXME: Remove spaces from printing Type and put them where they belong!
+
+    public void visitArraySpec(GNode n) {
+	// 0 = Parent, wrapped in Type node
+	// 1 = Component, wrapped in Type node
+
+	printer.indent().p("// Template specialization for array of ");
+	printer.p(n.getNode(1)).pln();
+
+	printer.indent().pln("template<>");
+
+	printer.indent().p("java::lang::Class Array <").p(n.getNode(1));
+	printer.p(">::__class() {").incr().pln();
+
+	printer.indent().pln("static java::lang::Class k = ").incr();
+	printer.indent().p("new java::lang::__Class(literal(\"");
+	printer.p(n.getNode(1)).p("\"),").pln();
+
+	// The parent class is an Array with components of it's Parent
+	printer.indent().indent().p("Array<");
+	printer.p(n.getNode(0)).p(">::__class(),").pln();
+	printer.indent().indent().p(n.getNode(1)).p("::__class());").pln();
+
+	printer.decr();
+	printer.indent().pln("return k;");
+	printer.decr().indent().pln("}");
+	printer.pln();
+    }
+
+    public void visitParent(GNode n) {
+	// Just a wrapper for a Type node
+	for (Iterator<?> iter = n.iterator(); iter.hasNext(); ) 
+	    printer.p(' ').p((Node)iter.next());
+    }
+
+    public void visitComponent(GNode n) {
+
+	// Just a wrapper for a Type node
+	for (Iterator<?> iter = n.iterator(); iter.hasNext(); ) 
+	    printer.p(' ').p((Node)iter.next());
+    }
+
+
     // Not Used
     /** Visit the specified structure type reference. */
 

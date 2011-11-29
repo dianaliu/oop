@@ -149,6 +149,7 @@ public class ClassLayoutParser extends Visitor {
 		// add Pointer cast node
 		GNode pCast = GNode.create("PointerCast");
 		pCast.add(n.getNode(2)); // return Type
+		// if return type is String, int, etc. then do TYPE(*)(TYPE)
 		// When it's a new method, you don't need to cast from this.Class
 		// Instead, for @ least one case, String(*)(String)
 		// I'm not sure what the general case is
@@ -247,43 +248,43 @@ public class ClassLayoutParser extends Visitor {
 	// @param n the root node of the tree to copy
 	// @return A complete deep copy of node n
 	GNode deepCopy(GNode n) {
-		GNode retVal = (GNode) new Visitor() {
-			public Object visit(GNode n) {
-				GNode retVal = GNode.ensureVariable(GNode.create(n));
-				while( retVal.size() > 0 ) retVal.remove(0);
-				for( Object o : n ) {
-					if( o instanceof GNode ) retVal.add( visit((GNode)o) );
-					else retVal.add( o ); //arbitrary objects don't need to be copied because they would just be replaced
-				}
-				return retVal;
+	    GNode retVal = (GNode) new Visitor() {
+		    public Object visit(GNode n) {
+			GNode retVal = GNode.ensureVariable(GNode.create(n));
+			while( retVal.size() > 0 ) retVal.remove(0);
+			for( Object o : n ) {
+			    if( o instanceof GNode ) retVal.add( visit((GNode)o) );
+			    else retVal.add( o ); //arbitrary objects don't need to be copied because they would just be replaced
 			}
+			return retVal;
+		    }
 		}.dispatch(n);
-		return retVal;
+	    return retVal;
+	}
+    
+    // Using the currently set global className, copies the parents header and makes necessary changes
+    // @param parentHeader A node representing the parent classes header structure
+    // @return The new header node for the child class with appropriate modifications
+    GNode inheritHeader( GNode parentHeader ) {
+	GNode copy = deepCopy( parentHeader );
+	GNode copyVT = (GNode)copy.getNode(0);
+	int size = copyVT.size();
+	copyVT.getNode(size-1).getNode(4).getNode(0).set(0, "__"+className ); //changing the Class __isa pointer in the constructor;
+	for( int i = 1; i < size-1; i++ ) { //start at one to ignore Class __isa, end at size-1 to ignore constructor
+	    GNode thisVirtualMethod = (GNode)copyVT.getNode(i);
+	    thisVirtualMethod.getNode(2).getNode(0).getNode(0).set(0, className);
+	}
+	// Change constructor here: updating the casts for non overrided methods
+	GNode vtConstructorPointerList = (GNode)copyVT.getNode(size-1).getNode(4);
+	for( int i = 1; i < vtConstructorPointerList.size(); i++ ) { // start at one to ignore __isa
+	    GNode thisPointer = (GNode)vtConstructorPointerList.getNode(i);
+	    GNode caster = GNode.create("PointerCast");
+	    caster.add( copyVT.getNode(i).getNode(0) ); //return value
+	    caster.add( copyVT.getNode(i).getNode(2) ); //parameters
+	    if( thisPointer.size() >= 4 ) thisPointer.set(3, caster);
+	    else thisPointer.add( caster );
 	}
 	
-	// Using the currently set global className, copies the parents header and makes necessary changes
-	// @param parentHeader A node representing the parent classes header structure
-	// @return The new header node for the child class with appropriate modifications
-	GNode inheritHeader( GNode parentHeader ) {
-	    GNode copy = deepCopy( parentHeader );
-	    GNode copyVT = (GNode)copy.getNode(0);
-	    int size = copyVT.size();
-	    copyVT.getNode(size-1).getNode(4).getNode(0).set(0, "__"+className ); //changing the Class __isa pointer in the constructor;
-	    for( int i = 1; i < size-1; i++ ) { //start at one to ignore Class __isa, end at size-1 to ignore constructor
-		GNode thisVirtualMethod = (GNode)copyVT.getNode(i);
-		thisVirtualMethod.getNode(2).getNode(0).getNode(0).set(0, className);
-	    }
-	    // Change constructor here: updating the casts for non overrided methods
-	    GNode vtConstructorPointerList = (GNode)copyVT.getNode(size-1).getNode(4);
-	    for( int i = 1; i < vtConstructorPointerList.size(); i++ ) { // start at one to ignore __isa
-		GNode thisPointer = (GNode)vtConstructorPointerList.getNode(i);
-		GNode caster = GNode.create("PointerCast");
-		caster.add( copyVT.getNode(i).getNode(0) ); //return value
-		caster.add( copyVT.getNode(i).getNode(2) ); //parameters
-		if( thisPointer.size() >= 4 ) thisPointer.set(3, caster);
-		else thisPointer.add( caster );
-	    }
-	    
 	    GNode copyDL = (GNode)copy.getNode(1);
 	    copyDL.set(0, createSkeletonDataField( "__"+className+"_VT*", "__vptr" )); //setting the right vtable pointer name
 	    GNode constructorList = GNode.create("ConstructorHeaderList");
@@ -507,41 +508,41 @@ public class ClassLayoutParser extends Visitor {
     
     // Returns a Class node from the classTree
     // @param sc name of the Class desired
-	// @return the appropriate class node
+    // @return the appropriate class node
     public GNode getClass(String sc) {
 		
-		// Declared final to be accessible from inner Visitor classes
-		final String s = sc;
+	// Declared final to be accessible from inner Visitor classes
+	final String s = sc;
+	
+	return (GNode)( new Visitor() {
 		
-		return (GNode)( new Visitor() {
-			
-			public GNode visitClass(GNode n) {
-				
-				// Found the class
-				if( getName(n).equals(s) ) {
-					return n;
-				}
-				
-				// Keep Searching
-				for( Object o : n) {
-					if (o instanceof Node) {
-						GNode returnValue = (GNode)dispatch((GNode)o);
-						if( returnValue != null ) return returnValue;
-					}
-				}
-				return null;
+		public GNode visitClass(GNode n) {
+		    
+		    // Found the class
+		    if( getName(n).equals(s) ) {
+			return n;
+		    }
+		    
+		    // Keep Searching
+		    for( Object o : n) {
+			if (o instanceof Node) {
+			    GNode returnValue = (GNode)dispatch((GNode)o);
+			    if( returnValue != null ) return returnValue;
 			}
-			
-			public void visit(GNode n) { // override visit for GNodes
-				for( Object o : n) {
-					if (o instanceof Node) dispatch((GNode)o);
-				}
-			}
-			
+		    }
+		    return null;
+		}
+		
+		public void visit(GNode n) { // override visit for GNodes
+		    for( Object o : n) {
+			if (o instanceof Node) dispatch((GNode)o);
+		    }
+		}
+		
 	    }.dispatch(classTree));
     }
-	
-	//Returns a Class node representing the parent class of the specified class name
+    
+    //Returns a Class node representing the parent class of the specified class name
 	//@param sc name of the Class for which the parent is needed.
 	//@return the node of the superclass
 	public GNode getSuperclass(String sc) {

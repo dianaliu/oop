@@ -172,6 +172,10 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	GNode vtable = buildVTable(n);
 	hNode.addNode(vtable);
 
+	// If there are any custom array types, declare them
+	GNode arrayTemplates = findArrays(n);
+	hNode.addNode(arrayTemplates);
+
 	return hNode;
     }
 
@@ -278,6 +282,95 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	return typedef;
     }
 
+    // Find if there were any arrays of "custom" type declared.  If so, generate
+    // nodes so we may generate nodes to specialize the array template
+    // by adding Class information.
+    // "Custom" types are anything not ints, Objects, and Strings which Grimm
+    // made for us.
+    //
+    // @param Java ClassDeclaration Node
+
+    // Global node to allow access from Visitor 
+    GNode arraySpecs = GNode.create("ArraySpecializations");
+    public GNode findArrays(GNode n) {
+
+	// To generate the template specialization, we need to create a new 
+	// Class object.  The class constructor is below.  He only passes the 
+	// first 3 parameters
+	/*
+	  __Class(String name,
+              Class parent,
+              Class component = (Class)__rt::null(),
+              bool primitive = false);
+	*/
+
+	new Visitor() {
+	    
+	    public void visitFieldDeclaration(GNode n) {
+		// FIXME: What is the qID for an Array of Arrays?
+		// Can we do type lookup chaining?
+
+		String qID = "";
+
+		// A shit ton of conditionals
+		boolean isCustomArray = false;
+		if(n.size() >= 2 && n.getNode(1).size() >= 2) {
+		    
+		    if( n.getNode(1).getNode(1) != null &&
+			n.getNode(1).getNode(1).hasName("Dimensions") ) {
+			   
+			   qID = n.getNode(1).getNode(0).getString(0);
+			   
+			   if(!"String".equals(qID) && !"Object".equals(qID)
+			      && !"int".equals(qID)) {
+			       isCustomArray = true;
+			   } // end set isCustomArray
+			   
+			   
+		       } // end if "Dimensions"
+		       } // end size()
+		       
+		       
+		if(isCustomArray) {
+		    System.out.println("--- Custom Array of " + qID);
+		    // He
+
+
+
+		    // QUERY: Do we have to format parent specially?
+		    GNode parent = GNode.create("Parent");
+		    parent.add(clp.createTypeNode(clp.getSuperclassName(qID)));
+		    GNode component = GNode.create("Component");
+		    component.add(clp.createTypeNode(qID));
+		    
+		    //		    GNode primitive = GNode.create("IsPrimitive");
+		    //		    primitive.add("false");
+		    
+		    GNode arraySpec = GNode.create("ArraySpec");
+		    arraySpec.add(parent);
+		    arraySpec.add(component);
+		    //		    arraySpec.add(primitive);
+		    // This gets returned eventually
+		    arraySpecs.add(arraySpec);
+		    
+		} // end isCustomArray
+	    } // end visitFieldDeclaration
+
+	    public void visit(GNode n) {
+		// Need to override visit to work for GNodes
+		for( Object o : n) {
+		    if (o instanceof Node) dispatch((GNode)o);
+		}
+	    }
+	    
+	}.dispatch(n);
+	
+	if(arraySpecs.size() <= 0) arraySpecs = null;
+
+	GNode arrays = GNode.create("Declaration", arraySpecs); // can be null
+	return arrays;
+
+    }
 
 
     // ------------------------------------------
@@ -426,8 +519,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    n.set(0, pI);
 		}
 		else { // catch all
-		    System.out.println("\t--- Didn't translate node " + 
-				       n.getNode(0).toString());
+		    //		    System.out.println("\t--- Didn't translate node " + 
+		    //				       n.getNode(0).toString());
 		}
 		
 		visit(n);
