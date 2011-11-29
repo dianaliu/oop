@@ -678,52 +678,96 @@ public class CPPPrinter extends Visitor {
 	}
     
 
-    // Used to print out template specialization for arrays of custom types
-    public void visitArraySpecializations(GNode n) {
+    // Used to print out custom __class()
+    public void visitCustomClasses(GNode n) {
+	
 	for (Iterator<?> iter = n.iterator(); iter.hasNext(); ) 
 	    printer.p(' ').p((Node)iter.next());
     }
 
-    // FIXME: Remove spaces from printing Type and put them where they belong!
+    // FIXME: Extra spaces around type
+    public void visitCustomClass(GNode n) {
 
-    public void visitArraySpec(GNode n) {
 	// 0 = Parent, wrapped in Type node
 	// 1 = Component, wrapped in Type node
 
-	printer.indent().p("// Template specialization for array of ");
-	printer.p(n.getNode(1)).pln();
+	printer.indent().p("// Internal accessor for java.lang.");
+	printer.p(n.getNode(1)).p("'s class.").pln();
 
-	printer.indent().pln("template<>");
-
-	printer.indent().p("java::lang::Class Array <").p(n.getNode(1));
-	printer.p(">::__class() {").incr().pln();
-
-	printer.indent().pln("static java::lang::Class k = ").incr();
-	printer.indent().p("new java::lang::__Class(literal(\"");
-	printer.p(n.getNode(1)).p("\"),").pln();
-
-	// The parent class is an Array with components of it's Parent
-	printer.indent().indent().p("Array<");
-	printer.p(n.getNode(0)).p(">::__class(),").pln();
-	printer.indent().indent().p(n.getNode(1)).p("::__class());").pln();
-
+	printer.indent().p("Class __").p(n.getNode(1)).p("::__class() {").pln();
+	printer.incr();
+	printer.indent().p("static Class k = ").pln();
+	printer.incr().indent().p("new __Class(__rt::literal(\"java.lang.");
+	printer.p(n.getNode(1)).p("\"), __").p(n.getNode(0)).p("::__class());").pln();
 	printer.decr();
-	printer.indent().pln("return k;");
-	printer.decr().indent().pln("}");
+	printer.indent().p("return k;").pln();
+	printer.decr();
+	printer.indent().p("}").pln();
 	printer.pln();
     }
 
-    public void visitParent(GNode n) {
-	// Just a wrapper for a Type node
+    // Used to print template specialization of __class() for arrays
+
+    public void visitArrayTemplates(GNode n) {
+
+	printer.pln().indent().p("namespace __rt {").pln();
+	printer.incr();
+
 	for (Iterator<?> iter = n.iterator(); iter.hasNext(); ) 
 	    printer.p(' ').p((Node)iter.next());
+
+	printer.decr().pln("}").pln();
+
+    }
+    
+    public void visitArrayTemplate(GNode n) {
+
+	// 0 = Parent, wrapped in Type node
+	// 1 = Component, wrapped in Type node
+
+
+	printer.indent().p("// Template specialization for array of").p(n.getNode(1)).pln();
+	printer.indent().pln("template<>");
+
+	printer.indent().p("java::lang::Class Array <java::lang::");
+	printer.p(n.getNode(1)).p(">::__class() {").pln();
+	printer.incr();
+
+	printer.indent().p("static java::lang::Class k = ").pln();
+	printer.incr();
+	printer.indent().p("new java::lang::__Class(literal(\"[Ljava.lang.");
+	printer.p(n.getNode(1)).p(";\"),").pln();
+	
+	printer.incr();
+	printer.indent().p("Array<java::lang::").p(n.getNode(0));
+	printer.p(">::__class(),").pln();
+
+	printer.indent().p("java::lang::__").p(n.getNode(1)).p("::__class());");
+	printer.pln().decr();
+
+	printer.decr();
+
+	printer.indent().pln("return k;");
+
+	printer.decr();
+	printer.indent().pln("}");
+
+	
     }
 
-    public void visitComponent(GNode n) {
+    
+
+    public void visitParentType(GNode n) {
+	// Just a wrapper for a Type node
+	for (Iterator<?> iter = n.iterator(); iter.hasNext(); ) 
+	    printer.p((Node)iter.next());
+    }
+
+    public void visitComponentType(GNode n) {
 
 	// Just a wrapper for a Type node
 	for (Iterator<?> iter = n.iterator(); iter.hasNext(); ) 
-	    printer.p(' ').p((Node)iter.next());
+	    printer.p((Node)iter.next());
     }
 
 

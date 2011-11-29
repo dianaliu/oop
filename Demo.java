@@ -2,16 +2,7 @@
 // String arrays work wtih 10/13
 
 public class Demo {
-    
-    /*
-     * Errors for multiple declarations, but getting closer to overloading!
-    public static int retInt() {
-	int i = 4+5;
-	return i;
-    }
-    
-    */
-
+  
     public String retS(String s) {
 	return s;
 
@@ -39,6 +30,8 @@ public class Demo {
 	System.out.println("o class = " + o.getClass().toString());
 
 	String[] ss = new String[2];
+	Object[] oo = new Object[2];
+	int[] ii = new int[2];
 	ss[0] = "zero";
 	ss[1] = s;
 	
@@ -53,13 +46,16 @@ public class Demo {
 
 	// FIXME: Generate templates for custom arrays if used, 
 	// lookup via symbol table!
-	//	Demo[] dd = new Demo[2];
-	//	dd[0] = new Demo();
-	//	dd[1] = new Demo();
+	Demo[] dd = new Demo[2];
+	dd[0] = new Demo();
+	dd[1] = new Demo();
 
-	//	for(int i=0; i < 2; i++) {
-	//	    System.out.println("dd[] = " + dd[i].getClass().toString());
-	//	}
+
+	boolean f = false;
+	
+	for(int i=0; i < 2; i++) {
+	    System.out.println("dd[] = " + dd[i].getClass().toString());
+	}
 	
 
     }

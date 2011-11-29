@@ -151,8 +151,13 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
 	// hNode contains all information for the .h file to be printed
 	GNode hNode = buildHeader(n);
-
 	cppTree.add(hNode);
+
+	// Note: templateNodes has the same information as CustomClass nodes.
+	// It is built at the same time as the header, but must reside in a 
+	// a different branch as it is in a different namespace.
+	GNode tNode = templateNodes;
+	cppTree.add(tNode);
 	
     }
 
@@ -291,7 +296,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     // @param Java ClassDeclaration Node
 
     // Global node to allow access from Visitor 
-    GNode arraySpecs = GNode.create("ArraySpecializations");
+    GNode customClasses = GNode.create("CustomClasses");
+    GNode templateNodes = GNode.create("ArrayTemplates");
     public GNode findArrays(GNode n) {
 
 	// To generate the template specialization, we need to create a new 
@@ -325,34 +331,30 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 			      && !"int".equals(qID)) {
 			       isCustomArray = true;
 			   } // end set isCustomArray
-			   
-			   
-		       } // end if "Dimensions"
-		       } // end size()
+		    } // end if "Dimensions"
+		} // end size()
 		       
 		       
 		if(isCustomArray) {
-		    System.out.println("--- Custom Array of " + qID);
-		    // He
-
-
-
-		    // QUERY: Do we have to format parent specially?
-		    GNode parent = GNode.create("Parent");
+		    GNode parent = GNode.create("ParentType");
 		    parent.add(clp.createTypeNode(clp.getSuperclassName(qID)));
-		    GNode component = GNode.create("Component");
+		    GNode component = GNode.create("ComponentType");
 		    component.add(clp.createTypeNode(qID));
+			    
+		    GNode customClass = GNode.create("CustomClass");
+		    customClass.add(parent);
+		    customClass.add(component);
+       
+		    customClasses.add(customClass);
 		    
-		    //		    GNode primitive = GNode.create("IsPrimitive");
-		    //		    primitive.add("false");
-		    
-		    GNode arraySpec = GNode.create("ArraySpec");
-		    arraySpec.add(parent);
-		    arraySpec.add(component);
-		    //		    arraySpec.add(primitive);
-		    // This gets returned eventually
-		    arraySpecs.add(arraySpec);
-		    
+
+		    // Array template specialization uses the same information
+		    // as __class() so just copying to diff. location
+		    GNode templateNode = GNode.create("ArrayTemplate");
+		    templateNode.add(parent);
+		    templateNode.add(component);
+		    templateNodes.add(templateNode);
+
 		} // end isCustomArray
 	    } // end visitFieldDeclaration
 
@@ -365,11 +367,9 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	    
 	}.dispatch(n);
 	
-	if(arraySpecs.size() <= 0) arraySpecs = null;
-
-	GNode arrays = GNode.create("Declaration", arraySpecs); // can be null
-	return arrays;
-
+	if(customClasses.size() <= 0) customClasses = null;
+	GNode customs = GNode.create("Declaration", customClasses);
+	return customs;
     }
 
 
