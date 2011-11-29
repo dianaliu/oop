@@ -15,10 +15,12 @@ or
 
 ##What does it do?##
 - Resolve and translate all dependencies in the same package
+  - We hope to selectively import and translate only those used.
 - Inheritance using vtables and data layouts
 - Translate new classes and methods
 - (Method overloading)
-- (Memory management using smart pointers)
+- (Method overriding)
+- Memory management using smart pointers
 
 ##What does it not do?##
 Our translator only supports a subset of the Java language. For more details, see the [specifications] (http://cs.nyu.edu/rgrimm/teaching/fa11-oop/#languages).
