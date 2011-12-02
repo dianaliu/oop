@@ -29,10 +29,14 @@ import xtc.tree.Visitor;
 import xtc.tree.Location;
 import xtc.tree.Printer;
 
+import xtc.util.SymbolTable;
+import xtc.util.SymbolTable.Scope;
+
 import xtc.lang.CParser;
 import xtc.lang.CPrinter;
 import xtc.lang.JavaFiveParser;
 import xtc.lang.JavaPrinter;
+import xtc.lang.JavaAnalyzer;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -147,15 +151,38 @@ public class Translator extends xtc.util.Tool {
 	   	
 	   	//FIXME: SymTable test; remove later
 	   	System.out.println("\nMESSING WITH THE SYMBOL TABLE\n");
+	   	SymbolTable symTable = new SymbolTable();
+	   	JavaAnalyzer myAnalyzer = new JavaAnalyzer(runtime, symTable);
+	   	
+	   	
+	   	
+	   	/*
 	   	TranslatorSymbolTable tst = new TranslatorSymbolTable("Global");
-	    System.out.println("Symbol identifier value : " + tst.getType("Global"));
-	   	System.out.println("Mangler:");
-	   	System.out.println(tst.symTable.toNameSpace("WheresMyCar", "Dude"));
-	   	System.out.println("UnMangler:");
-	   	//stem.out.println(tst.symTable.fromNameSpace("Dude(WheresMyCar)"));
+	    //System.out.println("Symbol identifier value : " + tst.getType("intGlobal"));
  		//find all variable names and their types
+ 		
+ 			tst.addSymbols(trees[0]);
+	 		tst.symTable.root();
+	 		tst.symTable.enter("depScope");
+	 		tst.addSymbols(trees[1]);
+ 		
+ 		
  		tst.addSymbols(trees[0]);
- 		tst.addSymbols(trees[1]);
+ 		String depScope = "dep";
+ 		for(int i = 1; i < trees.length; i++) {
+ 			if(trees[i] != null){
+		 		
+		 		tst.symTable.root();
+		 		tst.symTable.enter(depScope + i);
+		 		tst.addSymbols(trees[i]);
+	 		}
+	 	}
+ 		
+ 		tst.symTable.root();
+ 		//System.out.println("Get type intGlobal: " + tst.getType("intGlobal"));
+ 		System.out.println("Get type intMain: " + tst.getType("intGlobal"));
+ 		//System.out.println("Get type intMeth: " + tst.getType("intMeth"));
+ 		*/
  		
  		System.out.println("\nDONE MESSING WITH THE SYMBOL TABLE\n");
 	   	
@@ -222,6 +249,8 @@ public class Translator extends xtc.util.Tool {
 		System.err.println(e.getMessage());
 	    }
 	    
+
+	    
 	} // end -translate
 	
 	
@@ -262,6 +291,7 @@ public class Translator extends xtc.util.Tool {
 	    
 	    runtime.console().pln("--- Finish inheritance analysis").flush();
 	} // end -inherit
+	
 	
     } // end process
     
