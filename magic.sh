@@ -1,11 +1,8 @@
 #!/bin/bash  
 
- clear
- source setup.sh
- make
- clear
+clear
 
- echo  Test Script: Compares Java output to translated CPP output.
+ echo  "Test Script: Compares Java output to translated CPP output."
 
  # 0. Make/clean output directory
 if [ ! -d "output" ]
@@ -26,38 +23,36 @@ if [ ! -d "output" ]
            echo "Files will write to output/"
 fi
 
+  
   # 1. Get Java file(s) from command line and add to array javaInput
  javaInput=()
 
-function failure()
-{
-    echo "$@" >&2
-    # FIXME: Don't completely exit terminal
-    return 1
-#    read -p "Try again - Press Enter to quit."
-}
-
- # FIXME: Assumes single .java file input. Consider files, dir, and import statements.
+ # 2. Compile and run Java file.
  for var in "$@"
          do
-         # 2. Compile and run Java files.
-         cp $var "output/$var"
+         cp "$var" "output/"$var""
 
-	 cd output/
-         javac $var || failure "--- ERR: Java compile time error"
+	 echo "--- Received input file: $var"
+         javac "output/$var" || { echo "--- ERR: Java compile time error"; return 1; }
+	 echo "--- Compiled $var"
          # 3. Save output from Java files
 	 j=java
 	 fileName=${var%.$j} # remove .java 
-	 cd ..
 
-	 java -cp output/ $fileName > "output/jOut.txt" || failure "--- ERR: Java runtime error"
-	 echo "--- Successfully compiled and ran $var"
 
+	 # FIXME: For some programs, exits without printing err below
+	 java -cp output/ "$fileName" > "output/j.txt" || { echo "--- ERR: Java runtime error"; return 1; }
+
+	 echo "--- Ran $var and saved output to output/j.txt"
 
          javaInput=("${javaInput[@]}" "$var")   
- done 
+done 
 
  # 4. Translate Java files
+
+ source setup.sh
+ make
+
  for ((a=0; a < ${#javaInput[@]}; a++)) 
 	do
          java xtc.oop.Translator -translate ${javaInput[a]}
@@ -68,7 +63,7 @@ function failure()
  cd output/
 
  cppOutput=()
- for file in *.cpp ; do
+ for file in *.cc ; do
 	cppOutput=("${cppOutput[@]}" "$file")
  done
 
@@ -81,25 +76,35 @@ function failure()
  do
      allCPP="${allCPP} ${cppOutput[i]}"
  done
-  g++ $allCPP || failure "--- ERR: CPP compile time error"
+ # This is the only or statement that works proper
+  g++ $allCPP java_lang.cc || { echo "--- ERR: CPP compile time error"; cd ..; return 1; }
+  echo "--- Compiled $allCPP java_lang.cc"
 
  # 7. Run and save output from CPP files
-  ./a.out > "cOut.txt" || failure "--- ERR: CPP runtime error"
+  ./a.out > "c.txt" || { echo "--- ERR: CPP runtime error"; cd ..; return 1; }
+    echo "--- Ran $allCPP java_lang.cc and saved output to output/c.txt"
+
 
  # 8. Compare Java and CPP output
- if diff jOut.txt cOut.txt > /dev/null ; then
-	echo "Success! Outputs were the same."
- else 
- 	echo "Bummer. Outputs were different."
+    echo "--------------------------------------------------------------------"
+    
+    if diff j.txt c.txt  > /dev/null ; then
+	
+	echo "--- Pass! Outputs were the same."
+	echo "--- Output"
+	cat c.txt
+
+    else 
+ 	echo "--- Fail. Outputs were different."
+	echo "--- See diff --side-by-side below:"
+	diff j.txt c.txt --side-by-side
  fi
+    echo "--------------------------------------------------------------------"
 
- # Not necessary, but return to xtc/  
+ #  Return to xtc/  
  cd ..
+ return 0;
 
-
- # FIXME: Isn't there just one output file?
- # echo "Number of translations that passed: ${pass}"
- # echo "Out of: ${#javaInput[@]}"
- read -p "End of program - Press Enter to quit."
+# read -p "End of program - Press Enter to quit."
 
 

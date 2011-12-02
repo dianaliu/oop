@@ -183,9 +183,9 @@ public class Translator extends xtc.util.Tool {
 			new LeafTransplant(clp, GNode.cast(trees[i]), DEBUG); 
 		    returned[i] = translator.getCPPTree();
 		    
-		    //		    if(DEBUG) 
+		    if(DEBUG) 
 		    runtime.console().pln("--- CPP AST #" + (i+1));
-		    //		    if(DEBUG) 
+		    if(DEBUG) 
 		    runtime.console().format(returned[i]).pln().flush();
 		    if(DEBUG) 
 			runtime.console().pln("\t-----------------------").flush();
@@ -211,7 +211,7 @@ public class Translator extends xtc.util.Tool {
 			    // Since we run from xtc, outputs to xtc/output/
 			    String fileName = "output/";
 			    fileName += root.getString(root.size() - 1);
-			    fileName += ".cpp";
+			    fileName += ".cc";
 			    
 			    PrintWriter fstream = new PrintWriter(fileName);
 			    Printer cppCode = new Printer(fstream);

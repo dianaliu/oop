@@ -395,4 +395,18 @@ namespace __rt {
     }
   }
 
+  // ========================================================================
+
+  // Template function for translated Java casts.
+  template <typename T, typename U>
+  T java_cast(U object) {
+    java::lang::Class k = T::value_t::__class();
+
+    if (! k->__vptr->isInstance(k, object)) {
+      throw java::lang::ClassCastException();
+    }
+
+    return T(object);
+  }
+
 }
