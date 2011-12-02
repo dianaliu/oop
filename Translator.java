@@ -50,11 +50,13 @@ import java.io.Reader;
 
 import java.util.ArrayList;
 
+import xtc.oop.LeafTransplant;
 
 public class Translator extends xtc.util.Tool {
 	
 	
     public static boolean DEBUG = false;
+	public static boolean DEBUGBARF = false;
 	
 	/** Create a new translator. */
     public Translator() {
@@ -78,6 +80,7 @@ public class Translator extends xtc.util.Tool {
 	    runtime.
 		bool("printAST", "printAST", false, "Print Java AST.").
 		bool("debug", "debug", false, "Extra output for debugging").
+		bool("barf", "barf", false, "Translated Tree Output").
 		bool("inherit", "inherit", false, "Test inheritance analysis, includes DEBUG flag.").
 		bool("translate", "translate", false, 
 		     "Translate Java code to C++ without inheritance.");
@@ -99,6 +102,10 @@ public class Translator extends xtc.util.Tool {
 	    DEBUG = true;
 	}
 	
+	if(runtime.test("barf")) {
+	    DEBUGBARF = true;
+	}
+
 	if( runtime.test("translate") ) {
 	    
 	    runtime.console().pln("--- Begin translation").flush();
@@ -135,19 +142,19 @@ public class Translator extends xtc.util.Tool {
 	    final ClassLayoutParser clp = new ClassLayoutParser(trees, DEBUG);
 	    if(DEBUG) 
 			runtime.console().pln("--- Finish inheritance analysis").flush();
-	   	//----------------------------------------------------------------------
+	    //---------------------------------------------------------------
 	   	
-
+	    
 	    if(DEBUG) 
-			runtime.console().pln("--- Begin trimming dependencies").flush();
-		// Mark only the dependency files which are actually invoked
-		// trees = depResolver.trimDependencies(clp, trees);
+		runtime.console().pln("--- Begin trimming dependencies").flush();
+	    // Mark only the dependency files which are actually invoked
+	    // trees = depResolver.trimDependencies(clp, trees);
 	    if(DEBUG) 
-			runtime.console().pln("--- Finished trimming dependencies").flush();
-	   	//----------------------------------------------------------------------
-	   	
-	   	
-	   	
+		runtime.console().pln("--- Finished trimming dependencies").flush();
+	    //-----------------------------------------------------------
+	    
+	    
+	    /**	
 	   	
 	   	//FIXME: SymTable test; remove later
 	   	System.out.println("\nMESSING WITH THE SYMBOL TABLE\n");
@@ -186,7 +193,7 @@ public class Translator extends xtc.util.Tool {
  		
  		System.out.println("\nDONE MESSING WITH THE SYMBOL TABLE\n");
 	   	
-	   	
+	    **/ 
 	   	
 	   	
 	    if(DEBUG) 
@@ -204,9 +211,9 @@ public class Translator extends xtc.util.Tool {
 		    returned[i] = translator.getCPPTree();
 		    
 		    if(DEBUG) 
-			runtime.console().pln("--- CPP AST #" + (i+1));
+		    runtime.console().pln("--- CPP AST #" + (i+1));
 		    if(DEBUG) 
-			runtime.console().format(returned[i]).pln().flush();
+		    runtime.console().format(returned[i]).pln().flush();
 		    if(DEBUG) 
 			runtime.console().pln("\t-----------------------").flush();
 		}
@@ -228,9 +235,10 @@ public class Translator extends xtc.util.Tool {
 			{
 			    // Name our file
 			    GNode root = GNode.cast(returned[i]);
+			    // Since we run from xtc, outputs to xtc/output/
 			    String fileName = "output/";
 			    fileName += root.getString(root.size() - 1);
-			    fileName += ".cpp";
+			    fileName += ".cc";
 			    
 			    PrintWriter fstream = new PrintWriter(fileName);
 			    Printer cppCode = new Printer(fstream);

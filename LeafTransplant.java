@@ -7,6 +7,7 @@ import xtc.tree.Visitor;
 import xtc.util.Runtime;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 
 /*
  * Builds a CPP AST tree using a Java AST tree
@@ -102,9 +103,10 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		translateClassDeclaration(n);
 		// Build and add implementation node
    		translateClassBody(n);
+       
 	    }
 	    
-
+	  
 	    public void visit(GNode n) {
 		// Need to override visit to work for GNodes
 		for( Object o : n) {
@@ -149,8 +151,13 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
 	// hNode contains all information for the .h file to be printed
 	GNode hNode = buildHeader(n);
-
 	cppTree.add(hNode);
+
+	// Note: templateNodes has the same information as CustomClass nodes.
+	// It is built at the same time as the header, but must reside in a 
+	// a different branch as it is in a different namespace.
+	GNode tNode = templateNodes;
+	cppTree.add(tNode);
 	
     }
 
@@ -170,6 +177,10 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	GNode vtable = buildVTable(n);
 	hNode.addNode(vtable);
 
+	// If there are any custom array types, declare them
+	GNode arrayTemplates = findArrays(n);
+	hNode.addNode(arrayTemplates);
+
 	return hNode;
     }
 
@@ -180,24 +191,25 @@ public class LeafTransplant extends Visitor implements CPPUtil {
        
 	// Populate our Data Layout with information
     	GNode dataDeclarationList = GNode.create("StructureDeclarationList");
-	// FIXME: This breaks printer?
-	dataDeclarationList.add(clp.getDataLayout(className));
+	GNode dl = clp.getDataLayout(className);
 
-	// ------------------------------------
+	// Copy data layout members to StructureDeclarationList
+	for (Iterator<?> iter = dl.iterator(); iter.hasNext(); ) {
+	    dataDeclarationList.add(iter.next());  
+	}
+
+	// -------------------------------------------------------------------
 
 	// Build the skeleton of the Data Layout struct
-	// FIXME: Printer should print __className
-	GNode structTypeDef = GNode.create("StructureTypeDefinition", 
-					      null, className, 
-					      dataDeclarationList, null);
+	GNode structTypeDef = 
+	    GNode.create("StructureTypeDefinition", "DataLayout", className, 
+			 dataDeclarationList, null);
        	
-	
-	GNode declarationSpecifiers = GNode.create("DeclarationSpecifiers", 
-						   structTypeDef);
+	//	GNode declarationSpecifiers = GNode.create("DeclarationSpecifiers", 
+	//						   structTypeDef);
 
 
-	GNode dataLayout = GNode.create("Declaration", null, 
-					declarationSpecifiers, null);
+	GNode dataLayout = GNode.create("Declaration", structTypeDef);
 
 
 	return dataLayout;
@@ -206,31 +218,28 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     // Build CPP VTable nodes to create struct __Class_VT { }
     // @param n ClassDeclaration node from Java AST
     public GNode buildVTable(GNode n) {
-
-
 	// Nodes are created "inside out" from the leaves up
 
-	// Populate vtable with information
-	// NOTE: The vtableList is not quite accurate at the moment and needs to
-	// be modified in ClassLayoutParser. But the logic below is correct.
 	GNode vtableDeclarationList = GNode.create("StructureDeclarationList");
-	// FIXME: This breaks printer?
-	vtableDeclarationList.add(clp.getVTable(className));
+	GNode vt = clp.getVTable(className);
 
-	// ------------------------------------
+	// Copy vtable members to StructureDeclarationList
+	for (Iterator<?> iter = vt.iterator(); iter.hasNext(); ) {
+	    vtableDeclarationList.add(iter.next());  
+	}
+	
+	// --------------------------------------------------------------------
 
 	// Build skeleton of VTable struct
-	// FIXME: Printer should print __className_VT
 	GNode vtableStructDefinition = 
-	    GNode.create("StructureTypeDefinition", null, className, 
+	    GNode.create("StructureTypeDefinition", "VTable", className, 
 			 vtableDeclarationList, null);
 
-	GNode vtableDeclarationSpecifiers = 
-	    GNode.create("DeclarationSpecifiers", vtableStructDefinition);
+	//	GNode vtableDeclarationSpecifiers = 
+	//	    GNode.create("DeclarationSpecifiers", vtableStructDefinition);
 
 	GNode vtable = 
-	    GNode.create("Declaration", null, 
-			 vtableDeclarationSpecifiers, null);
+	    GNode.create("Declaration", vtableStructDefinition);
        
 	return vtable;
     }
@@ -250,27 +259,118 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	GNode initializedDeclaratorList = 
 	    GNode.create("InitializedDeclaratorList", initializedDeclarator);
 	    
-	// ------------------------------------
+	// ----------------------------------------------------------------
 	    
 	GNode typedefSpecifier = GNode.create("TypedefSpecifier");
 	
-	// FIXME: Printer must print __className*
+	// removed * because Smart Pointers don't use *
+	// removed __ because need clean classname
 	GNode classIdentifier = 
-	    createPrimaryIdentifier( "__" + className + "*" );
-	
-	GNode typedefDeclarationSpecifiers = 
-	    GNode.create("DeclarationSpecifiers", typedefSpecifier, 
-			 classIdentifier);
-	
-	// ------------------------------------
+	    createPrimaryIdentifier(className);
 
+	GNode td = GNode.create("TypedefDeclaration", 
+				typedefSpecifier, classIdentifier);
+	
+	// ----------------------------------------------------------------
+
+	GNode forwardDeclaration = GNode.create("ForwardDeclaration", 
+						initializedDeclaratorList, td);
+
+	GNode typedef = GNode.create("Declaration", forwardDeclaration);
+
+	/**
 	GNode typedef = 
 	    GNode.create("Declaration", null, typedefDeclarationSpecifiers, 
 		     initializedDeclaratorList);
+	**/
 
 	return typedef;
     }
 
+    // Find if there were any arrays of "custom" type declared.  If so, generate
+    // nodes so we may generate nodes to specialize the array template
+    // by adding Class information.
+    // "Custom" types are anything not ints, Objects, and Strings which Grimm
+    // made for us.
+    //
+    // @param Java ClassDeclaration Node
+
+    // Global node to allow access from Visitor 
+    GNode customClasses = GNode.create("CustomClasses");
+    GNode templateNodes = GNode.create("ArrayTemplates");
+    public GNode findArrays(GNode n) {
+
+	// To generate the template specialization, we need to create a new 
+	// Class object.  The class constructor is below.  He only passes the 
+	// first 3 parameters
+	/*
+	  __Class(String name,
+              Class parent,
+              Class component = (Class)__rt::null(),
+              bool primitive = false);
+	*/
+
+	new Visitor() {
+	    
+	    public void visitFieldDeclaration(GNode n) {
+		// FIXME: What is the qID for an Array of Arrays?
+		// Can we do type lookup chaining?
+
+		String qID = "";
+
+		// A shit ton of conditionals
+		boolean isCustomArray = false;
+		if(n.size() >= 2 && n.getNode(1).size() >= 2) {
+		    
+		    if( n.getNode(1).getNode(1) != null &&
+			n.getNode(1).getNode(1).hasName("Dimensions") ) {
+			   
+			   qID = n.getNode(1).getNode(0).getString(0);
+			   
+			   if(!"String".equals(qID) && !"Object".equals(qID)
+			      && !"int".equals(qID)) {
+			       isCustomArray = true;
+			   } // end set isCustomArray
+		    } // end if "Dimensions"
+		} // end size()
+		       
+		       
+		if(isCustomArray) {
+		    GNode parent = GNode.create("ParentType");
+		    parent.add(clp.createTypeNode(clp.getSuperclassName(qID)));
+		    GNode component = GNode.create("ComponentType");
+		    component.add(clp.createTypeNode(qID));
+			    
+		    GNode customClass = GNode.create("CustomClass");
+		    customClass.add(parent);
+		    customClass.add(component);
+       
+		    customClasses.add(customClass);
+		    
+
+		    // Array template specialization uses the same information
+		    // as __class() so just copying to diff. location
+		    GNode templateNode = GNode.create("ArrayTemplate");
+		    templateNode.add(parent);
+		    templateNode.add(component);
+		    templateNodes.add(templateNode);
+
+		} // end isCustomArray
+	    } // end visitFieldDeclaration
+
+	    public void visit(GNode n) {
+		// Need to override visit to work for GNodes
+		for( Object o : n) {
+		    if (o instanceof Node) dispatch((GNode)o);
+		}
+	    }
+	    
+	}.dispatch(n);
+	
+	if(customClasses.size() <= 0) customClasses = null;
+	GNode customs = GNode.create("Declaration", customClasses);
+	return customs;
+    }
 
 
     // ------------------------------------------
@@ -311,6 +411,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
 	new Visitor () {
 
+	    // QUERY: At FieldDeclaration, can we copy Type to subsequent 
+	    // PrimaryIdentifiers?
 	    public void visitConstructorDeclaration(GNode n) {
 		// Get .this' Class for explicit method invocation
 		// FIXME: In Java AST, the instance name is not stored.
@@ -353,15 +455,35 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    // nodes? Is this if needed?
 		    if("System".equals(primaryIdentifier)) {
 			
+			// Change any + to >>
+			new Visitor () {
+			    
+			    public void visitAdditiveExpression(GNode n) {
+				if("+".equals(n.getString(1))) {
+				    n.set(1, "<<");
+				}
+			    }
+
+			    public void visit(GNode n) {
+				// Need to override visit to work for GNodes
+				for( Object o : n) {
+				    if (o instanceof Node) dispatch((GNode)o);
+				}
+			    }
+
+			}.dispatch(n); // end Visitor
+
 			if( "println".equals(n.getString(2)) ) {
 			    GNode strOut = GNode.create(kStrmOut);
 			    strOut.add(0, GNode.create( kPrimID ).add(0, "std::cout") );
 			    // Add all arguments to System.out.println
 			    for(int i = 0; i < n.getNode(3).size(); i++) {
-				strOut.add(1, n.getNode(3).get(i) ); 
+				// removed addindex 1
+				strOut.add(n.getNode(3).get(i) ); 
 			    }
 			    
-			    strOut.add(2, GNode.create( kPrimID ).add(0, "std::endl") );
+			    // removed add index 2
+			    strOut.add(GNode.create( kPrimID ).add(0, "std::endl") );
 			    
 			    expressionStatement.set(0, strOut);
 			}
@@ -386,21 +508,41 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 						 + primaryIdentifier);
 		}
 		else if(n.getNode(0).hasName("SuperExpression")) {
+
+		    // Replace Java keyword super with actual class
 		    GNode pI = GNode.create("PrimaryIdentifier");
 		   
 		    GNode vtList = clp.getVTable(thisClass);
-		    // TODO: Ask rob for getter.
-		    String superClass = "SUPERDUPER";
-		    pI.add(0, superClass);
+		    GNode superNode = clp.getSuperclass(className);
+		    String superName = clp.getName(superNode);
+		    pI.add(0, superName);
 		    n.set(0, pI);
 		}
 		else { // catch all
-		    System.out.println("\t--- ERR: Uncaught node " + 
-				       n.getNode(0).toString());
+		    //		    System.out.println("\t--- Didn't translate node " + 
+		    //				       n.getNode(0).toString());
 		}
 		
 		visit(n);
 	    }// End visitCall Expression
+
+
+	    public void visitFieldDeclaration(GNode n) {
+		// Translate Arrays - ned to get Type
+		if(null != n.getNode(2).getNode(0).getNode(2) && 
+		   n.getNode(2).getNode(0).getNode(2).hasName("ArrayInitializer")) 
+		    {
+
+			// Can't add Type to Declarators, Declarator, 
+			// or ArrayInitializer as fixed num children
+			// FUCK YOU, 
+
+			// Does this remove Type node from FieldDeclaration?
+
+			//			n.getNode(2).getNode(0).getNode(2).add(n.getNode(1));
+		    }
+	
+	    }
 	    
 	    public void visit(GNode n) {
 		// Need to override visit to work for GNodes

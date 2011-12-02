@@ -467,7 +467,8 @@ public class CPPPrinter extends Visitor {
 	
 	/** Visit the specified declaration node. */
 	public void visitDeclaration(GNode n) {
-	    // TODO:
+	    printer.p(n.getNode(0));
+	    /*
 		boolean nested = isNested;
 		if (! nested) {
 			if (lineUp) {
@@ -489,29 +490,30 @@ public class CPPPrinter extends Visitor {
 		isNested       = false;
 		isIfElse       = false;
 		
-		if (null != n.get(0)) {
-			printer.p("__extension__ ");
-		}
-		// visitDeclarationSpecifiers
-		printer.p(n.getNode(1));
+		//		if (null != n.get(0)) {
+		//			printer.p("__extension__ ");
+		//		}
  
-		if (null != n.get(2)) {
-			printer.p(' ').p(n.getNode(2));
-			nested = true;
-		}
-		if (! nested) {
+		//		if (null != n.get(2)) {
+		//			printer.p(' ').p(n.getNode(2));
+		//			nested = true;
+		//		}
+		//		if (! nested) {
 		    //			printer.p(';').fitMore().pln();
-		}
+		//		}
 		
 		isDeclaration  = true;
 		isStatement    = false;
 		isOpenLine     = false;
 		isNested       = false;
 		isIfElse       = false;
+
+	    */
 	}
 	
 	/** Visit the specified declaration specifiers node. */
-	public void visitDeclarationSpecifiers(GNode n) {
+    public void visitDeclarationSpecifiers(GNode n) {
+	// Removed this node. not called
 	    
 	    for(Object o : n ) {
 		if( o instanceof GNode ) {
@@ -551,13 +553,26 @@ public class CPPPrinter extends Visitor {
 		printer.p("__thread");
 	}
 	
-	/** Visit the specified typedef storage class specifier node. */
-	public void visitTypedefSpecifier(GNode n) {
 
-	    printer.p("typedef");
-	}
+    public void visitTypedefDeclaration(GNode n) {
+	printer.indent().p(n.getNode(0)).p(" ");
+
+	// If Smart Pointers...
+        printer.p("__rt::Ptr<__").p(n.getNode(1)).p("> ");
+	printer.p(n.getNode(1)).p(";").pln();
+
+	//	printer.p("__").p(n.getNode(1)).p("* ").p(n.getNode(1)).p(";").pln();
+	printer.pln();
+    }
+
+
+    /** Visit the specified typedef storage class specifier node. */
+    public void visitTypedefSpecifier(GNode n) {
 	
-	/** Visit the specified volatile qualifier node. */
+	printer.p("typedef");
+    }
+    
+    /** Visit the specified volatile qualifier node. */
 	public void visitVolatileQualifier(GNode n) {
 		printer.p(n.getString(0));
 	}
@@ -629,22 +644,133 @@ public class CPPPrinter extends Visitor {
 
 	/** Visit the specified structure type definition. */
 	public void visitStructureTypeDefinition(GNode n) {
-	    // n.getNode(2) = StructureDeclarationList
-	    // n.getNode(2).getNode(0) = 
-	    // DataLayoutDeclaration || VTableDeclaration
+	   
+	    if("DataLayout".equals(n.getString(0))) {
+		printer.indent().p("// The data layout for ");
+		printer.p(n.getString(1)).pln();
+		printer.indent().p("struct __").p(n.getString(1)).pln(" {");
+		printer.incr();
+	    }
+	    else if("VTable".equals(n.getString(0))) {
+		printer.indent().p("// The vtable layout for ");
+		printer.p(n.getString(1)).pln();
+		printer.indent().p("struct __").p(n.getString(1));
+		printer.p("_VT").pln(" {");
+		printer.incr();
+	    }
 
-	    //	    className = n.getString(1);
-	    
 	    for(Object o : n ) {
 		if( o instanceof GNode ) printer.p((GNode)o);
-		else if (o instanceof String) className = (String)o;
-		else ; // null
+		else ; // do nothing
 	    }
 	   
-	    printer.pln();
+	    // Hardcoding class
+	    if("DataLayout".equals(n.getString(0)))  {
+		printer.pln();
+		printer.indent().p("static Class __class();").pln();
+		printer.pln();
+	    }
+	    
 	    isLongDecl = true;
+
+	    printer.decr();
+	    printer.indent().pln("};").pln();
 	}
     
+
+    // Used to print out custom __class()
+    public void visitCustomClasses(GNode n) {
+	
+	for (Iterator<?> iter = n.iterator(); iter.hasNext(); ) 
+	    printer.p(' ').p((Node)iter.next());
+    }
+
+    // FIXME: Extra spaces around type
+    public void visitCustomClass(GNode n) {
+
+	// 0 = Parent, wrapped in Type node
+	// 1 = Component, wrapped in Type node
+
+	printer.indent().p("// Internal accessor for java.lang.");
+	printer.p(n.getNode(1)).p("'s class.").pln();
+
+	printer.indent().p("Class __").p(n.getNode(1)).p("::__class() {").pln();
+	printer.incr();
+	printer.indent().p("static Class k = ").pln();
+	printer.incr().indent().p("new __Class(__rt::literal(\"java.lang.");
+	printer.p(n.getNode(1)).p("\"), __").p(n.getNode(0)).p("::__class());").pln();
+	printer.decr();
+	printer.indent().p("return k;").pln();
+	printer.decr();
+	printer.indent().p("}").pln();
+	printer.pln();
+    }
+
+    // Used to print template specialization of __class() for arrays
+
+    public void visitArrayTemplates(GNode n) {
+
+	printer.pln().indent().p("namespace __rt {").pln();
+	printer.incr();
+
+	for (Iterator<?> iter = n.iterator(); iter.hasNext(); ) 
+	    printer.p(' ').p((Node)iter.next());
+
+	printer.decr().pln("}").pln();
+
+    }
+    
+    public void visitArrayTemplate(GNode n) {
+
+	// 0 = Parent, wrapped in Type node
+	// 1 = Component, wrapped in Type node
+
+
+	printer.indent().p("// Template specialization for array of").p(n.getNode(1)).pln();
+	printer.indent().pln("template<>");
+
+	printer.indent().p("java::lang::Class Array <java::lang::");
+	printer.p(n.getNode(1)).p(">::__class() {").pln();
+	printer.incr();
+
+	printer.indent().p("static java::lang::Class k = ").pln();
+	printer.incr();
+	printer.indent().p("new java::lang::__Class(literal(\"[Ljava.lang.");
+	printer.p(n.getNode(1)).p(";\"),").pln();
+	
+	printer.incr();
+	printer.indent().p("Array<java::lang::").p(n.getNode(0));
+	printer.p(">::__class(),").pln();
+
+	printer.indent().p("java::lang::__").p(n.getNode(1)).p("::__class());");
+	printer.pln().decr();
+
+	printer.decr();
+
+	printer.indent().pln("return k;");
+
+	printer.decr();
+	printer.indent().pln("}");
+
+	
+    }
+
+    
+
+    public void visitParentType(GNode n) {
+	// Just a wrapper for a Type node
+	for (Iterator<?> iter = n.iterator(); iter.hasNext(); ) 
+	    printer.p((Node)iter.next());
+    }
+
+    public void visitComponentType(GNode n) {
+
+	// Just a wrapper for a Type node
+	for (Iterator<?> iter = n.iterator(); iter.hasNext(); ) 
+	    printer.p((Node)iter.next());
+    }
+
+
     // Not Used
     /** Visit the specified structure type reference. */
 
@@ -693,19 +819,10 @@ public class CPPPrinter extends Visitor {
 	printer.incr();
 	
 	for( Object o : n ) {
-	    if("DataLayoutDeclaration".equals(n.getNode(0).getName())) {
-		printer.p("// Data Layout for ").pln(className);
-	    }
-	    else if("VTableDeclaration".equals(n.getNode(0).getName())) {
-		printer.p("// VTable Layout for ").pln(className);
-	    } 
-	    else {
-		printer.indent().p("// ?: ").pln(GNode.cast(o).getName());
-	    }
 	    printer.p((GNode)o);
-	    	    
 	}
 	printer.decr();
+
 	
     }
 	
@@ -983,35 +1100,44 @@ public class CPPPrinter extends Visitor {
 		printer.p("__builtin_va_list");
 	}
 	
-	/** Visit the specified initialized declarator list node. */
-	public void visitInitializedDeclaratorList(GNode n) {
 
-	    // FIXME: Does this need to be in own namespace?
-	    boolean  first = true;	    
+    public void visitForwardDeclaration(GNode n) {
+	// Holds the nodes for forward declaration of structs and typedefs
 
-	    if(null != n.getNode(0).getNode(1)) {
+	for (Iterator<?> iter = n.iterator(); iter.hasNext(); ) {
+	    printer.p((Node)iter.next());
+	    if (iter.hasNext()) printer.pln();
+	}
 
-		className = 
-		    n.getNode(0).getNode(1).getString(0);
+
+    }
+
+
+    /** Visit the specified initialized declarator list node. */
+    public void visitInitializedDeclaratorList(GNode n) {
 	
-		printer.pln();
-		printer.indent().pln("// Forward declaration of datalayout and vt");
-		// FIXME: Do I need templates?
-		printer.indent().p("struct __").p(className).pln(";");
-		printer.indent().p("struct __").p(className).pln("_VT;");
-		printer.pln();
-		printer.indent().pln("// Definition of type name");
-		printer.indent().p("typedef __").p(className).p("* ").p(className).pln(";");
+	boolean  first = true;	    
+	
+	if(null != n.getNode(0).getNode(1)) {
+	    
+	    className = 
+		n.getNode(0).getNode(1).getString(0);
+	    
+	    printer.pln();
+	    printer.indent().pln("// Forward declaration of datalayout and vt");
+	    // FIXME: Do I need templates?
+	    printer.indent().p("struct __").p(n.getNode(0)).pln(";");
+	    printer.indent().p("struct __").p(n.getNode(0)).pln("_VT;");
+
+       	}
+	
+	else for(Object o : n ) { // catch all
+		printer.pln("// Missed an IntializedDeclaratorList");
 		
 	    }
-	    
-	    else for(Object o : n ) { // catch all
-		    printer.pln("// Missed an IntializedDeclaratorList");
-		    
-		}
-	}
+    }
     
-	/** Visit the specified initialized declarator node. */
+    /** Visit the specified initialized declarator node. */
 	public void visitInitializedDeclarator(GNode n) {
 	    // TODO: 
 	    for(Object o : n ) {
@@ -1319,7 +1445,14 @@ public class CPPPrinter extends Visitor {
 		
 		printer.indent().p("for (").p(n.getNode(0)).p(')');
 		prepareNested();
-		printer.p(n.getNode(1));
+		// For safety, add {} around single line 
+		// ExpressionStatements
+		if( n.getNode(1).hasName("ExpressionStatement") ) {
+		    printer.pln('{').incr();
+		    printer.p(n.getNode(1));
+		    printer.decr().indent().p('}').pln();
+		}
+		else printer.p(n.getNode(1)); // Block, {} automatic 
 		
 		endStatement(nested);
 	}
@@ -1337,7 +1470,7 @@ public class CPPPrinter extends Visitor {
 		
     }
 
-    // TODO: always #include <iostream>
+
     // FIXME: Use tokens
     // @param n always has 3 children
     public void visitImportDeclaration(GNode n) {
@@ -1430,64 +1563,34 @@ public class CPPPrinter extends Visitor {
     }
 
     public void visitClassBody(GNode n) {
-	// Keep visiting
-	for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
-
+		// Keep visiting
+		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
+		
     }
-
-    public void visitNewClassExpression(GNode n) {
-	// TODO: 
-	for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
-    }
-
-    public void visitDataLayoutDeclaration(GNode n) {
-	//	for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
-	// DataLayoutDeclaration only has children FieldDeclaration
-
-	printer.indent().p("struct __").p(className).pln(" {");
-	printer.incr();
-	//	printer.indent().p("__").p(className).pln("* _vptr;");
-	//	printer.indent().p("// __").p(className).pln("();");
-
-	//	printer.indent().p("// Values in DataLayout ").pln(className);
-	// FIXME: CLP needs to fix classes, add constructor, change order
-	for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
-
-	//	printer.indent().p("static __").p(className).pln("_VT  __vtable");
-
-	printer.pln().decr();
-	printer.indent().pln("};");
 	
-    } 
+    public void visitNewClassExpression(GNode n) {
 
-    public void visitVTableDeclaration(GNode n) {
-
-	// FIXME: Align entries
-	printer.indent().p("struct __").p(className).pln("_VT {");
-	printer.incr();
-
-	for( Object o : n ) {
-	    // Visits virtual method declarations
-	    printer.p((GNode)o);
+	
+	for(Object o : n ) {
+	    if( o instanceof GNode ) {
+		if(GNode.cast(o).hasName("QualifiedIdentifier")) 
+		    printer.p("new __").p((GNode)o).p("()");
+	    }
 	}
-
-	printer.pln().decr();
-	printer.indent().pln("};");
-
-    } 
+    }
 
     public void visitExtension(GNode n) {
-	// TODO: 
-	for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
+		// TODO: 
+		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
     }
-
+	
     // Running random xtc code through our Translator to see what I've missed
     // Below is what I've added, w/default behavior
     
     public void visitTypeArguments(GNode n) {
-	for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
+		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
     }
-
+	
     public void visitWildcard(GNode n) {
 	// Node has null value, print something based on Node exists	for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
 	
@@ -1495,20 +1598,20 @@ public class CPPPrinter extends Visitor {
 
     
     
-
-
-
+	
+	
+	
     // ----------------------------------
     // END : Modded by Diana! (Note, not all inclusive)
     // ----------------------------------
-
-
-
-
+	
+	
+	
+	
 	//COPIED FROM JAVA PRINTER:
 	/** Visit the specified basic for control. */
 	public void visitBasicForControl(GNode n) {
-
+		
 	    printer.p(n.getNode(0));
 	    if (null != n.get(1)) printer.p(n.getNode(1)).p(' ');
 	    
@@ -1517,16 +1620,16 @@ public class CPPPrinter extends Visitor {
 	    exitContext(prec1);
 	    
 	    if (null != n.get(3)) {
-		final int prec2 = enterContext(PREC_BASE);
-		formatAsTruthValue(n.getNode(3));
-		exitContext(prec2);
+			final int prec2 = enterContext(PREC_BASE);
+			formatAsTruthValue(n.getNode(3));
+			exitContext(prec2);
 	    }
 	    printer.p("; ");
 	    
 	    final int prec3 = enterContext(PREC_BASE);
 	    printer.p(n.getNode(4));
 	    exitContext(prec3);
-	 
+		
 	}
 	
 	/** Visit the specified switch statement node. */
@@ -1581,11 +1684,45 @@ public class CPPPrinter extends Visitor {
 	
 	/** Visit the specified expression statement node. */
 	public void visitExpressionStatement(GNode n) {
-		boolean nested = startStatement(STMT_ANY, n);
-		printer.indent().p(n.getNode(0)).pln(';');
-		endStatement(nested);
+
+	    // If primary identifier other than std:; must check not null
+	    for( Object o : n) {
+		if (o instanceof Node) {
+		    new Visitor() {
+			public void visitPrimaryIdentifier(GNode n) {
+			    if(!n.getString(0).startsWith("std")) {
+				printer.indent().p(" __rt::checkNotNull(");
+				printer.p(n).p(");").pln();
+			    }
+			}
+
+			public void visitSubscriptExpression(GNode n) {
+			    //			    printer.indent().p(" __rt::checkIndex(").p(n.getNode(0)).p(", ");
+			    //			    printer.p(n.getNode(1)).p(");").pln();
+
+			}
+			
+			public void visit(GNode n) {
+			    for( Object o : n) {
+				if (o instanceof Node) dispatch((GNode)o);
+			    }
+			}
+			
+		    }.dispatch(GNode.cast(o));
+
+		} // end if
+	    } // end for loop
+
+	    
+
+
+	    // Continue like normal
+	    boolean nested = startStatement(STMT_ANY, n);
+	    printer.indent().p(n.getNode(0)).pln(';');
+	    endStatement(nested);
+
 	}
-	
+    
 	/** Visit the specified empty statement node. */
 	public void visitEmptyStatement(GNode n) {
 		boolean nested = startStatement(STMT_ANY, n);
@@ -2030,9 +2167,13 @@ public class CPPPrinter extends Visitor {
 	/** Visit the specified subscript expression node. */
 	public void visitSubscriptExpression(GNode n) {
 		int prec1  = startExpression(160);
-		printer.p(n.getNode(0));
 		int prec2  = enterContext(PREC_BASE);
+
+
+		printer.p("(*").p(n.getNode(0)).p(")");
 		printer.p('[').p(n.getNode(1)).p(']');
+        
+		
 		exitContext(prec2);
 		endExpression(prec1);
 	}
@@ -2093,9 +2234,19 @@ public class CPPPrinter extends Visitor {
 	
 	/** Visit the specified primary identifier node. */
 	public void visitPrimaryIdentifier(GNode n) {
+	    // For all variables, check not null?
+	    // NO - std::cout and std::end lis a primary identifier....
+	    // Also, in TypedefDeclaration, but I think we overrode?
+
+
+		// do normal stuff
 		int prec = startExpression(160);
 		printer.p(n.getString(0));
+		// FIXME: Temporarily need ->data for Strings in output
+
 		endExpression(prec);
+
+
 	}
 	
 	/** Visit the specified statement as exprression node. */
@@ -2162,75 +2313,258 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	public void visitHeaderDeclaration(GNode n) {
-	    // FIXME: Included twice
-	    printer.pln("#pragma once");
+	    //	    printer.pln("#pragma once"); // once we separate .h file
 	    printer.pln("#include <iostream>");
+	    printer.pln("#include \"ptr.h\"");
 	    printer.pln("#include \"java_lang.h\"").pln();
 	    printer.pln("namespace java {");
 	    printer.incr();
 	    printer.indent().pln("namespace lang {");
 	    printer.incr();
-
+		
 	    for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
+		
+	    String cn = n.getNode(0).getNode(0).getNode(0).getNode(0).getNode(1).getString(0);
+
+	    // Add destructor to namespace java::lang
+	    printer.indent().pln("// The destructor");
+	    printer.indent().p("void __").p(cn).p("::__delete(__").p(cn);
+	    printer.p("* __this) {").pln();
+	    printer.incr();
+	    printer.indent().pln("delete __this;");
+	    printer.decr();
+	    printer.indent().pln("}");
+
+	    printer.pln();
+
+	    // Before exiting namespace java::lang, write constructors for
+	    // Class and Class_VT
+	    // FIXME: Hardcoding for now - only works for empty constructors
+	    printer.indent().pln("// Empty constructors for class and vt");
+
+	    printer.incr().indent();
+	    printer.p("__").p(cn).p("::__").p(cn);
+	    printer.p("() :  __vptr(&__vtable) {").pln();
+	    printer.indent().p("}").pln();
+	    
+	    printer.pln();
+
+	    printer.indent().p("__").p(cn).p("_VT __").p(cn);
+	    printer.p("::__vtable;").pln();
+
+	    printer.decr();
 
 	    printer.decr();
 	    printer.indent().pln("}");
 	    printer.decr();
 	    printer.pln("}").pln();
-
+		
 	}
 	
 	public void visitImplementationDeclaration(GNode n) {
 		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
 	}
+
+    // FIXME: global variable to selectively ->data Strings.  
+    // not needed in future versions
+    public static boolean is_output = false;
 	
 	public void visitStreamOutputList(GNode n) {
 		for(Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
-			printer.p( (GNode)iter.next() );
-			if(iter.hasNext() )printer.p( " << " );
+		    GNode nxt = (GNode)iter.next();
+		    
+		    printer.p(nxt);
+		    // FIXME: Hardcoding ->data for String, 
+		    // not needed in later versions
+		    //		    is_output = true;
+		
+		    printer.incr();
+		    if(iter.hasNext()) printer.pln().indent().p( " << " );
+		    printer.decr();
 		}
+		// TODO: Add logic for concatenation vs addition
+		// This is operator method overloading!
+		// Currently some +'s are incorrect
+
+		is_output = false;
 	}
 
 
 	
 	public void visitVirtualMethodDeclaration(GNode n) {
 	    // TODO: Make it prettier!
-	    printer.indent();
-
-	    if("main".equals(n.getString(1))) return;
-
-	    // Return Type
-	    if(null != n.getNode(0)) {
-		printer.p(n.getNode(0));
-	    }
-
-	    // method name
-	    printer.p(" (*").p(n.getString(1)).p(")");
-
-
-	    // Formal Parameters
-	    if(null != n.getNode(2)) {
-		GNode fps = n.cast(n.getNode(2));
-		printer.p("(");
-		
-		for(Iterator<Object> iter = fps.iterator(); iter.hasNext(); ) {
-		    // Only print Identifier, variable name as well?
-		    printer.p( ((GNode)iter.next()).getNode(0) );
-		    if(iter.hasNext() )printer.p( ", " );
+	   
+	    if( ! "main".equals(n.getString(1))) {
+		printer.indent();
+		// Return Type
+		if(null != n.getNode(0)) {
+		    printer.p(n.getNode(0));
 		}
-		printer.p(")");
 		
+		// method name
+		printer.p(" (*").p(n.getString(1)).p(")");
+
+		
+		// Formal Parameters
+
+		// Case __delete, pass raw pointer
+		if("__delete".equals(n.getString(1))) {
+		    // void (*__delete)(__CLASS*);
+		    printer.p("(__").p(n.getNode(2)).p("*)");
+		}
+		else if(null != n.getNode(2)) {
+		    GNode fps = n.cast(n.getNode(2));
+		    printer.p("(");
+		    
+		    for(Iterator<Object> iter = fps.iterator(); iter.hasNext();)
+			{
+			// Only print Identifier, variable name as well?
+			printer.p( ((GNode)iter.next()).getNode(0) );
+			if(iter.hasNext() )printer.p( ", " );
+		    }
+		    printer.p(")");
+		    
+		}
+		printer.pln(';');
 	    }
+	}
+	
+
+    // KEEP
+	public void visitvtMethodPointersList( GNode n ) {
+		printer.incr().indent().pln();
+		for(Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
+		    // ROB: Pls remove main method
+		    // add delete for mem mgmt
+
+		    printer.indent().p((GNode)iter.next());
+		    if(iter.hasNext())printer.p( ", " ).pln();
+			
+		}
+		printer.decr();
+	}
+	
+	public void visitvtMethodPointer( GNode n ) {
+        
+	    printer.p(n.getString(0)); // print methodName
+
+	    if("__delete".equals(n.getString(0))) {
+		// FIXME: Hacky, but working delete method
+		printer.p("((").p(n.getNode(3).getNode(0)).p("(*)");
+		// to get __Demo* not just Demo
+		printer.p("(__").p(n.getNode(3).getNode(1)).p("*))");
+		printer.p("&__Object::").p(n.getString(0)).p(")"); 
+	    }
+	    else {
+		printer.p("(").p(n.getNode(3));
+		printer.p("&").p(n.getNode(1)).p("::");
+		printer.p(n.getString(0)).p(")");
+	    }
+	    		
+       	}
+
+    public void visitMethodPointersList( GNode n )  {
+	// FIXME: Now it's not used?
+	// oh well, leave well enough alone.  it works!
+		printer.incr().indent().pln();
+		for(Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
+			    printer.indent().p((GNode)iter.next());
+			    if(iter.hasNext())printer.p( ", " ).pln();
+			
+		}
+		printer.decr();
+	}
+	
+	public void visitMethodPointer( GNode n ) {
+	    // FIXME: Not used now? SO CONFUSEd
+	    // oh well, leave them named vt
+
+	    printer.p(n.getString(0)); // print methodName
+
 	    
-	    
-	    printer.pln(';');
+		
+       	}
+	
+	public void visitMethodHeaderList( GNode n ) {
+		printer.pln();
+		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
 
 	}
 	
+	public void visitStaticMethodHeader(GNode n) {
+	    // FIXME: Only print current Class as parameter, if inherited
+	    if(! "main".equals(n.getString(1))) {
+			printer.indent().p("static ").p(n.getNode(0));
+			printer.p(' ').p(n.getString(1));
+			printer.p('(').p(n.getNode(2)).p(");").pln();	
+	    }
+	}
+	
+	public void visitConstructorHeaderList(GNode n) {
+
+	    // FIXME: Hardcoding empty Constructor, since it's empty now
+	    printer.indent().p("// Constructor").pln();
+	    printer.indent().p("__").p(n.getString(0)).p("();").pln();
+
+	    printer.indent().pln("// Destructor");
+	    printer.indent().p("static void __delete(__");
+	    printer.p(n.getString(0)).p("*);");
+
+	    if(n.size() > 0) printer.pln();
+	    for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
+	}
+	
+	public void visitConstructorHeader(GNode n) {
+		printer.indent().p(n.getString(0));
+		printer.p('(').p(n.getNode(1)).p(");").pln();	
+	}
+	
+	public void visitDataFieldList( GNode n ) {
+		if(n.size() > 0) printer.pln();
+		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
+	}
+	
+	
+	
+	public void visitClassISAPointer( GNode n ) {
+	    // FIXME: Should always call Object's class?
+	    printer.p(" __isa(__Object::__class())");
+
+	    //		printer.p("__isa(").p(n.getString(0)).p("::__class())");
+	}
+	
+	public void visitVTConstructorDeclaration(GNode n) { 
+	    printer.indent().p(n.getNode(0)).pln();
+		
+	    if (null != n.get(1)) printer.indent().p(n.getNode(1));
+		
+
+	    printer.indent().p("__").p(className).p("_VT()");
+	    //	    printer.indent().p(n.getString(2)).p("() ");
+		
+	    if(null != n.get(4)) {
+			// Print out MethodPointerList
+			printer.p(": ");
+			printer.p(n.getNode(4));
+	    }
+		
+	    isOpenLine = true;
+	    printer.p(n.getNode(5)).pln();
+		
+	}
+	
+	public void visitPointerCast(GNode n) {
+		printer.p('(').p(n.getNode(0)).p("(*)(").p(n.getNode(1)).p("))");
+	}
+    
+    //----------------------------------------------------------
+    //                   END NEW METHODS
+    //----------------------------------------------------------
+    
     // ------------------------------------------------------
     // ------ Begin via JavaPrinter.  Thanks Grimm! ---------
     // ------------------------------------------------------
-
+	
     /** Visit the specified constructor declaration. */
     public void visitConstructorDeclaration(GNode n) { 
 	printer.indent().p(n.getNode(0));
@@ -2265,26 +2599,32 @@ public class CPPPrinter extends Visitor {
 	endExpression(prec);
     }
     
-    // Version A - Java Printer
     /** Visit the specified new array expression. */
     public void visitNewArrayExpression(GNode n) {
 	final int prec = startExpression(160);
-	printer.p("new ").p(n.getNode(0)).p(n.getNode(1)).p(n.getNode(2));
+
+	printer.p(n.getNode(1)).p(n.getNode(2));
 	if (null != n.get(3)) printer.p(' ').p(n.getNode(3));
 	endExpression(prec);
     }
     
-    // Version A - Java Printer
+    public void visitConcreteDimensions(GNode n) {
+	printer.p("(").p(n.getNode(0)).p(")");
+    }
+
+
+    // from Java Printer
     /** Visit the specified array initlizer. */
     public void visitArrayInitializer(GNode n) {
+
 	if (! n.isEmpty()) {
-	    printer.pln('{').incr().indent();
+	    printer.p('{');
 	    for (Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
 		printer.buffer().p((Node)iter.next());
 		if (iter.hasNext()) printer.p(", ");
 		printer.fit();
 	    }
-	    printer.pln().decr().indent().p('}');
+	    printer.p('}');
 	} else {
 	    printer.p("{ }");
 	}
@@ -2327,7 +2667,7 @@ public class CPPPrinter extends Visitor {
 	}
     }
     
-
+	
     // via Java Printer
     /** Visit the specified throw statement. */
     public void visitThrowStatement(GNode n) {
@@ -2341,10 +2681,10 @@ public class CPPPrinter extends Visitor {
     // via Java Printer
     /** Visit the specified catch clause. */
     public void visitCatchClause(GNode n) {
-	printer.p("catch (").p(n.getNode(0)).p(")").p(n.getNode(1));
+		printer.p("catch (").p(n.getNode(0)).p(")").p(n.getNode(1));
     }
-
-
+	
+	
     // via Java Printer
     /** Visit the specified do while statement. */
     public void visitDoWhileStatement(GNode n) {
@@ -2370,23 +2710,23 @@ public class CPPPrinter extends Visitor {
 
 	// Is main method?
 	if("main".equals(n.getString(3))) {
-	    printer.p("int main()");
+	    printer.p("int32_t main()");
 	    // FIXME: For main, detect if any command line args
 	}
 	else {
-	    printer.indent().p(n.getNode(0));
+	    //	    printer.indent().p(n.getNode(0)); // Modifiers
 	    if (null != n.get(1)) printer.p(n.getNode(1)).p("1=");
 	    
 	    // Node 2 = return type
-	    printer.p(n.getNode(2));
+	    printer.p(n.getNode(2)).p(" ");
 	    
 	    if (! "<init>".equals(n.get(3))) {
 		// Node 3 = method Name
-		printer.p(className).p("::").p(n.getString(3)).p(' ');
+		printer.p("__").p(className).p("::").p(n.getString(3)).p(' ');
 	    }
 
 	    // Formal Parameters
-	    printer.p(n.getNode(4));
+	    printer.p("(").p(n.getNode(4)).p(")");
 	}
 
 	if (null != n.get(5)) {
@@ -2416,23 +2756,41 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	public void visitDeclarator(GNode n) {
-		printer.p(n.getString(0));
-		if(null != n.get(1)) {
-			if (Token.test(n.get(1))) {
-				formatDimensions(n.getString(1).length());
-			} else {
-				printer.p(n.getNode(1));
-			}
+
+	    if(null != n.get(2)) {
+		if ( n.getNode(2).hasName("ArrayInitializer") ||
+		     n.getNode(2).hasName("NewArrayExpression") ) {
+		    // supress var name
 		}
-		if(null != n.get(2)) {
-			printer.p(" = ").p(n.getNode(2));
+	
+		else printer.p(n.getString(0)); // var name
+	    }
+	    else printer.p(n.getString(0)); // var name
+	    
+	    if(null != n.get(1)) {
+		if (Token.test(n.get(1))) {
+		    formatDimensions(n.getString(1).length());
+		} else {
+		    printer.p(n.getNode(1));
 		}
-	}
+	    }
+	    
+	    if(null != n.get(2)) {
+		
+		if(n.getNode(2).hasName("ArrayInitializer") ||
+		   n.getNode(2).hasName("NewArrayExpression")) {
+		    printer.p(n.getNode(2));
+		}
 	
-	protected void formatDimensions(final int n) {
-		for (int i=0; i<n; i++) printer.p("[]");
+		else { printer.p(" = ").p(n.getNode(2)); }
+	    }
+	    
 	}
-	
+    
+    protected void formatDimensions(final int n) {
+	for (int i=0; i<n; i++) printer.p("[]");
+    }
+    
 	public void visitDeclarators(GNode n) {
 		for (Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
 			printer.p((Node)iter.next());
@@ -2441,12 +2799,32 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	public void visitFieldDeclaration(GNode n) {
-	    // FIXME: Extra space btwn Type ( n.getNode(1) ) and 
-	    // Declarator (n.getNode(2))
-	    //	       printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(' ').p(n.getNode(2)).p(';').pln();
-printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(n.getNode(2)).p(';').pln();
-		isDeclaration = true;
-		isOpenLine    = false;
+
+	    // Look for NewClassExpression to implement memroy mgmt
+
+	    // Look ahead for ArrayInitializer or NewArrayExpression translation
+	   
+	    GNode declarationType = GNode.cast(n.getNode(2).getNode(0).getNode(2));
+
+	    if(null != declarationType && (declarationType.hasName("ArrayInitializer") || declarationType.hasName("NewArrayExpression") ) )
+		{
+		    // Ugly, but there's no other way to get Type later on, as
+		    // Nodes are all generic
+
+		    // Adding mem mgmt:
+		    printer.indent().p("__rt::Ptr<");
+		    printer.p("__rt::Array<").p(n.getNode(1)).p("> >");
+		    printer.p(" ").p(n.getNode(2).getNode(0).getString(0));
+		    printer.p(" = ");
+		    printer.p("new __rt::Array<").p(n.getNode(1)).p(">");
+		}
+
+	    if(null != declarationType && (declarationType.hasName("ArrayInitializer") || declarationType.hasName("NewArrayExpression") ) ) { /** don't print type here*/	}
+	    else printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(" ");
+
+	    printer.p(n.getNode(2)).p(';').pln();
+	    isDeclaration = true;
+	    isOpenLine    = false;
 	}
 	
 	public void visitBlockDeclaration(GNode n) {
@@ -2480,9 +2858,9 @@ printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(n.getNode(2)).p(';').pln();
 		isNested      = false;
 		isIfElse      = false;
 	}
-
-
-
+	
+	
+	
 	/** Visit the specified call expression. */
 	public void visitCallExpression(GNode n) {
 	    
@@ -2491,18 +2869,22 @@ printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(n.getNode(2)).p(';').pln();
 	    
 	    // Callling instance
 	    if (null == n.getNode(0)) 
-		printer.p("__this");	    
+			printer.p("__this");	    
 	    else if (n.getNode(0).hasName("ThisExpression")) 
-		printer.p("__this");
+			printer.p("__this");
 	    else printer.p(n.getNode(0));
-	   
+		
 	    // method name
 	    printer.p("->__vptr->").p(n.getString(2));
-
+		
 	    // arguments
-	    if(n.getNode(3).size() > 0)printer.p(n.getNode(3));
+	    // FIXME: Know when to pass self, etc. as arguments
+	    if(n.getNode(3).size() > 0) printer.p(n.getNode(3));
+	    else if ("toString".equals(n.getString(2)) ||
+		     "getClass".equals(n.getString(2))) 
+		printer.p("(").p(n.getNode(0)).p(")");
 	    else printer.p("()");
-
+		
 	    endExpression(prec);
 	}
 	
@@ -2517,7 +2899,7 @@ printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(n.getNode(2)).p(';').pln();
 	
 	/** Visit the specified this expression. */
 	public void visitThisExpression(GNode n) {
-
+		
 	    // TODO: How to get calling class?
 	    final int prec = startExpression(160);
 	    // WTF would be there?
@@ -2539,21 +2921,21 @@ printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(n.getNode(2)).p(';').pln();
 	}
 	
 	/** Visit the specified type. */
-    	public void visitType(GNode n) {
-
+	public void visitType(GNode n) {
+		
 	    printer.p(n.getNode(0));
 	    if (null != n.get(1)) {
       		if (Token.test(n.get(1))) {
-		    formatDimensions(n.getString(1).length());
-		} else {
-		    printer.p(n.getNode(1));
-		}
+				formatDimensions(n.getString(1).length());
+			} else {
+				printer.p(n.getNode(1));
+			}
 	    }
-	    printer.p(' ');
+	    //    printer.p(' ');
 	}
     
     public void visitInstantiatedType(GNode n) {
-	boolean first = true;
+		boolean first = true;
 		for (Object o : n) {
 			if (first) first = false;
 			else printer.p('.');
@@ -2645,28 +3027,28 @@ printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(n.getNode(2)).p(';').pln();
 	}
 	
 	public void visitFormalParameters(GNode n) {
-	    printer.p('(');
+		
 	    for (Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
-		printer.p((Node)iter.next());
-		if (iter.hasNext()) printer.p(", ");
+			printer.p((Node)iter.next());
+			if (iter.hasNext()) printer.p(", ");
 	    }
-	    printer.p(')');
+		
 	}
 	
 	public void visitFormalParameter(GNode n) {
-
+		
 	    // WTF is this black magic?
 	    final int size = n.size();
 	    printer.p(n.getNode(0)).p(n.getNode(1));
 	    for (int i=2; i<size-3; i++) { // Print multiple catch types.
-		printer.p(" | ").p(n.getNode(i));
+			printer.p(" | ").p(n.getNode(i));
 	    }
 	    if (null != n.get(size-3)) printer.p(n.getString(size-3));
 	    printer.p(' ').p(n.getString(size-2)).p(n.getNode(size-1));
 	}
 	
-
-      // Original Grimm method
+	
+	// Original Grimm method
 	public void visitQualifiedIdentifier(GNode n) {
 		final int prec = startExpression(160);
 		
@@ -2681,10 +3063,14 @@ printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(n.getNode(2)).p(';').pln();
 		
 		endExpression(prec);
 	}
-
+	
 	
 	public void visitDimensions(GNode n) {
+	    if(n.size() <= 1) ; // One dimension array, do nothing
+	    else if(n.size() > 1) {
+		// FIXME: 
 		for (int i=0; i<n.size(); i++) printer.p("[]");
+	    }
 	}
 	
 	protected boolean containsLongExpression(GNode n) {
@@ -2696,11 +3082,11 @@ printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(n.getNode(2)).p(';').pln();
 	    // FUCK - where is rt? Needs translate to __rt
 	    // If it's a method, neeed ->__vptr
 	    // If it's a data field, only instance->field
-
+		
 	    // This is a data field, don't need to access __vptr
 	    final int prec = startExpression(160);
 	    printer.p(n.getNode(0)).p("->").p(n.getString(1));
-
+		
 	    endExpression(prec);
 	}
 	
@@ -2718,7 +3104,7 @@ printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(n.getNode(2)).p(';').pln();
 	public void visitConditionalStatement(GNode n) {
 		final int     flag   = null == n.get(2) ? STMT_IF : STMT_IF_ELSE;
 		final boolean nested = startStatement(flag, n);
-
+		
 		if (isIfElse) {
 			printer.p(' ');
 		} else {
@@ -2765,7 +3151,8 @@ printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(n.getNode(2)).p(';').pln();
 	/** Visit the specified string literal. */
 	public void visitStringLiteral(GNode n) {
 		final int prec = startExpression(160);
-		printer.p(n.getString(0));
+		printer.p("__rt::literal(").p(n.getString(0)).p(")");
+		//		if(is_output) printer.p("->data");
 		endExpression(prec);
 	}
 	
@@ -2783,14 +3170,14 @@ printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(n.getNode(2)).p(';').pln();
 		printer.p("__rt::null()");
 		endExpression(prec);
 	}
-
+	
     // TODO DIANA: change to cpp types
 	public void visitPrimitiveType(GNode n) {
 	    String primType = n.getString(0);
 	    if("int".equals(primType))
-		primType = "int32_t";
+			primType = "int32_t";
 	    else if("boolean".equals(primType))
-		primType = "bool";
+			primType = "bool";
 	    
 	    printer.p(primType);
 	} 
@@ -2801,9 +3188,33 @@ printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(n.getNode(2)).p(';').pln();
 		endExpression(prec);
 	}
 	
-    // Version B
 	/** Visit the specified expression. */
 	public void visitExpression(GNode n) {
+
+	    if(n.getNode(2).hasName("PrimaryIdentifier")) {
+
+		    for( Object o : n) {
+			if (o instanceof Node) {
+			    new Visitor() {
+				public void visitSubscriptExpression(GNode n) {
+				    printer.indent().p(" __rt::checkStore(");
+				    printer.p(n.getNode(0)).p(",");
+	
+				}
+				
+				public void visit(GNode n) {
+				    for( Object o : n) {
+					if (o instanceof Node) dispatch((GNode)o);
+				    }
+				}
+				
+			    }.dispatch(GNode.cast(o));
+			    
+			} // end if
+		    } // end for loop
+		    printer.p(n.getNode(2)).p(");").pln();
+		}
+
 		final int prec1 = startExpression(10);
 		final int prec2 = enterContext();
 		printer.p(n.getNode(0));
