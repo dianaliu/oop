@@ -17,7 +17,6 @@
  * USA.
  */
 package xtc.oop;
-import xtc.oop.LeafTransplant;
 
 import xtc.parser.ParseException;
 import xtc.parser.Result;
@@ -38,6 +37,9 @@ import xtc.lang.JavaFiveParser;
 import xtc.lang.JavaPrinter;
 import xtc.lang.JavaAnalyzer;
 
+import xtc.util.SymbolTable;
+import xtc.util.SymbolTable.Scope;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -47,8 +49,6 @@ import java.io.IOException;
 import java.io.Reader;
 
 import java.util.ArrayList;
-
-
 
 
 public class Translator extends xtc.util.Tool {
@@ -203,8 +203,10 @@ public class Translator extends xtc.util.Tool {
 			new LeafTransplant(clp, GNode.cast(trees[i]), DEBUG); 
 		    returned[i] = translator.getCPPTree();
 		    
-		    if(DEBUG) runtime.console().pln("--- CPP AST #" + (i+1));
-		    if(DEBUG) runtime.console().format(returned[i]).pln().flush();
+		    if(DEBUG) 
+			runtime.console().pln("--- CPP AST #" + (i+1));
+		    if(DEBUG) 
+			runtime.console().format(returned[i]).pln().flush();
 		    if(DEBUG) 
 			runtime.console().pln("\t-----------------------").flush();
 		}
@@ -242,7 +244,7 @@ public class Translator extends xtc.util.Tool {
 		
 		runtime.console().pln("--- Finish writing CPP file(s)").flush();
 		// Also print cpp output to console?
-		runtime.console().pln("--- Finish translation. See output/").flush();
+		runtime.console().pln("--- Finish translation. See xtc/output/").flush();
 		
 	    }
 	    catch(Exception e) {
