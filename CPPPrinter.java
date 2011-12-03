@@ -2324,18 +2324,31 @@ public class CPPPrinter extends Visitor {
 		
 	    for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
 		
+	    String cn = n.getNode(0).getNode(0).getNode(0).getNode(0).getNode(1).getString(0);
 
+	    // Add destructor to namespace java::lang
+	    printer.indent().pln("// The destructor");
+	    printer.indent().p("void __").p(cn).p("::__delete(__").p(cn);
+	    printer.p("* __this) {").pln();
+	    printer.incr();
+	    printer.indent().pln("delete __this;");
+	    printer.decr();
+	    printer.indent().pln("}");
+
+	    printer.pln();
 
 	    // Before exiting namespace java::lang, write constructors for
 	    // Class and Class_VT
 	    // FIXME: Hardcoding for now - only works for empty constructors
 	    printer.indent().pln("// Empty constructors for class and vt");
-	    String cn = n.getNode(0).getNode(0).getNode(0).getNode(0).getNode(1).getString(0);
+
 	    printer.incr().indent();
 	    printer.p("__").p(cn).p("::__").p(cn);
 	    printer.p("() :  __vptr(&__vtable) {").pln();
 	    printer.indent().p("}").pln();
 	    
+	    printer.pln();
+
 	    printer.indent().p("__").p(cn).p("_VT __").p(cn);
 	    printer.p("::__vtable;").pln();
 
