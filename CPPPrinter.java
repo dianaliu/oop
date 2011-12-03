@@ -707,7 +707,6 @@ public class CPPPrinter extends Visitor {
     }
 
     // Used to print template specialization of __class() for arrays
-
     public void visitArrayTemplates(GNode n) {
 
 	printer.pln().indent().p("namespace __rt {").pln();
@@ -2609,7 +2608,15 @@ public class CPPPrinter extends Visitor {
     }
     
     public void visitConcreteDimensions(GNode n) {
-	printer.p("(").p(n.getNode(0)).p(")");
+	printer.p("(");
+
+	for (Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
+	    printer.p((Node)iter.next());
+	    if (iter.hasNext()) printer.p(", ");
+	    printer.fit();
+	}
+	
+	printer.p(")");
     }
 
 
@@ -2810,13 +2817,38 @@ public class CPPPrinter extends Visitor {
 		{
 		    // Ugly, but there's no other way to get Type later on, as
 		    // Nodes are all generic
+		    // Looks ugly, but works for all dimensions!
 
-		    // Adding mem mgmt:
+		    // Begin mem mgmt:
+		    // ? Do you only mem mgmt the exterior array?
 		    printer.indent().p("__rt::Ptr<");
-		    printer.p("__rt::Array<").p(n.getNode(1)).p("> >");
+
+		    // Begin Array declaration, may be nested
+		    int dim = n.getNode(1).getNode(1).size();
+		    for(int i = 0; i < dim; i++) {
+			printer.p("__rt::Array<");
+		    }
+		    printer.p(n.getNode(1).getNode(0));
+		    for(int i = 0; i < dim; i++) {
+			printer.p(" >");
+		    }
+		    // end Array declaration
+
+		    // end mem mgmt
+		    printer.p(" >");
 		    printer.p(" ").p(n.getNode(2).getNode(0).getString(0));
 		    printer.p(" = ");
-		    printer.p("new __rt::Array<").p(n.getNode(1)).p(">");
+		    printer.p("new ");
+
+		    // Begin Array declaration, may be nested
+		    for(int i = 0; i < dim; i++) {
+			printer.p("__rt::Array<");
+		    }
+		    printer.p(n.getNode(1).getNode(0));
+		    for(int i = 0; i < dim; i++) {
+			printer.p(" >");
+		    }
+		    // end Array declaration
 		}
 
 	    if(null != declarationType && (declarationType.hasName("ArrayInitializer") || declarationType.hasName("NewArrayExpression") ) ) { /** don't print type here*/	}
