@@ -535,7 +535,6 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
 			// Can't add Type to Declarators, Declarator, 
 			// or ArrayInitializer as fixed num children
-			// FUCK YOU, 
 
 			// Does this remove Type node from FieldDeclaration?
 

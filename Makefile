@@ -21,7 +21,8 @@ SOURCE = \
 	LeafTransplant.java \
 	CPPPrinter.java \
 	DependencyResolver.java \
-        TranslatorSymbolTable.java
+        TranslatorSymbolTable.java \
+	MavisBeacon.java
 
 
 JNI_SOURCE =

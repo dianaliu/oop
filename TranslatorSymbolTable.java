@@ -100,6 +100,7 @@ public class TranslatorSymbolTable {
 				symTable.current().addDefinition(name, type);
 				System.out.println("Qualified name : " + symTable.current().getQualifiedName());
 				
+				
 				try{
 					PrintWriter fstream = new PrintWriter("Scope.txt");
 					Printer babysFirstScope = new Printer(fstream);

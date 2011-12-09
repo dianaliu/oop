@@ -36,6 +36,7 @@ import xtc.lang.CPrinter;
 import xtc.lang.JavaFiveParser;
 import xtc.lang.JavaPrinter;
 import xtc.lang.JavaAnalyzer;
+import xtc.lang.JavaAstSimplifier;
 
 import xtc.util.SymbolTable;
 import xtc.util.SymbolTable.Scope;
@@ -154,12 +155,21 @@ public class Translator extends xtc.util.Tool {
 	    //-----------------------------------------------------------
 	    
 	    
-	    /**	
+	    
 	   	
 	   	//FIXME: SymTable test; remove later
 	   	System.out.println("\nMESSING WITH THE SYMBOL TABLE\n");
-	   	SymbolTable symTable = new SymbolTable();
-	   	JavaAnalyzer myAnalyzer = new JavaAnalyzer(runtime, symTable);
+	   	
+	   	
+	   	//the symbol table is a public data member of myBacon 
+	   	MavisBeacon myBacon = new MavisBeacon(runtime);
+	  	myBacon.createTable(trees);
+	   	
+	   	//lookup a node's data type
+	   	myBacon.finder(trees[0]);
+	    
+	    //System.out.println("Bacon test: " + (String)myBacon.getType(bacon));
+	   	//System.out.println("Has a scope?: " + myBacon.symTable.hasScope(trees[0]));
 	   	
 	   	
 	   	
@@ -168,12 +178,8 @@ public class Translator extends xtc.util.Tool {
 	    //System.out.println("Symbol identifier value : " + tst.getType("intGlobal"));
  		//find all variable names and their types
  		
- 			tst.addSymbols(trees[0]);
-	 		tst.symTable.root();
-	 		tst.symTable.enter("depScope");
-	 		tst.addSymbols(trees[1]);
- 		
- 		
+ 		tst.addSymbols(trees[0]);
+	 	tst.symTable.root();
  		tst.addSymbols(trees[0]);
  		String depScope = "dep";
  		for(int i = 1; i < trees.length; i++) {
@@ -181,20 +187,19 @@ public class Translator extends xtc.util.Tool {
 		 		
 		 		tst.symTable.root();
 		 		tst.symTable.enter(depScope + i);
+		 		//tst.addSymbols(trees[1]);
 		 		tst.addSymbols(trees[i]);
 	 		}
 	 	}
  		
  		tst.symTable.root();
- 		//System.out.println("Get type intGlobal: " + tst.getType("intGlobal"));
- 		System.out.println("Get type intMain: " + tst.getType("intGlobal"));
- 		//System.out.println("Get type intMeth: " + tst.getType("intMeth"));
+ 		//System.out.println("Get type intMain: " + tst.getType("intGlobal"));
  		*/
  		
  		System.out.println("\nDONE MESSING WITH THE SYMBOL TABLE\n");
 	   	
-	    **/ 
-	   	
+	    
+	   
 	   	
 	    if(DEBUG) 
 			runtime.console().pln("--- Begin cpp translation").flush();
@@ -263,6 +268,7 @@ public class Translator extends xtc.util.Tool {
 	    
 	} // end -translate
 	
+
 	
 	if(runtime.test("inherit")) {
 	    DEBUG = true;
