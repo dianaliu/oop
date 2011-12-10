@@ -1,3 +1,5 @@
+// This is the correct translation, done manually.
+
 #include <iostream>
 #include "ptr.h"
 #include "java_lang.h"

@@ -185,7 +185,7 @@ public class Translator extends xtc.util.Tool {
 		    
 		    if(DEBUG) 
 		    runtime.console().pln("--- CPP AST #" + (i+1));
-		    if(DEBUGBARF) 
+		    if(DEBUG) 
 		    runtime.console().format(returned[i]).pln().flush();
 		    if(DEBUG) 
 			runtime.console().pln("\t-----------------------").flush();

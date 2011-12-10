@@ -149,11 +149,12 @@ public class ClassLayoutParser extends Visitor {
 		newPtr.add( formalParameters );
 
 		// Add explicit __this using classname
+		// FIXME: Technically, this should be added under a 
+		// "FormalParameter" node but no biggie, it works.
 		GNode params = (GNode) newPtr.getNode(2);
-		params.add(createTypeNode(className));
+		//		params.add(GNode.create("FormalParameter").add( createTypeNode(className)) );
+			params.add(createTypeNode(className));
 		
-
-		//	newPtr.add( GNode.create( "FormalParameters" ) );
 		// add Pointer cast node
 		GNode pCast = GNode.create("PointerCast");
 		// ? No need for PointerCast when adding new methods?
@@ -584,26 +585,26 @@ public class ClassLayoutParser extends Visitor {
 		return (GNode)( new Visitor() {
 			
 			public GNode visitClass(GNode n) {
-				
-				// Found the class
-				if( getName(n).equals(s) ) {
-					return n;
+			    
+			    // Found the class
+			    if( getName(n).equals(s) ) {
+				return n;
+			    }
+			    
+			    // Keep Searching
+			    for( Object o : n) {
+				if (o instanceof Node) {
+				    GNode returnValue = (GNode)dispatch((GNode)o);
+				    if( returnValue != null ) return returnValue;
 				}
-				
-				// Keep Searching
-				for( Object o : n) {
-					if (o instanceof Node) {
-						GNode returnValue = (GNode)dispatch((GNode)o);
-						if( returnValue != null ) return returnValue;
-					}
-				}
-				return null;
+			    }
+			    return null;
 			}
 			
 			public void visit(GNode n) { // override visit for GNodes
-				for( Object o : n) {
-					if (o instanceof Node) dispatch((GNode)o);
-				}
+			    for( Object o : n) {
+				if (o instanceof Node) dispatch((GNode)o);
+			    }
 			}
 			
 	    }.dispatch(classTree));
@@ -634,20 +635,81 @@ public class ClassLayoutParser extends Visitor {
     // @param cN Class Name
 	// @return the classes vtable node
     public GNode getVTable(String cN) {
-		GNode className = getClass(cN);
-		GNode classVT = (GNode)(className.getNode(0).getNode(0));
-		return classVT;
+	GNode className = getClass(cN);
+	GNode classVT = (GNode)(className.getNode(0).getNode(0));
+	return classVT;
     }
 	
     // Returns Data Layout list for a class
     // @param cN Class Name
 	// @return the classes data layout node
     public GNode getDataLayout(String cN) {
-		GNode className = getClass(cN);
-		GNode classData = (GNode) (className.getNode(0).getNode(1));
-		return classData;
+	GNode className = getClass(cN);
+	GNode classData = (GNode) (className.getNode(0).getNode(1));
+	return classData;
     }
 	
+
+    // Return's a specific node from a Virtual Table
+    // @param VirtualTable node
+    public GNode getVTMethod(GNode vtn, String m) {
+	//	System.out.println("--- Enter CLP");
+
+	// Declared final to be accessible from inner Visitor
+	final String mName = m;
+	//	System.out.println("--- Searching for method " + mName);
+	
+	GNode returnThis = (GNode)( new Visitor () {
+	    
+		public GNode visitVirtualMethodDeclaration(GNode n) {
+		    
+		    //		    System.out.println("\t--- At VirtualMethodDeclaration node:"
+		    //				       + n.getString(1));
+		    
+		    if( mName.equals(n.getString(1)) ) {
+			// Found the node
+			//			System.out.println("/t--- Returning VirtualMethodDeclaration node " + n.getString(1));
+			//			System.out.println("/t--- that node is" + n.toString());
+
+			return n;
+		    }
+		    
+		    // Keep Searching
+		    for( Object o : n) {
+			if (o instanceof Node) {
+			    GNode returnValue = (GNode)dispatch((GNode)o);
+			    if( returnValue != null ) return returnValue;
+			}
+		    }
+		    
+		    return null;
+		    
+		}
+		
+		public GNode  visit(GNode n) { // override visit for GNodes
+        
+		    // Keep Searching
+		    for( Object o : n) {
+			if (o instanceof Node) {
+			    GNode returnValue = (GNode)dispatch((GNode)o);
+			    if( returnValue != null ) return returnValue;
+			}
+		    }
+		    
+		    return null;
+
+		}
+		
+	    }.dispatch(vtn));
+	
+
+	//	if(null == returnThis)
+	//	    System.out.println("/t--- null :-(");
+
+	return returnThis;
+
+    }
+
 	//Returns the name of the super class of the specified class, or null if class name is Object (the root class)
 	//@param cN the Class name
 	//@return the string name of the superclass
