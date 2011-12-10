@@ -287,13 +287,13 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	return typedef;
     }
 
-    // Find if there were any arrays of "custom" type declared.  If so, generate
+    // Find all arrays of "custom" type declared.  If so, generate
     // nodes so we may generate nodes to specialize the array template
-    // by adding Class information.
+    // by adding Class information and create __class() method
     // "Custom" types are anything not ints, Objects, and Strings which Grimm
-    // made for us.
+    // made for us.  This includes multi-d arrays
     //
-    // @param Java ClassDeclaration Node
+    // @param n Java ClassDeclaration Node
 
     // Global node to allow access from Visitor 
     GNode customClasses = GNode.create("CustomClasses");
@@ -313,49 +313,68 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	new Visitor() {
 	    
 	    public void visitFieldDeclaration(GNode n) {
-		// FIXME: What is the qID for an Array of Arrays?
-		// Can we do type lookup chaining?
-
+       
 		String qID = "";
+		int dim = 1;
 
-		// A shit ton of conditionals
-		boolean isCustomArray = false;
+		// 1. Determine if we're declaring an Array
 		if(n.size() >= 2 && n.getNode(1).size() >= 2) {
 		    
 		    if( n.getNode(1).getNode(1) != null &&
 			n.getNode(1).getNode(1).hasName("Dimensions") ) {
-			   
-			   qID = n.getNode(1).getNode(0).getString(0);
-			   
-			   if(!"String".equals(qID) && !"Object".equals(qID)
-			      && !"int".equals(qID)) {
-			       isCustomArray = true;
-			   } // end set isCustomArray
-		    } // end if "Dimensions"
-		} // end size()
-		       
-		       
-		if(isCustomArray) {
-		    GNode parent = GNode.create("ParentType");
-		    parent.add(clp.createTypeNode(clp.getSuperclassName(qID)));
-		    GNode component = GNode.create("ComponentType");
-		    component.add(clp.createTypeNode(qID));
+
+			// Found an array declaration
+			GNode dims = (GNode) n.getNode(1).getNode(1);
+			qID = n.getNode(1).getNode(0).getString(0);
+
+			if( dims.size() > 1 || ( !"String".equals(qID) && 
+						 !"Object".equals(qID)
+						 && !"int".equals(qID)) ) {
+			    // Customization is needed
+			    for(int i = 0; i < dims.size(); i++) {
+				qID = "[" + qID; 
+			    }
+
+			    GNode component = GNode.create("ComponentType");
+			    GNode parent = GNode.create("ParentType");
+
+			    component.add(clp.createTypeNode(qID));
+			    String pID =  n.getNode(1).getNode(0).getString(0);
+			    pID = clp.getSuperclassName(pID);
+			    parent.add(clp.createTypeNode(pID));
+
+
+			    // Added to tree at an earlier point
+			    GNode customClass = GNode.create("CustomClass");
+			    customClass.add(parent);
+			    customClass.add(component);
 			    
-		    GNode customClass = GNode.create("CustomClass");
-		    customClass.add(parent);
-		    customClass.add(component);
-       
-		    customClasses.add(customClass);
-		    
+			    customClasses.add(customClass);
+			    
+			    // Array template specialization uses the same 
+			    // information as __class() so just copying to diff
+			    // . location
+			    GNode templateNode = GNode.create("ArrayTemplate");
+			    templateNode.add(parent);
+			    templateNode.add(component);
+			    templateNodes.add(templateNode);
+			    
 
-		    // Array template specialization uses the same information
-		    // as __class() so just copying to diff. location
-		    GNode templateNode = GNode.create("ArrayTemplate");
-		    templateNode.add(parent);
-		    templateNode.add(component);
-		    templateNodes.add(templateNode);
+			}
+			else {
+			    // Nothing to do. Standard array
+			}
+			
+			
+			
 
-		} // end isCustomArray
+		    }
+
+		}
+		
+
+
+
 	    } // end visitFieldDeclaration
 
 	    public void visit(GNode n) {
@@ -409,7 +428,16 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	// This needs to be done with visit methods?
 	// Does order matter? yes
 
+	// to be accessible
+	final GNode classD = n;
+
 	new Visitor () {
+
+	    public void visitClassDeclaration(GNode n) {
+		thisClass = n.getString(1);
+		visit(n);
+	    }
+
 
 	    // QUERY: At FieldDeclaration, can we copy Type to subsequent 
 	    // PrimaryIdentifiers?
@@ -417,7 +445,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		// Get .this' Class for explicit method invocation
 		// FIXME: In Java AST, the instance name is not stored.
 		// Do we need it for cpp, and how do we get it?
-		thisClass = n.getString(2);
+		//		thisClass = n.getString(2);
 		//		System.out.println("\t--- Entered class " + thisClass);
 		visit(n);
 	    }
@@ -435,7 +463,6 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	
 		// 1. Identify the PrimaryIdentifier - calling Class
 		String primaryIdentifier = null;
-	
 
 		if(n.getNode(0) == null || 
 		   n.getNode(0).hasName("ThisExpression")) {
@@ -500,10 +527,36 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 			
 		    }// end if "System"
 		} // end SelectionExpression
+		else if(n.getNode(0).hasName("PrimaryIdentifier")) {
 
-		else if(n.getNode(0).hasName("PrimaryIdentifier")){
-		    // Do nothing
 		    primaryIdentifier = n.getNode(0).getString(0);
+		    System.out.println("--- Found PrimaryIdentifier " +
+				       primaryIdentifier);
+
+		    // Need to lookup the Type of primaryIdentifier
+		    // If it's a custom class, need to pass it as the last param
+		    // Eventually, can use SymbolTable, but hacking it for now
+		    
+		    // passing the wrong n!
+		    boolean yes = isCustomType(classD, primaryIdentifier);
+		    
+		    if(yes) {
+			// Add primaryIdentifier to Arguments
+			System.out.println("--- Must pass Argument " +
+					   primaryIdentifier);
+
+			// Will I have to deepCopy and ensure Variable?
+			GNode arguments = (GNode) n.getNode(3);
+			arguments = clp.deepCopy(arguments);
+			// Arguments should only have node children 
+			GNode p = GNode.create("PrimaryIdentifier");
+			p.add(primaryIdentifier);
+			arguments.add(p);
+
+			n.set(3, arguments);
+			
+		    }
+
 		    if(DEBUG) System.out.println("\t--- primaryIdentifier = " 
 						 + primaryIdentifier);
 		}
@@ -518,32 +571,49 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    pI.add(0, superName);
 		    n.set(0, pI);
 		}
-		else { // catch all
+       		else { // catch all
 		    //		    System.out.println("\t--- Didn't translate node " + 
 		    //				       n.getNode(0).toString());
 		}
+	   
 		
 		visit(n);
 	    }// End visitCall Expression
+  
+
+	    public void visitMethodDeclaration(GNode n) {
+		// If Parameters.size() of MethodDeclaration and clp's lookup
+		//  append CLASSNAME __this to parameters
 
 
-	    public void visitFieldDeclaration(GNode n) {
-		// Translate Arrays - ned to get Type
-		if(null != n.getNode(2).getNode(0).getNode(2) && 
-		   n.getNode(2).getNode(0).getNode(2).hasName("ArrayInitializer")) 
-		    {
+		GNode vt = clp.getVTable(thisClass);
+		String mName = n.getString(3);
+		GNode vtm = clp.getVTMethod(vt, mName);
 
-			// Can't add Type to Declarators, Declarator, 
-			// or ArrayInitializer as fixed num children
-			// FUCK YOU, 
-
-			// Does this remove Type node from FieldDeclaration?
-
-			//			n.getNode(2).getNode(0).getNode(2).add(n.getNode(1));
+		if(null != vtm) {
+		    if( n.getNode(4).size() != vtm.getNode(2).size() ) {
+			// Append __this parameter
+			System.out.println("--- Need to add nodes for " + 
+					   vtm.getString(1));
+			// Add a new Formal Parameter
+			if(n.getNode(4).hasName("FormalParameters")) {
+			    GNode fps = clp.deepCopy((GNode)n.getNode(4));
+			    fps.addNode( createFormalParameter(thisClass, "__this") );
+			    n.set(4, fps);
+			    // Need to deep copy to ensure variable
+			    // then, replace the FormalParameters node
+			   
+			}
+			   
 		    }
-	
+		    
+		}
+        
+
+		visit(n);
+		
 	    }
-	    
+
 	    public void visit(GNode n) {
 		// Need to override visit to work for GNodes
 		for( Object o : n) {
@@ -568,6 +638,91 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	return (GNode)GNode.create( kPrimID ).add(contents);
     }
 
+
+    // Make a new FormalParameter node
+    GNode createFormalParameter(String type, String name) {
+
+	GNode fp = GNode.ensureVariable(GNode.create("FormalParameter"));
+	fp.add(GNode.create("Modifiers"));
+	fp.add(clp.createTypeNode(type));
+	fp.add(null);
+	fp.add(name);
+	fp.add(null);
+
+	return fp;
+    }
+
+
+    // Looks up the type of a primaryIdentifier.  Tells you if it is custom
+    // Custom != String, Object, Class, etc.
+    // @param
+    boolean isCustomType(GNode n, String s) {
+	
+	final String p = s;
+
+	GNode isCT = (GNode) (new Visitor() {
+
+		public GNode visitDeclarator(GNode n) {
+		    
+		    if( p.equals(n.getString(0)) ) {
+			// We found where it is declared
+			// Now, check it's type
+
+
+		        String type = n.getNode(2).getNode(2).getString(0);
+			if(isCustom(type))
+			    return n;
+		    }
+		    
+
+		    // Keep Searching
+		    for( Object o : n) {
+			if (o instanceof Node) {
+			    GNode returnValue = (GNode)dispatch((GNode)o);
+			    if( returnValue != null ) return returnValue;
+			}
+		    }
+		    
+		    return null;
+		}
+
+
+		public GNode visit(GNode n) { // override visit for GNodes
+		    
+		    // Keep Searching
+		    for( Object o : n) {
+			if (o instanceof Node) {
+			    GNode returnValue = (GNode)dispatch((GNode)o);
+			    if( returnValue != null ) return returnValue;
+			}
+		    }
+		    
+		    return null;
+		    
+		}
+		
+	    }.dispatch(n));
+
+	if(isCT != null) return true;
+	return false;
+	
+
+    }
+
+
+
+    public boolean isCustom(String s) {
+
+	if("String".equals(s) ||
+	   "Object".equals(s) ||
+	   "Class".equals(s)) {
+	    // What about arrays? 
+	    return false;
+
+	}
+
+	return true;
+    }
 
    // ------------------------------------------
     // ------------- Getter Methods  ------------

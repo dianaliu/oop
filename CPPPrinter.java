@@ -44,18 +44,25 @@ import xtc.tree.Visitor;
  */
 public class CPPPrinter extends Visitor {
 	
-	/**
-	 * The flag for printing additional parentheses to avoid gcc
-	 * warnings.
-	 */
-	public static final boolean EXTRA_PARENTHESES = true;
-	
-	/**
-	 * The base precedence level. This level corresponds to the
-	 * expression nonterminal.
-	 */
-	public static final int PREC_BASE = 0;
-	
+
+    /**
+     * Class Layout Parser so we can use it's methods
+     */
+    ClassLayoutParser clp;
+
+    
+    /**
+     * The flag for printing additional parentheses to avoid gcc
+     * warnings.
+     */
+    public static final boolean EXTRA_PARENTHESES = true;
+    
+    /**
+     * The base precedence level. This level corresponds to the
+     * expression nonterminal.
+     */
+    public static final int PREC_BASE = 0;
+    
 	/**
 	 * The list precedence level.  This level corresponds to the
 	 * assignment expression nonterminal.
@@ -136,9 +143,9 @@ public class CPPPrinter extends Visitor {
 	 *
 	 * @param printer The printer.
 	 */
-	public CPPPrinter(Printer printer) {
-		this(printer, false, false);
-	}
+    public CPPPrinter( Printer printer) {
+	this(printer, false, false);
+    }
 	
 	/**
 	 * Create a new CPP printer.
@@ -149,12 +156,22 @@ public class CPPPrinter extends Visitor {
 	 * @param gnuify The flag for whether to use GNU code formatting
 	 *   conventions.
 	 */
-	public CPPPrinter(Printer printer, boolean lineUp, boolean gnuify) {
-		this.printer = printer;
-		this.lineUp  = lineUp;
-		this.gnuify  = gnuify;
-		printer.register(this);
-	}
+    public CPPPrinter(ClassLayoutParser clp, Printer printer, boolean lineUp, boolean gnuify) 
+    {
+	this.clp = clp;
+	this.printer = printer;
+	this.lineUp  = lineUp;
+	this.gnuify  = gnuify;
+	printer.register(this);
+    }
+
+    public CPPPrinter(Printer printer, boolean lineUp, boolean gnuify) 
+    {
+	this.printer = printer;
+	this.lineUp  = lineUp;
+	this.gnuify  = gnuify;
+	printer.register(this);
+    }
 	
 	/**
 	 * Determine whether the specified generic node contains a long type
@@ -707,7 +724,6 @@ public class CPPPrinter extends Visitor {
     }
 
     // Used to print template specialization of __class() for arrays
-
     public void visitArrayTemplates(GNode n) {
 
 	printer.pln().indent().p("namespace __rt {").pln();
@@ -2234,19 +2250,27 @@ public class CPPPrinter extends Visitor {
 	
 	/** Visit the specified primary identifier node. */
 	public void visitPrimaryIdentifier(GNode n) {
+
+	    // TODO: If primaryIdentifier was declared in data layout,
+	    // preceded it with __this.  use clp to lookup
+
+	    // FIXME: What if it's not from this class? 
+	    //	    System.out.println("Getting DataLayout for " + className);
+	    GNode dl = clp.getDataLayout(className); 
+	    
+	    boolean isField = clp.findPrimID(dl,n.getString(0));
+	    if(isField) printer.p("__this->");
+	    
 	    // For all variables, check not null?
 	    // NO - std::cout and std::end lis a primary identifier....
 	    // Also, in TypedefDeclaration, but I think we overrode?
 
 
-		// do normal stuff
-		int prec = startExpression(160);
-		printer.p(n.getString(0));
-		// FIXME: Temporarily need ->data for Strings in output
-
-		endExpression(prec);
-
-
+	    // do normal stuff
+	    int prec = startExpression(160);
+	    printer.p(n.getString(0));
+	    endExpression(prec);
+	    
 	}
 	
 	/** Visit the specified statement as exprression node. */
@@ -2554,7 +2578,9 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	public void visitPointerCast(GNode n) {
+	    if(n.size() > 0 ) {
 		printer.p('(').p(n.getNode(0)).p("(*)(").p(n.getNode(1)).p("))");
+	    }
 	}
     
     //----------------------------------------------------------
@@ -2609,7 +2635,15 @@ public class CPPPrinter extends Visitor {
     }
     
     public void visitConcreteDimensions(GNode n) {
-	printer.p("(").p(n.getNode(0)).p(")");
+	printer.p("(");
+
+	for (Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
+	    printer.p((Node)iter.next());
+	    if (iter.hasNext()) printer.p(", ");
+	    printer.fit();
+	}
+	
+	printer.p(")");
     }
 
 
@@ -2810,13 +2844,38 @@ public class CPPPrinter extends Visitor {
 		{
 		    // Ugly, but there's no other way to get Type later on, as
 		    // Nodes are all generic
+		    // Looks ugly, but works for all dimensions!
 
-		    // Adding mem mgmt:
+		    // Begin mem mgmt:
+		    // ? Do you only mem mgmt the exterior array?
 		    printer.indent().p("__rt::Ptr<");
-		    printer.p("__rt::Array<").p(n.getNode(1)).p("> >");
+
+		    // Begin Array declaration, may be nested
+		    int dim = n.getNode(1).getNode(1).size();
+		    for(int i = 0; i < dim; i++) {
+			printer.p("__rt::Array<");
+		    }
+		    printer.p(n.getNode(1).getNode(0));
+		    for(int i = 0; i < dim; i++) {
+			printer.p(" >");
+		    }
+		    // end Array declaration
+
+		    // end mem mgmt
+		    printer.p(" >");
 		    printer.p(" ").p(n.getNode(2).getNode(0).getString(0));
 		    printer.p(" = ");
-		    printer.p("new __rt::Array<").p(n.getNode(1)).p(">");
+		    printer.p("new ");
+
+		    // Begin Array declaration, may be nested
+		    for(int i = 0; i < dim; i++) {
+			printer.p("__rt::Array<");
+		    }
+		    printer.p(n.getNode(1).getNode(0));
+		    for(int i = 0; i < dim; i++) {
+			printer.p(" >");
+		    }
+		    // end Array declaration
 		}
 
 	    if(null != declarationType && (declarationType.hasName("ArrayInitializer") || declarationType.hasName("NewArrayExpression") ) ) { /** don't print type here*/	}
