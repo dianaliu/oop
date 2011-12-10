@@ -530,6 +530,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		else if(n.getNode(0).hasName("PrimaryIdentifier")) {
 
 		    primaryIdentifier = n.getNode(0).getString(0);
+		    
 		    System.out.println("--- Found PrimaryIdentifier " +
 				       primaryIdentifier);
 
@@ -537,28 +538,28 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    // If it's a custom class, need to pass it as the last param
 		    // Eventually, can use SymbolTable, but hacking it for now
 		    
-		    // passing the wrong n!
 		    boolean yes = isCustomType(classD, primaryIdentifier);
 		    
 		    if(yes) {
 			// Add primaryIdentifier to Arguments
 			System.out.println("--- Must pass Argument " +
-					   primaryIdentifier);
+					   primaryIdentifier + " to method " +
+					   n.getString(2));
 
-			// Will I have to deepCopy and ensure Variable?
 			GNode arguments = (GNode) n.getNode(3);
 			arguments = clp.deepCopy(arguments);
+	        
 			// Arguments should only have node children 
 			GNode p = GNode.create("PrimaryIdentifier");
 			p.add(primaryIdentifier);
 			arguments.add(p);
+			System.out.println("\n\t--- Added argument " +
+					   primaryIdentifier + " to node " + 
+					   n + "\n");
 
 			n.set(3, arguments);
-			
 		    }
 
-		    if(DEBUG) System.out.println("\t--- primaryIdentifier = " 
-						 + primaryIdentifier);
 		}
 		else if(n.getNode(0).hasName("SuperExpression")) {
 
@@ -576,8 +577,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    //				       n.getNode(0).toString());
 		}
 	   
-		
-		visit(n);
+		// Necessary? If argument is another CallExpression
+		//		visit(n);
 	    }// End visitCall Expression
   
 
@@ -667,14 +668,11 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    if( p.equals(n.getString(0)) ) {
 			// We found where it is declared
 			// Now, check it's type
-
-
 		        String type = n.getNode(2).getNode(2).getString(0);
 			if(isCustom(type))
 			    return n;
 		    }
 		    
-
 		    // Keep Searching
 		    for( Object o : n) {
 			if (o instanceof Node) {

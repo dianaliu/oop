@@ -1579,8 +1579,11 @@ public class CPPPrinter extends Visitor {
     }
 
     public void visitClassBody(GNode n) {
-		// Keep visiting
-		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
+	// Keep visiting unless it's a FieldDeclaration
+	for(Object o : n ) if( o instanceof GNode ) {
+		if(GNode.cast(o).hasName("FieldDeclaration")) {} // do nothing
+		else printer.p((GNode)o);
+	    }
 		
     }
 	
