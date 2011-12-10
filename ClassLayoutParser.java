@@ -26,21 +26,21 @@ public class ClassLayoutParser extends Visitor {
     // Constructor - initializes the CLP instance and begins processing
     // @param n node for a class declaration
     public ClassLayoutParser(GNode[] ast, boolean db) {
-	DEBUG = db;
-	if(DEBUG) System.out.println("--- Begin Class Layout Parser\n");
-	
-	//preinitialize the hardcoded Grimm types
-	initGrimmTypes();
-	
-	//parse all classes to be translated
-	for(int i = 0; i < ast.length; i++) {
-	    if(ast[i] != null) {
-		this.dispatch(ast[i]);
-	    }
-	}
-	
-	if(DEBUG) printClassTree();
-	if(DEBUG) System.out.println("--- End Class Layout Parser\n");
+		DEBUG = db;
+		if(DEBUG) System.out.println("--- Begin Class Layout Parser\n");
+		
+		//preinitialize the hardcoded Grimm types
+		initGrimmTypes();
+		
+		//parse all classes to be translated
+		for(int i = 0; i < ast.length; i++) {
+			if(ast[i] != null) {
+				this.dispatch(ast[i]);
+			}
+		}
+		
+		if(DEBUG) printClassTree();
+		if(DEBUG) System.out.println("--- End Class Layout Parser\n");
     }
     
 	// ----------------------------------
@@ -93,7 +93,7 @@ public class ClassLayoutParser extends Visitor {
 	// Visits the method declarations in a class, adding them as virtual methods to the vtable
 	// @param n MethodDeclaration node from a Java AST
 	public void visitMethodDeclaration(GNode n) {
-
+		
 	    // new VirtualMethodDeclaration: (0) return type, (1) method name, (2) parameters
 	    
 	    GNode methodSignature = GNode.create("VirtualMethodDeclaration");
@@ -101,14 +101,14 @@ public class ClassLayoutParser extends Visitor {
 	    methodSignature.add(n.get(3)); //method name
 	    GNode formalParameters = deepCopy((GNode)n.getNode(4));
 	    for( int i = 0; i < formalParameters.size(); i++ ) {
-		formalParameters.set(i, formalParameters.getNode(i).getNode(1) ); // this kills the parameter name
+			formalParameters.set(i, formalParameters.getNode(i).getNode(1) ); // this kills the parameter name
 	    }
-
+		
 	    int over = overridesMethod(n, (GNode)currentHeaderNode.getNode(0) );
-	    // Don't want to pass thisClass if a method is new/overridden
+	    // Don't want to pass thisClass if a method is overridden
 	    if(over > 0)
-		formalParameters.add(0, createTypeNode( className ) );
-
+			formalParameters.add(0, createTypeNode( className ) );
+		
 	    methodSignature.add(formalParameters); //parameter types
 	    
 	    //Override check here -- if overrides, use vtdecl.set(overrideIndex, methodSig) else just add it
@@ -117,54 +117,54 @@ public class ClassLayoutParser extends Visitor {
 	    if ("main".equals(methodName)) return; // Don't want main method
 	    
 	    int overrideIndex = overridesMethod(n, (GNode)currentHeaderNode.getNode(0) );
-	    if(overrideIndex >= 0) {
-		if(DEBUG) System.out.println( "overriding method: " + methodName );
-		currentHeaderNode.getNode(0).set(overrideIndex, methodSignature); // overrides, must replace
-		
-		//changing the constructor too
-		int index = currentHeaderNode.getNode(0).size()-1;
-		GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index).getNode(4);
-		GNode newPtr = GNode.create( "vtMethodPointer" );
-		newPtr.add( n.get(3) ); //method name
-		newPtr.add( createTypeNode( "__"+className ) ); //target
-		newPtr.add( GNode.create( "FormalParameters" ) );
-		// FIXME: Add PointerCast to this Class, see below for ex.
-		vtConstructorPtrList.set( overrideIndex, newPtr );
+	    if( overrideIndex >= 0 ) {
+			if(DEBUG) System.out.println( "overriding method: " + methodName );
+			currentHeaderNode.getNode(0).set(overrideIndex, methodSignature); // overrides, must replace
+			
+			//changing the constructor too
+			int index = currentHeaderNode.getNode(0).size()-1;
+			GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index).getNode(4);
+			GNode newPtr = GNode.create( "vtMethodPointer" );
+			newPtr.add( n.get(3) ); //method name
+			newPtr.add( createTypeNode( "__"+className ) ); //target
+			newPtr.add( GNode.create( "FormalParameters" ) );
+			// FIXME: Add PointerCast to this Class, see below for ex.
+			vtConstructorPtrList.set( overrideIndex, newPtr );
 	    }
 	    else {
-		// FIXME: If  new method, don't pass self Class
-		// as parameter, use for calling class
-		if(DEBUG) System.out.println( "adding method: " + methodName );
-		int index = currentHeaderNode.getNode(0).size()-1; //add it before the constructor, which is last(index+1)
-		currentHeaderNode.getNode(0).add(index, methodSignature); //extended, add the method signature to the vtable declaration
-		
-		//adding it to the constructor too
-		GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index+1).getNode(4);
-		// FIXME: Need to Flesh out for overriden as well?
-		GNode newPtr = GNode.create( "vtMethodPointer" );
-		newPtr.add( n.get(3) ); //method name
-		newPtr.add( createTypeNode( "__"+className ) ); //Calling Class
-		newPtr.add(formalParameters);
-		//	newPtr.add( GNode.create( "FormalParameters" ) );
-		// add Pointer cast node
-		GNode pCast = GNode.create("PointerCast");
-		pCast.add(n.getNode(2)); // return Type
-		// if return type is String, int, etc. then do TYPE(*)(TYPE)
-		// When it's a new method, you don't need to cast from this.Class
-		// Instead, for @ least one case, String(*)(String)
-		// I'm not sure what the general case is
-		pCast.add(n.getNode(2)); // return Type
-		//		pCast.add(createTypeNode(className)); // this Class
-		newPtr.add(pCast);
-		vtConstructorPtrList.add( newPtr );
-		
-		//adding it to the data layout
-		GNode dataLayoutMethList = (GNode)currentHeaderNode.getNode(1).getNode(3);
-		GNode hdr = GNode.create( "StaticMethodHeader" );
-		hdr.add( n.get(2) ); //return type
-		hdr.add( n.get(3) ); //method name
-		hdr.add( formalParameters ); //params
-		dataLayoutMethList.add( hdr );
+			// FIXME: If  new method, don't pass self Class
+			// as parameter, use for calling class
+			if(DEBUG) System.out.println( "adding method: " + methodName );
+			int index = currentHeaderNode.getNode(0).size()-1; //add it before the constructor, which is last(index+1)
+			currentHeaderNode.getNode(0).add(index, methodSignature); //extended, add the method signature to the vtable declaration
+			
+			//adding it to the constructor too
+			GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index+1).getNode(4);
+			// FIXME: Need to Flesh out for overriden as well?
+			GNode newPtr = GNode.create( "vtMethodPointer" );
+			newPtr.add( n.get(3) ); //method name
+			newPtr.add( createTypeNode( "__"+className ) ); //Calling Class
+			newPtr.add( formalParameters );
+			//	newPtr.add( GNode.create( "FormalParameters" ) );
+			// add Pointer cast node
+			GNode pCast = GNode.create("PointerCast");
+			pCast.add(n.getNode(2)); // return Type
+			// if return type is String, int, etc. then do TYPE(*)(TYPE)
+			// When it's a new method, you don't need to cast from this.Class
+			// Instead, for @ least one case, String(*)(String)
+			// I'm not sure what the general case is
+			pCast.add(n.getNode(2)); // return Type
+			//		pCast.add(createTypeNode(className)); // this Class
+			newPtr.add(pCast);
+			vtConstructorPtrList.add( newPtr );
+			
+			//adding it to the data layout
+			GNode dataLayoutMethList = (GNode)currentHeaderNode.getNode(1).getNode(3);
+			GNode hdr = GNode.create( "StaticMethodHeader" );
+			hdr.add( n.get(2) ); //return type
+			hdr.add( n.get(3) ); //method name
+			hdr.add( formalParameters ); //params
+			dataLayoutMethList.add( hdr );
 	    }
 		//FIXME: FINAL: name mangling
 	}
@@ -175,19 +175,19 @@ public class ClassLayoutParser extends Visitor {
     // @param parentVTable
 	// @return the index of the method if overrided, or -1 if not overrided
     int overridesMethod(GNode  n, GNode currentVTable) {
-	String methodName = n.get(3).toString();
-	// Due to method overloading, must check method name and parameters!
-
-	// Search current VTable to see if overriden and at what index
-	for(int i = 1; i < currentVTable.size()-1; i++) { //start at one to ignore __isa, end at size-1 to ignore constructor
-	    if(methodName.equals(currentVTable.getNode(i).get(1).toString())) {
-		if (n.getNode(4) == currentVTable.getNode(i).getNode(2)) // Compare Formal Parameters - equals()?
-		return i; //string comparison, return indexof
-	    }
-	}
-	
-	// If not overriden, return -1
-	return -1;
+		String methodName = n.get(3).toString();
+		// Due to method overloading, must check method name and parameters!
+		
+		// Search current VTable to see if overriden and at what index
+		for(int i = 1; i < currentVTable.size()-1; i++) { //start at one to ignore __isa, end at size-1 to ignore constructor
+			if(methodName.equals(currentVTable.getNode(i).get(1).toString())) {
+				if (n.getNode(4) == currentVTable.getNode(i).getNode(2)) // Compare Formal Parameters - equals()?
+					return i; //string comparison, return indexof
+			}
+		}
+		
+		// If not overriden, return -1
+		return -1;
     }
     
 	// ----------------------------------
@@ -199,11 +199,11 @@ public class ClassLayoutParser extends Visitor {
 	public void visitFieldDeclaration(GNode n) {
 		int overrideIndex = overridesField(n, (GNode)currentHeaderNode.getNode(1).getNode(1) );
 		if( overrideIndex >= 0 ) {
-			System.out.println( "overriding field: " + n.getNode(2).getNode(0).get(0).toString() );
+			if(DEBUG) System.out.println( "overriding field: " + n.getNode(2).getNode(0).get(0).toString() );
 			currentHeaderNode.getNode(1).getNode(1).set(overrideIndex, n); //add the data field to the classes' data layout declaration
 		}
 		else {
-			System.out.println( "adding field: " + n.getNode(2).getNode(0).get(0).toString() );
+			if(DEBUG) System.out.println( "adding field: " + n.getNode(2).getNode(0).get(0).toString() );
 			currentHeaderNode.getNode(1).getNode(1).add(n); //add the data field to the classes' data layout declaration
 		}
 	}
@@ -231,7 +231,7 @@ public class ClassLayoutParser extends Visitor {
 	// -----------------------------------
 	
 	public void visitConstructorDeclaration(GNode n) {
-	    System.out.println( "***constructor found in class " + className );
+	    if(DEBUG) System.out.println( "***constructor found in class " + className );
 	    GNode constructorSignature = GNode.create("ConstructorHeader");
 	    //	    constructorSignature.add(className);
 	    constructorSignature.add( n.get(2) ); //constructor name (just the class name)
@@ -250,13 +250,13 @@ public class ClassLayoutParser extends Visitor {
 	GNode deepCopy(GNode n) {
 	    GNode retVal = (GNode) new Visitor() {
 		    public Object visit(GNode n) {
-			GNode retVal = GNode.ensureVariable(GNode.create(n));
-			while( retVal.size() > 0 ) retVal.remove(0);
-			for( Object o : n ) {
-			    if( o instanceof GNode ) retVal.add( visit((GNode)o) );
-			    else retVal.add( o ); //arbitrary objects don't need to be copied because they would just be replaced
-			}
-			return retVal;
+				GNode retVal = GNode.ensureVariable(GNode.create(n));
+				while( retVal.size() > 0 ) retVal.remove(0);
+				for( Object o : n ) {
+					if( o instanceof GNode ) retVal.add( visit((GNode)o) );
+					else retVal.add( o ); //arbitrary objects don't need to be copied because they would just be replaced
+				}
+				return retVal;
 		    }
 		}.dispatch(n);
 	    return retVal;
@@ -266,25 +266,25 @@ public class ClassLayoutParser extends Visitor {
     // @param parentHeader A node representing the parent classes header structure
     // @return The new header node for the child class with appropriate modifications
     GNode inheritHeader( GNode parentHeader ) {
-	GNode copy = deepCopy( parentHeader );
-	GNode copyVT = (GNode)copy.getNode(0);
-	int size = copyVT.size();
-	copyVT.getNode(size-1).getNode(4).getNode(0).set(0, "__"+className ); //changing the Class __isa pointer in the constructor;
-	for( int i = 1; i < size-1; i++ ) { //start at one to ignore Class __isa, end at size-1 to ignore constructor
-	    GNode thisVirtualMethod = (GNode)copyVT.getNode(i);
-	    thisVirtualMethod.getNode(2).getNode(0).getNode(0).set(0, className);
-	}
-	// Change constructor here: updating the casts for non overrided methods
-	GNode vtConstructorPointerList = (GNode)copyVT.getNode(size-1).getNode(4);
-	for( int i = 1; i < vtConstructorPointerList.size(); i++ ) { // start at one to ignore __isa
-	    GNode thisPointer = (GNode)vtConstructorPointerList.getNode(i);
-	    GNode caster = GNode.create("PointerCast");
-	    caster.add( copyVT.getNode(i).getNode(0) ); //return value
-	    caster.add( copyVT.getNode(i).getNode(2) ); //parameters
-	    if( thisPointer.size() >= 4 ) thisPointer.set(3, caster);
-	    else thisPointer.add( caster );
-	}
-	
+		GNode copy = deepCopy( parentHeader );
+		GNode copyVT = (GNode)copy.getNode(0);
+		int size = copyVT.size();
+		copyVT.getNode(size-1).getNode(4).getNode(0).set(0, "__"+className ); //changing the Class __isa pointer in the constructor;
+		for( int i = 1; i < size-1; i++ ) { //start at one to ignore Class __isa, end at size-1 to ignore constructor
+			GNode thisVirtualMethod = (GNode)copyVT.getNode(i);
+			thisVirtualMethod.getNode(2).getNode(0).getNode(0).set(0, className);
+		}
+		// Change constructor here: updating the casts for non overrided methods
+		GNode vtConstructorPointerList = (GNode)copyVT.getNode(size-1).getNode(4);
+		for( int i = 1; i < vtConstructorPointerList.size(); i++ ) { // start at one to ignore __isa
+			GNode thisPointer = (GNode)vtConstructorPointerList.getNode(i);
+			GNode caster = GNode.create("PointerCast");
+			caster.add( copyVT.getNode(i).getNode(0) ); //return value
+			caster.add( copyVT.getNode(i).getNode(2) ); //parameters
+			if( thisPointer.size() >= 4 ) thisPointer.set(3, caster);
+			else thisPointer.add( caster );
+		}
+		
 	    GNode copyDL = (GNode)copy.getNode(1);
 	    copyDL.set(0, createSkeletonDataField( "__"+className+"_VT*", "__vptr" )); //setting the right vtable pointer name
 	    GNode constructorList = GNode.create("ConstructorHeaderList");
@@ -292,7 +292,7 @@ public class ClassLayoutParser extends Visitor {
 	    copyDL.set(2, constructorList);//clear out the constructor list
 	    GNode statMethList = (GNode)copyDL.getNode(3);
 	    for( Object o : statMethList ) { //changing the 'this' parameter types in the static data layout methods
-		((GNode)o).getNode(2).getNode(0).getNode(0).set(0, className); //ugh is that ugly or what?
+			((GNode)o).getNode(2).getNode(0).getNode(0).set(0, className); //ugh is that ugly or what?
 	    }
 	    copyDL.set(4, createSkeletonStaticDataField( "__"+className+"_VT", "__vtable" ));
 		return copy;
@@ -315,9 +315,17 @@ public class ClassLayoutParser extends Visitor {
 		return retVal;
 	}
 	
-	// ----------------------------------------------------
-    // -------------- Initialization Code -----------------
-    // ----------------------------------------------------
+	// ---------------------------------------------------- //
+    // --------------- Overloading Coding ----------------- //
+    // ---------------------------------------------------- //
+	
+	public String mangleMethod( GNode methodNode ) {
+		return null;
+	}
+	
+	// ---------------------------------------------------- //
+    // -------------- Initialization Code ----------------- //
+    // ---------------------------------------------------- //
     
 	
     // Init tree w/Grimm defined classes
@@ -338,15 +346,19 @@ public class ClassLayoutParser extends Visitor {
 		
 		GNode stringNode = GNode.create("Class");
 		stringNode.setProperty("name", "String");
+		stringNode.setProperty("parentClassNode", objectNode);
 		
 		GNode classNode = GNode.create("Class");
 		classNode.setProperty("name", "Class");
+		classNode.setProperty("parentClassNode", objectNode);
 		
 		GNode arrayNode = GNode.create("Class");
 		arrayNode.setProperty("name", "Array");
+		arrayNode.setProperty("parentClassNode", objectNode);
 		
 		GNode integerNode = GNode.create("Class");
 		integerNode.setProperty("name", "Integer");
+		integerNode.setProperty("parentClassNode", objectNode);
 		
 		classTree = objectNode;
 		classTree.add(stringNode);
@@ -389,7 +401,7 @@ public class ClassLayoutParser extends Visitor {
 	    new Visitor() { //visit all the virtual method declarations in the vtable and make an appropriate pointer in the constructor
 			public void visit( Node n ) {
 				for( Object o : n ) if (o instanceof GNode ) dispatch((GNode)o);
-			 }
+			}
 			public void visitVirtualMethodDeclaration( GNode n ) {
 				GNode newPtr = GNode.create( "vtMethodPointer" );
 				// 0 - method name
@@ -511,34 +523,34 @@ public class ClassLayoutParser extends Visitor {
     // @return the appropriate class node
     public GNode getClass(String sc) {
 		
-	// Declared final to be accessible from inner Visitor classes
-	final String s = sc;
-	
-	return (GNode)( new Visitor() {
+		// Declared final to be accessible from inner Visitor classes
+		final String s = sc;
 		
-		public GNode visitClass(GNode n) {
-		    
-		    // Found the class
-		    if( getName(n).equals(s) ) {
-			return n;
-		    }
-		    
-		    // Keep Searching
-		    for( Object o : n) {
-			if (o instanceof Node) {
-			    GNode returnValue = (GNode)dispatch((GNode)o);
-			    if( returnValue != null ) return returnValue;
+		return (GNode)( new Visitor() {
+			
+			public GNode visitClass(GNode n) {
+				
+				// Found the class
+				if( getName(n).equals(s) ) {
+					return n;
+				}
+				
+				// Keep Searching
+				for( Object o : n) {
+					if (o instanceof Node) {
+						GNode returnValue = (GNode)dispatch((GNode)o);
+						if( returnValue != null ) return returnValue;
+					}
+				}
+				return null;
 			}
-		    }
-		    return null;
-		}
-		
-		public void visit(GNode n) { // override visit for GNodes
-		    for( Object o : n) {
-			if (o instanceof Node) dispatch((GNode)o);
-		    }
-		}
-		
+			
+			public void visit(GNode n) { // override visit for GNodes
+				for( Object o : n) {
+					if (o instanceof Node) dispatch((GNode)o);
+				}
+			}
+			
 	    }.dispatch(classTree));
     }
     
@@ -550,7 +562,13 @@ public class ClassLayoutParser extends Visitor {
 		if (child.getProperty("name").equals("Object")) return null;
 		return (GNode)child.getProperty("parentClassNode");
 	}
-    
+	
+	//Returns a Class node representing the parent class of the specified class node
+	//@param n class node
+	//@return the node of the superclass
+	public GNode getSuperclass(GNode n) {
+		return getSuperclass( n.getStringProperty("name") );
+	}
 	
     // ----------------------------------------------------
     // ---------- Getter methods for Translator -----------
@@ -605,8 +623,8 @@ public class ClassLayoutParser extends Visitor {
 				visit(n);
 				//parent = temp;
 			}
-			
 		}.dispatch(classTree);
 		System.out.println();
     }
+	
 }
