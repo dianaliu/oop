@@ -650,6 +650,58 @@ public class ClassLayoutParser extends Visitor {
     }
 	
 
+    // Sees if a field was declared in the Data Layout
+    // @param dln Data Layout node
+    // @param s Name of the FieldDeclaration we hope to find
+    
+    public boolean findPrimID(GNode dln, String s) {
+
+	// eventually return false if not found
+
+	final String p = s;
+
+	GNode isDeclared = (GNode) (new Visitor () {
+
+		public GNode visitDeclarator(GNode n) {
+		    
+		    if( p.equals(n.getString(0)) ) {
+			return n;
+		    }
+		    
+
+		    // Keep Searching
+		    for( Object o : n) {
+			if (o instanceof Node) {
+			    GNode returnValue = (GNode)dispatch((GNode)o);
+			    if( returnValue != null ) return returnValue;
+			}
+		    }
+		    
+		    return null;
+		}
+
+		public GNode visit(GNode n) { // override visit for GNodes
+		    
+		    // Keep Searching
+		    for( Object o : n) {
+			if (o instanceof Node) {
+			    GNode returnValue = (GNode)dispatch((GNode)o);
+			    if( returnValue != null ) return returnValue;
+			}
+		    }
+		    
+		    return null;
+		    
+		}
+	    }.dispatch(dln));
+
+	if(isDeclared != null) return true;
+	
+	return false;
+	
+    } // end findPrimID
+
+
     // Return's a specific node from a Virtual Table
     // @param VirtualTable node
     public GNode getVTMethod(GNode vtn, String m) {
@@ -686,7 +738,7 @@ public class ClassLayoutParser extends Visitor {
 		    
 		}
 		
-		public GNode  visit(GNode n) { // override visit for GNodes
+		public GNode visit(GNode n) { // override visit for GNodes
         
 		    // Keep Searching
 		    for( Object o : n) {

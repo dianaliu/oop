@@ -184,9 +184,9 @@ public class Translator extends xtc.util.Tool {
 		    returned[i] = translator.getCPPTree();
 		    
 		    if(DEBUG) 
-		    runtime.console().pln("--- CPP AST #" + (i+1));
+			runtime.console().pln("--- CPP AST #" + (i+1));
 		    if(DEBUG) 
-		    runtime.console().format(returned[i]).pln().flush();
+			runtime.console().format(returned[i]).pln().flush();
 		    if(DEBUG) 
 			runtime.console().pln("\t-----------------------").flush();
 		}
@@ -216,7 +216,7 @@ public class Translator extends xtc.util.Tool {
 			    PrintWriter fstream = new PrintWriter(fileName);
 			    Printer cppCode = new Printer(fstream);
 			    
-			    new CPPPrinter( cppCode ).dispatch(returned[i]); 
+			    new CPPPrinter(clp, cppCode, false, false).dispatch(returned[i]); 
 			    cppCode.flush();
 			    if(DEBUG) runtime.console().pln("--- Wrote " 
 							    + fileName);

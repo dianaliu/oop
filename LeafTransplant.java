@@ -428,6 +428,9 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	// This needs to be done with visit methods?
 	// Does order matter? yes
 
+	// to be accessible
+	final GNode classD = n;
+
 	new Visitor () {
 
 	    public void visitClassDeclaration(GNode n) {
@@ -460,7 +463,6 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	
 		// 1. Identify the PrimaryIdentifier - calling Class
 		String primaryIdentifier = null;
-	
 
 		if(n.getNode(0) == null || 
 		   n.getNode(0).hasName("ThisExpression")) {
@@ -525,10 +527,36 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 			
 		    }// end if "System"
 		} // end SelectionExpression
-
 		else if(n.getNode(0).hasName("PrimaryIdentifier")) {
-		    // Do nothing
+
 		    primaryIdentifier = n.getNode(0).getString(0);
+		    System.out.println("--- Found PrimaryIdentifier " +
+				       primaryIdentifier);
+
+		    // Need to lookup the Type of primaryIdentifier
+		    // If it's a custom class, need to pass it as the last param
+		    // Eventually, can use SymbolTable, but hacking it for now
+		    
+		    // passing the wrong n!
+		    boolean yes = isCustomType(classD, primaryIdentifier);
+		    
+		    if(yes) {
+			// Add primaryIdentifier to Arguments
+			System.out.println("--- Must pass Argument " +
+					   primaryIdentifier);
+
+			// Will I have to deepCopy and ensure Variable?
+			GNode arguments = (GNode) n.getNode(3);
+			arguments = clp.deepCopy(arguments);
+			// Arguments should only have node children 
+			GNode p = GNode.create("PrimaryIdentifier");
+			p.add(primaryIdentifier);
+			arguments.add(p);
+
+			n.set(3, arguments);
+			
+		    }
+
 		    if(DEBUG) System.out.println("\t--- primaryIdentifier = " 
 						 + primaryIdentifier);
 		}
@@ -543,7 +571,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    pI.add(0, superName);
 		    n.set(0, pI);
 		}
-		else { // catch all
+       		else { // catch all
 		    //		    System.out.println("\t--- Didn't translate node " + 
 		    //				       n.getNode(0).toString());
 		}
@@ -582,7 +610,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		}
         
 
-
+		visit(n);
 		
 	    }
 
@@ -624,6 +652,77 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	return fp;
     }
 
+
+    // Looks up the type of a primaryIdentifier.  Tells you if it is custom
+    // Custom != String, Object, Class, etc.
+    // @param
+    boolean isCustomType(GNode n, String s) {
+	
+	final String p = s;
+
+	GNode isCT = (GNode) (new Visitor() {
+
+		public GNode visitDeclarator(GNode n) {
+		    
+		    if( p.equals(n.getString(0)) ) {
+			// We found where it is declared
+			// Now, check it's type
+
+
+		        String type = n.getNode(2).getNode(2).getString(0);
+			if(isCustom(type))
+			    return n;
+		    }
+		    
+
+		    // Keep Searching
+		    for( Object o : n) {
+			if (o instanceof Node) {
+			    GNode returnValue = (GNode)dispatch((GNode)o);
+			    if( returnValue != null ) return returnValue;
+			}
+		    }
+		    
+		    return null;
+		}
+
+
+		public GNode visit(GNode n) { // override visit for GNodes
+		    
+		    // Keep Searching
+		    for( Object o : n) {
+			if (o instanceof Node) {
+			    GNode returnValue = (GNode)dispatch((GNode)o);
+			    if( returnValue != null ) return returnValue;
+			}
+		    }
+		    
+		    return null;
+		    
+		}
+		
+	    }.dispatch(n));
+
+	if(isCT != null) return true;
+	return false;
+	
+
+    }
+
+
+
+    public boolean isCustom(String s) {
+
+	if("String".equals(s) ||
+	   "Object".equals(s) ||
+	   "Class".equals(s)) {
+	    // What about arrays? 
+	    return false;
+
+	}
+
+	return true;
+    }
 
    // ------------------------------------------
     // ------------- Getter Methods  ------------

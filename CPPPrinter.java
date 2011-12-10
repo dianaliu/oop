@@ -44,18 +44,25 @@ import xtc.tree.Visitor;
  */
 public class CPPPrinter extends Visitor {
 	
-	/**
-	 * The flag for printing additional parentheses to avoid gcc
-	 * warnings.
-	 */
-	public static final boolean EXTRA_PARENTHESES = true;
-	
-	/**
-	 * The base precedence level. This level corresponds to the
-	 * expression nonterminal.
-	 */
-	public static final int PREC_BASE = 0;
-	
+
+    /**
+     * Class Layout Parser so we can use it's methods
+     */
+    ClassLayoutParser clp;
+
+    
+    /**
+     * The flag for printing additional parentheses to avoid gcc
+     * warnings.
+     */
+    public static final boolean EXTRA_PARENTHESES = true;
+    
+    /**
+     * The base precedence level. This level corresponds to the
+     * expression nonterminal.
+     */
+    public static final int PREC_BASE = 0;
+    
 	/**
 	 * The list precedence level.  This level corresponds to the
 	 * assignment expression nonterminal.
@@ -136,9 +143,9 @@ public class CPPPrinter extends Visitor {
 	 *
 	 * @param printer The printer.
 	 */
-	public CPPPrinter(Printer printer) {
-		this(printer, false, false);
-	}
+    public CPPPrinter( Printer printer) {
+	this(printer, false, false);
+    }
 	
 	/**
 	 * Create a new CPP printer.
@@ -149,12 +156,22 @@ public class CPPPrinter extends Visitor {
 	 * @param gnuify The flag for whether to use GNU code formatting
 	 *   conventions.
 	 */
-	public CPPPrinter(Printer printer, boolean lineUp, boolean gnuify) {
-		this.printer = printer;
-		this.lineUp  = lineUp;
-		this.gnuify  = gnuify;
-		printer.register(this);
-	}
+    public CPPPrinter(ClassLayoutParser clp, Printer printer, boolean lineUp, boolean gnuify) 
+    {
+	this.clp = clp;
+	this.printer = printer;
+	this.lineUp  = lineUp;
+	this.gnuify  = gnuify;
+	printer.register(this);
+    }
+
+    public CPPPrinter(Printer printer, boolean lineUp, boolean gnuify) 
+    {
+	this.printer = printer;
+	this.lineUp  = lineUp;
+	this.gnuify  = gnuify;
+	printer.register(this);
+    }
 	
 	/**
 	 * Determine whether the specified generic node contains a long type
@@ -2233,19 +2250,27 @@ public class CPPPrinter extends Visitor {
 	
 	/** Visit the specified primary identifier node. */
 	public void visitPrimaryIdentifier(GNode n) {
+
+	    // TODO: If primaryIdentifier was declared in data layout,
+	    // preceded it with __this.  use clp to lookup
+
+	    // FIXME: What if it's not from this class? 
+	    //	    System.out.println("Getting DataLayout for " + className);
+	    GNode dl = clp.getDataLayout(className); 
+	    
+	    boolean isField = clp.findPrimID(dl,n.getString(0));
+	    if(isField) printer.p("__this->");
+	    
 	    // For all variables, check not null?
 	    // NO - std::cout and std::end lis a primary identifier....
 	    // Also, in TypedefDeclaration, but I think we overrode?
 
 
-		// do normal stuff
-		int prec = startExpression(160);
-		printer.p(n.getString(0));
-		// FIXME: Temporarily need ->data for Strings in output
-
-		endExpression(prec);
-
-
+	    // do normal stuff
+	    int prec = startExpression(160);
+	    printer.p(n.getString(0));
+	    endExpression(prec);
+	    
 	}
 	
 	/** Visit the specified statement as exprression node. */
