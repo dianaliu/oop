@@ -2553,7 +2553,9 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	public void visitPointerCast(GNode n) {
+	    if(n.size() > 0 ) {
 		printer.p('(').p(n.getNode(0)).p("(*)(").p(n.getNode(1)).p("))");
+	    }
 	}
     
     //----------------------------------------------------------

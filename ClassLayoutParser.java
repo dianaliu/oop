@@ -134,43 +134,45 @@ public class ClassLayoutParser extends Visitor {
 			vtConstructorPtrList.set( overrideIndex, newPtr );
 	    }
 	    else {
-			// FIXME: If  new method, don't pass self Class
-			// as parameter, use for calling class
-			if(DEBUG) System.out.println( "adding method: " + methodName );
-			int index = currentHeaderNode.getNode(0).size()-1; //add it before the constructor, which is last(index+1)
-			currentHeaderNode.getNode(0).add(index, methodSignature); //extended, add the method signature to the vtable declaration
-			
-			//adding it to the constructor too
-			GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index+1).getNode(4);
-			// FIXME: Need to Flesh out for overriden as well?
-			GNode newPtr = GNode.create( "vtMethodPointer" );
-			newPtr.add( n.get(3) ); //method name
-			newPtr.add( createTypeNode( "__"+className ) ); //Calling Class
-			newPtr.add( formalParameters );
-			//	newPtr.add( GNode.create( "FormalParameters" ) );
-			// add Pointer cast node
-			GNode pCast = GNode.create("PointerCast");
-			pCast.add(n.getNode(2)); // return Type
-			// if return type is String, int, etc. then do TYPE(*)(TYPE)
-			// When it's a new method, you don't need to cast from this.Class
-			// Instead, for @ least one case, String(*)(String)
-			// I'm not sure what the general case is
-			pCast.add(n.getNode(2)); // return Type
-			//		pCast.add(createTypeNode(className)); // this Class
-			newPtr.add(pCast);
-			vtConstructorPtrList.add( newPtr );
-			
-			//adding it to the data layout
-			GNode dataLayoutMethList = (GNode)currentHeaderNode.getNode(1).getNode(3);
-			GNode hdr = GNode.create( "StaticMethodHeader" );
-			hdr.add( n.get(2) ); //return type
-			hdr.add( n.get(3) ); //method name
-			hdr.add( formalParameters ); //params
-			dataLayoutMethList.add( hdr );
+		// FIXME: If  new method, don't pass self Class
+		// as parameter, use for calling class
+		if(DEBUG) System.out.println( "adding method: " + methodName );
+		int index = currentHeaderNode.getNode(0).size()-1; //add it before the constructor, which is last(index+1)
+		currentHeaderNode.getNode(0).add(index, methodSignature); //extended, add the method signature to the vtable declaration
+		
+		//adding it to the constructor too
+		GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index+1).getNode(4);
+		// FIXME: Need to Flesh out for overriden as well?
+		GNode newPtr = GNode.create( "vtMethodPointer" );
+		newPtr.add( n.get(3) ); //method name
+		newPtr.add( createTypeNode( "__"+className ) ); //Calling Class
+		newPtr.add( formalParameters );
+
+		// Add explicit __this using classname
+		GNode params = (GNode) newPtr.getNode(2);
+		params.add(createTypeNode(className));
+		
+
+		//	newPtr.add( GNode.create( "FormalParameters" ) );
+		// add Pointer cast node
+		GNode pCast = GNode.create("PointerCast");
+		// ? No need for PointerCast when adding new methods?
+		//	pCast.add(n.getNode(2)); // return Type
+        
+		newPtr.add(pCast);
+		vtConstructorPtrList.add( newPtr );
+		
+		//adding it to the data layout
+		GNode dataLayoutMethList = (GNode)currentHeaderNode.getNode(1).getNode(3);
+		GNode hdr = GNode.create( "StaticMethodHeader" );
+		hdr.add( n.get(2) ); //return type
+		hdr.add( n.get(3) ); //method name
+		hdr.add( formalParameters ); //params
+		dataLayoutMethList.add( hdr );
 	    }
-		//FIXME: FINAL: name mangling
+	    //FIXME: FINAL: name mangling
 	}
-	
+    
 	// [INTERNAL]
     // Determines if a Class overrides it's Parent method
     // @param MethodDeclaration node
