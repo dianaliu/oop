@@ -3,7 +3,9 @@
 public class Casting {
 
     public static void main (String[] args) {
-	
+
+	String s = "soo";
+
 	Object Ob = (Object)s;
 	System.out.println("Ob is: " + Ob.toString());
 	
