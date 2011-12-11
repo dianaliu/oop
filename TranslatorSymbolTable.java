@@ -82,52 +82,115 @@ public class TranslatorSymbolTable {
 
 				
 			}
-			public void visitMethodDeclaration(GNode n){
-				
-				
-				blockName = "" + (n.hashCode() + n.getLocation().line + n.getLocation().column);
-
-//				System.out.println("VISITED A NEW METHOD " + scopeName);
-				symTable.enter("" + blockName);
-				visit(n);
-				symTable.exit();
-				
-				
+		    public void visitMethodDeclaration(GNode n){
+			
+			
+			blockName = "" + (n.hashCode() + n.getLocation().line + n.getLocation().column);
+			
+			//				System.out.println("VISITED A NEW METHOD " + scopeName);
+			symTable.enter("" + blockName);
+			visit(n);
+			symTable.exit();
+			
+			
+		    }
+		    
+		    public void visitFormalParameter(GNode n) {
+			
+			String name = n.getString(3);
+			String type = 
+			    n.getNode(1).getNode(0).getString(0);
+			
+			symTable.current().addDefinition(name, type);
+			
+			visit(n);
+		    } 
+		    
+		    
+		    
+		    public void visitFieldDeclaration(GNode n) {
+			
+			String name = n.getNode(2).getNode(0).getString(0);				
+			String type = n.getNode(1).getNode(0).getString(0);
+			
+			symTable.current().addDefinition(name, type);
+			//				System.out.println("Qualified name : " + symTable.current().getQualifiedName());
+			try{
+			    PrintWriter fstream = new PrintWriter("Scope.txt");
+			    Printer babysFirstScope = new Printer(fstream);
+			    symTable.root().dump(babysFirstScope);
+			    babysFirstScope.flush();
 			}
-			
-			public void visitFormalParameter(GNode n) {
+			catch(Exception e) {
+			    System.err.println(e.getMessage());
+			}
+			System.out.println(" ");
+			visit(n);
+		    } 
 
-				String name = n.getString(3);
-				String type = 
-				    n.getNode(1).getNode(0).getString(0);
-				
-				symTable.current().addDefinition(name, type);
-				
-				visit(n);
-			} 
-			
-			
-			
-			public void visitFieldDeclaration(GNode n) {
 
-				String name = n.getNode(2).getNode(0).getString(0);				
-				String type = n.getNode(1).getNode(0).getString(0);
+		    public void visitBasicForControl(GNode n) {
+		
+			// FIXME: Make name and type global variables for this 
+			// method
+			String name = null;
+			String type = null;
+
+			// Looking for variable type
+			if(n.getNode(1).hasName("Type")) {
+			    type = n.getNode(1).getNode(0).getString(0);
+			}
+			else {
+			    System.out.println("Node structure is " +
+					       n.toString());
+			}
+
+			// Looking for variable name
+			if(n.getNode(2).hasName("Declarators")) {
+			    if(n.getNode(2).getNode(0).hasName("Declarator")) {
 				
-				symTable.current().addDefinition(name, type);
-//				System.out.println("Qualified name : " + symTable.current().getQualifiedName());
-				try{
-					PrintWriter fstream = new PrintWriter("Scope.txt");
-					Printer babysFirstScope = new Printer(fstream);
-					symTable.root().dump(babysFirstScope);
-					babysFirstScope.flush();
-				}
-				catch(Exception e) {
-					System.err.println(e.getMessage());
-				}
-				System.out.println(" ");
-				visit(n);
-			} 
-			
+				name = n.getNode(2).getNode(0).getString(0);
+
+			    }
+			}
+			else {
+			    System.out.println("Node structure is " 
+					       + n.toString());
+			}
+
+
+			// Time to add it to the symbol table
+			if(null != name && null != type) {
+
+			    System.out.println("Adding to SymbolTable: (" 
+					       + name + ", " + type + ")");
+			    symTable.current().addDefinition(name, type);
+			   
+			    try{
+				// FIXME: Need to use the same PrintWriter
+				// for all scope writing
+				PrintWriter fstream = new PrintWriter("Scope.txt");
+				Printer babysFirstScope = new Printer(fstream);
+				symTable.root().dump(babysFirstScope);
+				babysFirstScope.flush();
+			    }
+			    catch(Exception e) {
+				System.err.println(e.getMessage());
+			    }
+			    
+			}
+			else {
+			    System.out.println("ERR: Couldn't find name/type");
+			}
+
+			// Entering a new scope due to For Loop 
+			blockName = "" + (n.hashCode() + n.getLocation().line + n.getLocation().column);
+
+			symTable.enter("" + blockName);
+			visit(n);
+			symTable.exit();
+		    }
+		    
 			public void visit(GNode n) {
 				for (Object o : n) if (o instanceof GNode) dispatch((GNode)o);
 			}
@@ -140,12 +203,13 @@ public class TranslatorSymbolTable {
 		
 		new Visitor() {
 			public void visitBlock(GNode n){
-				//store scope information
-				blockName = "" + (n.hashCode() + n.getLocation().line + n.getLocation().column);
-				
-				symTable.enter("" + blockName);
-				visit(n);
-				symTable.exit();
+			    //store scope information
+			    blockName = "" + (n.hashCode() + n.getLocation().line + n.getLocation().column);
+			    
+			    System.out.println("About to enter " + blockName);
+			    symTable.enter("" + blockName);
+			    visit(n);
+			    symTable.exit();
 			}
 			public void visitMethodDeclaration(GNode n){
 				
@@ -161,17 +225,23 @@ public class TranslatorSymbolTable {
 			}
 			public void visitPrimaryIdentifier(GNode n) {
 				
-				String name = (String)(n.get(0));
-//				System.out.println("This is name " + name);
-				String type = "";
-				if(!name.equals("System"))	
-					type = symTable.lookup(name).toString();
-				
+			    String name = n.getString(0);
+			    String type = null;
+			    
+			    if(!"System".equals(name)) {
+				System.out.println("--- Looking up type for " 
+						   + name);
+				type = symTable.lookup(name).toString();
+			    }
+			    
+			    if(null != type) {
 				n.setProperty(type,name);
-				
-//				System.out.println("This is type " + type + ",This is name " + name);
-				visit(n);
-				
+				System.out.println("Set Type = " + type 
+						   + " for var " + name);
+			    }
+			    else System.out.println("Couldn't find Type for " 
+						    + name);
+			    visit(n);
 			}
 			
 			
