@@ -95,20 +95,15 @@ public class TranslatorSymbolTable {
 				
 			}
 			
-			public void visitFormalParameters(GNode n) {
+			public void visitFormalParameter(GNode n) {
 
-				String name = n.getNode(0).getString(3);
-
-//				System.out.println("name of this " + name);
+				String name = n.getString(3);
+				String type = 
+				    n.getNode(1).getNode(0).getString(0);
 				
-				String type = n.getNode(0).getNode(1).getNode(0).getString(0);
-				
-//				System.out.println("type of this " + type);
-
 				symTable.current().addDefinition(name, type);
 				
 				visit(n);
-
 			} 
 			
 			

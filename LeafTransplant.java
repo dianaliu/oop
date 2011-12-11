@@ -713,6 +713,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     // @param n Java AST ClassDeclaration
     // @param s String name of the PrimaryIdentifier
     boolean isCustomType(GNode n, String s) {
+	// FIXME: Source of lots of bugs due to variable nature of Declarator 
+	// node.  Make more robust.
 	
 	final String p = s;
 
@@ -721,14 +723,12 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		public GNode visitDeclarator(GNode n) {
 		    
 		    if( p.equals(n.getString(0)) ) {
-			// We found where it is declared
-			// Now, check it's type
-			// Shoudl really use another visitor to get  Type node,
-			// But using simple if to check if the Type has been 
-			// wrapped in a Cast Node.
-			
-		        String type;
+			// We found where it is declared to get Type
+			String type;
 			if(n.getNode(2).hasName("Type")) {
+			    type = n.getNode(2).getNode(2).getString(0);
+			}
+			else if(n.getNode(2).hasName("NewClassExpression")) {
 			    type = n.getNode(2).getNode(2).getString(0);
 			}
 			else {
