@@ -19,6 +19,7 @@
 package xtc.oop;
 
 import java.util.Iterator;
+import java.util.StringTokenizer;
 
 import xtc.tree.LineMarker;
 import xtc.tree.Node;
@@ -386,6 +387,7 @@ public class CPPPrinter extends Visitor {
 		precedence = prec;
 	}
 	
+	
 	/** Visit the specified translation unit node. */
 	public void visitTranslationUnit(GNode n) {
 		// Reset the state.
@@ -406,6 +408,7 @@ public class CPPPrinter extends Visitor {
 		    else if(o instanceof String);
 		}
 	}
+	
 	
 	/** Visit the specified function definition node. */
 	public void visitFunctionDefinition(GNode n) {
@@ -1472,6 +1475,7 @@ public class CPPPrinter extends Visitor {
 		
 		endStatement(nested);
 	}
+	
 
 	
 
@@ -2052,11 +2056,13 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	/** Visit the specified cast expression node. */
+	
 	public void visitCastExpression(GNode n) {
 		int prec = startExpression(140);
 		printer.p('(').p(n.getNode(0)).p(')').p(n.getNode(1));
 		endExpression(prec);
 	}
+	
 	
 	/** Visit the specified sizeof expression node. */
 	public void visitSizeofExpression(GNode n) {
@@ -2666,7 +2672,9 @@ public class CPPPrinter extends Visitor {
     }
     
     /** Visit the specified basic cast expression. */
+    
     public void visitBasicCastExpression(GNode n) {
+    
 	final int prec = startExpression(140);
 	printer.p('(').p(n.getNode(0));
 	if(null != n.get(1)) {
@@ -2675,7 +2683,9 @@ public class CPPPrinter extends Visitor {
 	printer.p(')').p(n.getNode(2));  
 	
 	endExpression(prec);
+	
     }
+    
     
     /** Visit the specified new array expression. */
     public void visitNewArrayExpression(GNode n) {
@@ -2842,11 +2852,35 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	public void visitDeclarator(GNode n) {
+		//---------------------------Handle Casts--------------------------------
+		//dynamic cast ing
+		if(n.get(2) != null) {
+			//System.out.println("Visted declarator " + (String)n.get(2).toString());
+			/*
+			if((n.getNode(2).hasName("BasicCastExpression"))) {
+				printer.p((String)(n.get(0).toString()) + " = __rt::java_cast<" + (String)(n.getNode(2).getNode(0).get(0).toString()) + ">(" + 
+					(String)(n.getNode(2).getNode(2).get(0).toString()) + ");").pln();
+			}
+			*/
+			if((n.getNode(2).hasName("CastExpression"))) {
+				printer.p((String)(n.get(0).toString()) + " = __rt::java_cast<" + (String)(n.getNode(2).getNode(0).getNode(0).get(0).toString()) + ">(" + 
+					(String)(n.getNode(2).getNode(1).get(0).toString()) + ");").pln();
+			}
+			
+		}
+		
+		
+		//--------------------------End Cast Handling--------------------------
 
 	    if(null != n.get(2)) {
 		if ( n.getNode(2).hasName("ArrayInitializer") ||
 		     n.getNode(2).hasName("NewArrayExpression") ) {
-		    // supress var name
+		
+		    // suppress var name
+		}
+		
+		if( n.getNode(2).hasName("CastExpression")) {
+			printer.p("//");
 		}
 	
 		else printer.p(n.getString(0)); // var name
@@ -2867,7 +2901,9 @@ public class CPPPrinter extends Visitor {
 		   n.getNode(2).hasName("NewArrayExpression")) {
 		    printer.p(n.getNode(2));
 		}
-	
+		else if((n.getNode(2).hasName("CastExpression"))) {
+			//suppress assignment - handled by dynamic cast
+		}
 		else { printer.p(" = ").p(n.getNode(2)); }
 	    }
 	    

@@ -39,8 +39,6 @@ public class ClassLayoutParser extends Visitor {
 			}
 		}
 		
-		
-		if(DEBUG) sequenceGenome();
 		if(DEBUG) printClassTree();
 		if(DEBUG) System.out.println("--- End Class Layout Parser\n");
     }
@@ -329,57 +327,6 @@ public class ClassLayoutParser extends Visitor {
     // --------------- Overloading Coding ----------------- //
     // ---------------------------------------------------- //
 	
-	// Tests the inheritance hierarchy for subclass relationships
-	// @param parentClassName The name of the parent class
-	// @param childClassName The name of the child class
-	// @return -1 if no relationship, 0 if parentClass == childClass, levels of inherited distance otherwise
-	public int paternityTest( String parentClassName, String childClassName ) {
-		GNode parentClassNode = getClass(parentClassName);
-		GNode childClassNode = getClass(childClassName);
-		int levels = 0; 
-		while( childClassNode != null ) {
-			System.out.println( "ccn: " + childClassNode.getProperty("name") + " : ");
-			if( parentClassNode.equals(childClassNode) ) return levels;
-			childClassNode = getSuperclass( childClassNode.getStringProperty("name") );
-			levels++;
-		}
-		return -1; // you are NOT the father.
-	}
-	
-	//[DEBUG - INTERNAL]
-	public void sequenceGenome() {
-		new Visitor () {
-			public void visit(GNode n) {
-				for( Object o : n) {
-					if (o instanceof Node) dispatch((GNode)o);
-				}
-			}
-			
-			public void visitClass(GNode n) {
-				final String parentName = n.getStringProperty("name");
-				new Visitor () {
-					public void visit(GNode n) {
-						for( Object o : n) {
-							if (o instanceof Node) dispatch((GNode)o);
-						}
-					}
-					
-					public void visitClass(GNode n) {
-						String childName = n.getStringProperty("name");
-						
-						System.out.println( "Testing " + parentName + " and " + childName + " : " + paternityTest(parentName, childName) );
-						
-						visit(n);
-					}
-				}.dispatch(classTree);
-				visit(n);
-			}
-		}.dispatch(classTree);
-	}
-	
-	// 
-	// @param methodNode
-	// @return 
 	public String mangleMethod( GNode methodNode ) {
 		return null;
 	}
