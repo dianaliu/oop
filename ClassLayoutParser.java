@@ -135,42 +135,42 @@ public class ClassLayoutParser extends Visitor {
 			vtConstructorPtrList.set( overrideIndex, newPtr );
 	    }
 	    else {
-		// FIXME: If  new method, don't pass self Class
-		// as parameter, use for calling class
-		if(DEBUG) System.out.println( "adding method: " + methodName );
-		int index = currentHeaderNode.getNode(0).size()-1; //add it before the constructor, which is last(index+1)
-		currentHeaderNode.getNode(0).add(index, methodSignature); //extended, add the method signature to the vtable declaration
-		
-		//adding it to the constructor too
-		GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index+1).getNode(4);
-		// FIXME: Need to Flesh out for overriden as well?
-		GNode newPtr = GNode.create( "vtMethodPointer" );
-		newPtr.add( mangledName ); //method name
-		newPtr.add( createTypeNode( "__"+className ) ); //Calling Class
-		newPtr.add( formalParameters );
-
-		// Add explicit __this using classname
-		// FIXME: Technically, this should be added under a 
-		// "FormalParameter" node but no biggie, it works.
-		GNode params = (GNode) newPtr.getNode(2);
-		//		params.add(GNode.create("FormalParameter").add( createTypeNode(className)) );
+			// FIXME: If  new method, don't pass self Class
+			// as parameter, use for calling class
+			if(DEBUG) System.out.println( "adding method: " + methodName );
+			int index = currentHeaderNode.getNode(0).size()-1; //add it before the constructor, which is last(index+1)
+			currentHeaderNode.getNode(0).add(index, methodSignature); //extended, add the method signature to the vtable declaration
+			
+			//adding it to the constructor too
+			GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index+1).getNode(4);
+			// FIXME: Need to Flesh out for overriden as well?
+			GNode newPtr = GNode.create( "vtMethodPointer" );
+			newPtr.add( mangledName ); //method name
+			newPtr.add( createTypeNode( "__"+className ) ); //Calling Class
+			newPtr.add( formalParameters );
+			
+			// Add explicit __this using classname
+			// FIXME: Technically, this should be added under a 
+			// "FormalParameter" node but no biggie, it works.
+			GNode params = (GNode) newPtr.getNode(2);
+			//		params.add(GNode.create("FormalParameter").add( createTypeNode(className)) );
 			params.add(createTypeNode(className));
-		
-		// add Pointer cast node
-		GNode pCast = GNode.create("PointerCast");
-		// ? No need for PointerCast when adding new methods?
-		//	pCast.add(n.getNode(2)); // return Type
-        
-		newPtr.add(pCast);
-		vtConstructorPtrList.add( newPtr );
-		
-		//adding it to the data layout
-		GNode dataLayoutMethList = (GNode)currentHeaderNode.getNode(1).getNode(3);
-		GNode hdr = GNode.create( "StaticMethodHeader" );
-		hdr.add( n.get(2) ); //return type
-		hdr.add( mangledName ); //method name
-		hdr.add( formalParameters ); //params
-		dataLayoutMethList.add( hdr );
+			
+			// add Pointer cast node
+			GNode pCast = GNode.create("PointerCast");
+			// ? No need for PointerCast when adding new methods?
+			//	pCast.add(n.getNode(2)); // return Type
+			
+			newPtr.add(pCast);
+			vtConstructorPtrList.add( newPtr );
+			
+			//adding it to the data layout
+			GNode dataLayoutMethList = (GNode)currentHeaderNode.getNode(1).getNode(3);
+			GNode hdr = GNode.create( "StaticMethodHeader" );
+			hdr.add( n.get(2) ); //return type
+			hdr.add( mangledName  ); //method name
+			hdr.add( formalParameters ); //params
+			dataLayoutMethList.add( hdr );
 	    }
 	    //FIXME: FINAL: name mangling
 	}
@@ -187,7 +187,7 @@ public class ClassLayoutParser extends Visitor {
 		// Search current VTable to see if overriden and at what index
 		for(int i = 1; i < currentVTable.size()-1; i++) { //start at one to ignore __isa, end at size-1 to ignore constructor
 			if(methodName.equals(currentVTable.getNode(i).get(1).toString())) {
-				if (n.getNode(4) == currentVTable.getNode(i).getNode(2)) // Compare Formal Parameters - equals()?
+				//if (n.getNode(4) == currentVTable.getNode(i).getNode(2)) // Compare Formal Parameters - equals()?
 					return i; //string comparison, return indexof
 			}
 		}
@@ -553,22 +553,22 @@ public class ClassLayoutParser extends Visitor {
 			    
 			    // Found the class
 			    if( getName(n).equals(s) ) {
-				return n;
+					return n;
 			    }
 			    
 			    // Keep Searching
 			    for( Object o : n) {
-				if (o instanceof Node) {
-				    GNode returnValue = (GNode)dispatch((GNode)o);
-				    if( returnValue != null ) return returnValue;
-				}
+					if (o instanceof Node) {
+						GNode returnValue = (GNode)dispatch((GNode)o);
+						if( returnValue != null ) return returnValue;
+					}
 			    }
 			    return null;
 			}
 			
 			public void visit(GNode n) { // override visit for GNodes
 			    for( Object o : n) {
-				if (o instanceof Node) dispatch((GNode)o);
+					if (o instanceof Node) dispatch((GNode)o);
 			    }
 			}
 			
@@ -600,133 +600,133 @@ public class ClassLayoutParser extends Visitor {
     // @param cN Class Name
 	// @return the classes vtable node
     public GNode getVTable(String cN) {
-	GNode className = getClass(cN);
-	GNode classVT = (GNode)(className.getNode(0).getNode(0));
-	return classVT;
+		GNode className = getClass(cN);
+		GNode classVT = (GNode)(className.getNode(0).getNode(0));
+		return classVT;
     }
 	
     // Returns Data Layout list for a class
     // @param cN Class Name
 	// @return the classes data layout node
     public GNode getDataLayout(String cN) {
-	GNode className = getClass(cN);
-	GNode classData = (GNode) (className.getNode(0).getNode(1));
-	return classData;
+		GNode className = getClass(cN);
+		GNode classData = (GNode) (className.getNode(0).getNode(1));
+		return classData;
     }
 	
-
+	
     // Sees if a field was declared in the Data Layout
     // @param dln Data Layout node
     // @param s Name of the FieldDeclaration we hope to find
     
     public boolean findPrimID(GNode dln, String s) {
-
-	// eventually return false if not found
-
-	final String p = s;
-
-	GNode isDeclared = (GNode) (new Visitor () {
-
-		public GNode visitDeclarator(GNode n) {
-		    
-		    if( p.equals(n.getString(0)) ) {
-			return n;
-		    }
-		    
-
-		    // Keep Searching
-		    for( Object o : n) {
-			if (o instanceof Node) {
-			    GNode returnValue = (GNode)dispatch((GNode)o);
-			    if( returnValue != null ) return returnValue;
+		
+		// eventually return false if not found
+		
+		final String p = s;
+		
+		GNode isDeclared = (GNode) (new Visitor () {
+			
+			public GNode visitDeclarator(GNode n) {
+				
+				if( p.equals(n.getString(0)) ) {
+					return n;
+				}
+				
+				
+				// Keep Searching
+				for( Object o : n) {
+					if (o instanceof Node) {
+						GNode returnValue = (GNode)dispatch((GNode)o);
+						if( returnValue != null ) return returnValue;
+					}
+				}
+				
+				return null;
 			}
-		    }
-		    
-		    return null;
-		}
-
-		public GNode visit(GNode n) { // override visit for GNodes
-		    
-		    // Keep Searching
-		    for( Object o : n) {
-			if (o instanceof Node) {
-			    GNode returnValue = (GNode)dispatch((GNode)o);
-			    if( returnValue != null ) return returnValue;
+			
+			public GNode visit(GNode n) { // override visit for GNodes
+				
+				// Keep Searching
+				for( Object o : n) {
+					if (o instanceof Node) {
+						GNode returnValue = (GNode)dispatch((GNode)o);
+						if( returnValue != null ) return returnValue;
+					}
+				}
+				
+				return null;
+				
 			}
-		    }
-		    
-		    return null;
-		    
-		}
 	    }.dispatch(dln));
-
-	if(isDeclared != null) return true;
-	
-	return false;
-	
+		
+		if(isDeclared != null) return true;
+		
+		return false;
+		
     } // end findPrimID
-
-
+	
+	
     // Return's a specific node from a Virtual Table
     // @param VirtualTable node
     public GNode getVTMethod(GNode vtn, String m) {
-	//	System.out.println("--- Enter CLP");
-
-	// Declared final to be accessible from inner Visitor
-	final String mName = m;
-	//	System.out.println("--- Searching for method " + mName);
-	
-	GNode returnThis = (GNode)( new Visitor () {
-	    
-		public GNode visitVirtualMethodDeclaration(GNode n) {
-		    
-		    //		    System.out.println("\t--- At VirtualMethodDeclaration node:"
-		    //				       + n.getString(1));
-		    
-		    if( mName.equals(n.getString(1)) ) {
-			// Found the node
-			//			System.out.println("/t--- Returning VirtualMethodDeclaration node " + n.getString(1));
-			//			System.out.println("/t--- that node is" + n.toString());
-
-			return n;
-		    }
-		    
-		    // Keep Searching
-		    for( Object o : n) {
-			if (o instanceof Node) {
-			    GNode returnValue = (GNode)dispatch((GNode)o);
-			    if( returnValue != null ) return returnValue;
-			}
-		    }
-		    
-		    return null;
-		    
-		}
+		//	System.out.println("--- Enter CLP");
 		
-		public GNode visit(GNode n) { // override visit for GNodes
-        
-		    // Keep Searching
-		    for( Object o : n) {
-			if (o instanceof Node) {
-			    GNode returnValue = (GNode)dispatch((GNode)o);
-			    if( returnValue != null ) return returnValue;
-			}
-		    }
-		    
-		    return null;
-
-		}
+		// Declared final to be accessible from inner Visitor
+		final String mName = m;
+		//	System.out.println("--- Searching for method " + mName);
 		
+		GNode returnThis = (GNode)( new Visitor () {
+			
+			public GNode visitVirtualMethodDeclaration(GNode n) {
+				
+				//		    System.out.println("\t--- At VirtualMethodDeclaration node:"
+				//				       + n.getString(1));
+				
+				if( mName.equals(n.getString(1)) ) {
+					// Found the node
+					//			System.out.println("/t--- Returning VirtualMethodDeclaration node " + n.getString(1));
+					//			System.out.println("/t--- that node is" + n.toString());
+					
+					return n;
+				}
+				
+				// Keep Searching
+				for( Object o : n) {
+					if (o instanceof Node) {
+						GNode returnValue = (GNode)dispatch((GNode)o);
+						if( returnValue != null ) return returnValue;
+					}
+				}
+				
+				return null;
+				
+			}
+			
+			public GNode visit(GNode n) { // override visit for GNodes
+				
+				// Keep Searching
+				for( Object o : n) {
+					if (o instanceof Node) {
+						GNode returnValue = (GNode)dispatch((GNode)o);
+						if( returnValue != null ) return returnValue;
+					}
+				}
+				
+				return null;
+				
+			}
+			
 	    }.dispatch(vtn));
-	
-
-	//	if(null == returnThis)
-	//	    System.out.println("/t--- null :-(");
-
-	return returnThis;
-
+		
+		
+		//	if(null == returnThis)
+		//	    System.out.println("/t--- null :-(");
+		
+		return returnThis;
+		
     }
-
+	
 	//Returns the name of the super class of the specified class, or null if class name is Object (the root class)
 	//@param cN the Class name
 	//@return the string name of the superclass
