@@ -6,7 +6,6 @@ import xtc.tree.Visitor;
 
 import xtc.util.Runtime;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 
 /*
@@ -85,6 +84,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	
 	
     public void createCPPTree() {
+<<<<<<< HEAD
 		// We add nodes to the CPP AST in 3 stages:
 		// ImportDeclaration(s), ClassDeclaration - for header, 
 		// and ClassDeclaration - for body nodes.
@@ -118,6 +118,42 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		
 		
 		cppTree.add(className);
+=======
+	// We add nodes to the CPP AST in 3 stages:
+	// ImportDeclaration(s), ClassDeclaration - for header, 
+	// and ClassDeclaration - for body nodes.
+
+	// TODO: Vtable lookups at method invocation
+
+	new Visitor() {
+
+	    public void visitImportDeclaration(GNode n) {
+       		// Add import node to cpp tree
+		addImportNode(n);
+	    }
+
+	    public void visitClassDeclaration(GNode n) {
+		// Build and add header node
+		translateClassDeclaration(n);
+
+		// Build and add implementation node
+   		translateClassBody(n);
+       
+	    }
+	    
+	  
+	    public void visit(GNode n) {
+		// Need to override visit to work for GNodes
+		for( Object o : n) {
+		    if (o instanceof Node) dispatch((GNode)o);
+		}
+	    }
+	    
+	}.dispatch(javaTree);
+
+
+	cppTree.add(className);
+>>>>>>> 7a6a96d20bfda9ccbfdb5c9ac1c80ad7c3d95c42
     }
 	
     // ------------------------------------------
@@ -145,6 +181,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     // At ClassDeclaration, we build hNode to hold info. for the header file
     // @param n ClassDeclaration node from Java AST
     public void translateClassDeclaration (GNode n) {
+<<<<<<< HEAD
 		
 		// TODO: Use className to name output files
 		className = n.get(1).toString();
@@ -159,11 +196,34 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		GNode tNode = templateNodes;
 		cppTree.add(tNode);
 		
+=======
+
+	// TODO: Use className to name output files
+	className = n.get(1).toString();
+
+	// hNode contains all information for the .h file to be printed
+	GNode hNode = buildHeader(n);
+	cppTree.add(hNode);
+
+
+	// Must move ConstructorDeclaration nodes from ClassBody into the
+	//	cppTree.add(constructors);
+
+	// Note: templateNodes has the same information as CustomClass nodes.
+	// It is built at the same time as the header, but must reside in a 
+	// a different branch as it is in a different namespace __rt.
+	GNode tNode = templateNodes;
+	cppTree.add(tNode);
+
+
+	
+>>>>>>> 7a6a96d20bfda9ccbfdb5c9ac1c80ad7c3d95c42
     }
 	
     // Creates the header node for a Class
     // @param n ClassDeclaration node from Java AST
     GNode buildHeader(GNode n) {
+<<<<<<< HEAD
 		// Nodes are created "inside out" from the leaves up
 		
 		GNode hNode = GNode.create("HeaderDeclaration"); 
@@ -182,6 +242,29 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		hNode.addNode(arrayTemplates);
 		
 		return hNode;
+=======
+	// Nodes are created "inside out" from the leaves up
+
+	GNode hNode = GNode.create("HeaderDeclaration"); 
+
+	GNode typedef = buildTypedef(n);
+	hNode.addNode(typedef);
+
+	GNode dataLayout = buildDataLayout(n);
+	hNode.addNode(dataLayout);
+
+	GNode vtable = buildVTable(n);
+	hNode.addNode(vtable);
+
+	// If there are any custom array types, declare them
+	GNode arrayTemplates = findArrays(n);
+	hNode.addNode(arrayTemplates);
+
+	GNode constructors = findConstructors(n);
+	hNode.addNode(constructors);
+      
+	return hNode;
+>>>>>>> 7a6a96d20bfda9ccbfdb5c9ac1c80ad7c3d95c42
     }
 	
     // Build CPP Data Layout nodes to create struct __Class { }
@@ -299,6 +382,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     //GNode customClasses = GNode.create("CustomClasses");
     GNode templateNodes = GNode.create("ArrayTemplates");
     public GNode findArrays(GNode n) {
+<<<<<<< HEAD
 		
 		// To generate the template specialization, we need to create a new 
 		// Class object.  The class constructor is below.  He only passes the 
@@ -312,6 +396,71 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		final GNode customClasses = GNode.create("CustomClasses");
 		
 		new Visitor() {
+=======
+
+	// To generate the template specialization, we need to create a new 
+	// Class object.  The class constructor is below.  He only passes the 
+	// first 3 parameters
+	/*
+	  __Class(String name,
+              Class parent,
+              Class component = (Class)__rt::null(),
+              bool primitive = false);
+	*/
+
+	new Visitor() {
+	    
+	    public void visitFieldDeclaration(GNode n) {
+       
+		String qID = "";
+		int dim = 1;
+
+		// 1. Determine if we're declaring an Array
+		if(n.size() >= 2 && n.getNode(1).size() >= 2) {
+		    
+		    if( n.getNode(1).getNode(1) != null &&
+			n.getNode(1).getNode(1).hasName("Dimensions") ) {
+
+			// Found an array declaration
+			GNode dims = (GNode) n.getNode(1).getNode(1);
+			qID = n.getNode(1).getNode(0).getString(0);
+
+			if( dims.size() > 1 || ( !"String".equals(qID) && 
+						 !"Object".equals(qID)
+						 && !"int".equals(qID)) ) {
+			    // Customization is needed
+			    for(int i = 0; i < dims.size(); i++) {
+				qID = "[" + qID; 
+			    }
+
+			    GNode component = GNode.create("ComponentType");
+			    GNode parent = GNode.create("ParentType");
+
+			    component.add(clp.createTypeNode(qID));
+			    String pID =  n.getNode(1).getNode(0).getString(0);
+			    pID = clp.getSuperclassName(pID);
+			    parent.add(clp.createTypeNode(pID));
+
+
+			    // Added to tree at an earlier point
+			    GNode customClass = GNode.create("CustomClass");
+			    customClass.add(parent);
+			    customClass.add(component);
+			    
+			    customClasses.add(customClass);
+			    
+			    // Array template specialization uses the same 
+			    // information as __class() so just copying to diff
+			    // . location
+			    GNode templateNode = GNode.create("ArrayTemplate");
+			    templateNode.add(parent);
+			    templateNode.add(component);
+			    templateNodes.add(templateNode);
+			}
+			else {
+			    // Nothing to do. Standard array
+			}
+>>>>>>> 7a6a96d20bfda9ccbfdb5c9ac1c80ad7c3d95c42
 			
 			public void visitFieldDeclaration(GNode n) {
 				
@@ -381,12 +530,76 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 			
 		}.dispatch(n);
 		
+<<<<<<< HEAD
 		//if(customClasses.size() <= 0) customClasses = null;
 		GNode customs = GNode.create("Declaration", customClasses);
 		return customs;
     }
 	
 	
+=======
+	    } // end visitFieldDeclaration
+
+	    public void visit(GNode n) {
+		// Need to override visit to work for GNodes
+		for( Object o : n) {
+		    if (o instanceof Node) dispatch((GNode)o);
+		}
+	    }
+	    
+	}.dispatch(n);
+	
+	if(customClasses.size() <= 0) customClasses = null;
+	GNode customs = GNode.create("Declaration", customClasses);
+	return customs;
+    }
+
+
+    // Moves the ClassDeclaration node(s) into the header.
+    // @param n Java ClassDeclaration node
+    // @return Possibly null ConstructorDeclarations node to add to Header
+    GNode constructorDeclarations = GNode.create("ConstructorDeclarations");
+    public GNode findConstructors(GNode n) {
+
+	if(DEBUG) System.out.println("--- Entered findConstructors");
+	
+	new Visitor() {
+
+	    public void visitClassBody(GNode n) {
+		for( Object o : n) {  if (o instanceof Node) { 
+			GNode tmp = GNode.cast(o);
+			
+			if(tmp.hasName("ConstructorDeclaration")) {
+			    // Add it in the header
+			    constructorDeclarations.add(clp.deepCopy(tmp));
+			    
+			    // CPPPrinter ignores any 
+			    // ConstructorDeclarations in the ClassBody
+			    System.out.println("\t--- Moved a Constructor");
+			}
+		    }
+		}
+		
+		visit(n);
+	    }
+	    
+	    public void visit(GNode n) {
+		// Need to override visit to work for GNodes
+		for( Object o : n) {
+		    if (o instanceof Node) dispatch((GNode)o);
+		}
+	    } // end visit
+	    
+	}.dispatch(n);
+    
+	    // Does this still allow for a blank default constructor?
+	    // in CPPPrinter, if size()==0, print default constructor else,
+	    // do the custom stuff
+	return constructorDeclarations;
+    }
+    
+
+>>>>>>> 7a6a96d20bfda9ccbfdb5c9ac1c80ad7c3d95c42
     // ------------------------------------------
     // -------------- Build ccNode --------------
     // ------------------------------------------
@@ -555,6 +768,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 					if(DEBUG) System.out.println("\t--- primaryIdentifier = " 
 												 + primaryIdentifier);
 				}
+<<<<<<< HEAD
 				else if(n.getNode(0).hasName("SuperExpression")) {
 					
 					// Replace Java keyword super with actual class
@@ -614,6 +828,122 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 				for( Object o : n) {
 					if (o instanceof Node) dispatch((GNode)o);
 				}
+=======
+			    }
+
+			}.dispatch(n); // end Visitor
+
+			if( "println".equals(n.getString(2)) ) {
+			    GNode strOut = GNode.create(kStrmOut);
+			    strOut.add(0, GNode.create( kPrimID ).add(0, "std::cout") );
+			    // Add all arguments to System.out.println
+			    for(int i = 0; i < n.getNode(3).size(); i++) {
+				// removed addindex 1
+				strOut.add(n.getNode(3).get(i) ); 
+			    }
+			    
+			    // removed add index 2
+			    strOut.add(GNode.create( kPrimID ).add(0, "std::endl") );
+			    
+			    expressionStatement.set(0, strOut);
+
+			}
+			
+			else if("print".equals(n.getString(2))) {
+			    GNode strOut = GNode.create(kStrmOut);
+			    strOut.add(0, GNode.create( kPrimID ).add(0, "std::cout") );
+			    // Add all arguments to System.out.print
+			    for(int i = 0; i < n.getNode(3).size(); i++) {
+				strOut.add(1, n.getNode(3).get(i) ); 
+			    }
+			    expressionStatement.set(0, strOut);
+
+			    // Must examine the arguments of this new std
+			    //			    visit(expressionStatement);
+			} 
+			
+
+		    }// end if "System"
+		} // end SelectionExpression
+		else if(n.getNode(0).hasName("PrimaryIdentifier")) {
+
+		    primaryIdentifier = n.getNode(0).getString(0);
+		    
+		    if(DEBUG) System.out.println("--- Found PrimaryIdentifier " 
+						 + primaryIdentifier);
+
+		    // Need to lookup the Type of primaryIdentifier
+		    // If it's a custom class, need to pass it as the last param
+		    // Eventually, can use SymbolTable, but hacking it for now
+		    
+		    // ClassDeclaration node, String PrimaryIdentifier
+		    boolean yes = isCustomType(classD, primaryIdentifier);
+		    
+		    if(yes) {
+			// Add primaryIdentifier to Arguments
+			if(DEBUG) System.out.println("--- Must pass Argument " +
+					   primaryIdentifier + " to method " +
+					   n.getString(2));
+
+			GNode arguments = (GNode) n.getNode(3);
+			arguments = clp.deepCopy(arguments);
+	        
+			// Arguments should only have node children 
+			GNode p = GNode.create("PrimaryIdentifier");
+			p.add(primaryIdentifier);
+			arguments.add(p);
+			if(DEBUG) System.out.println("\n\t--- Added argument " +
+					   primaryIdentifier + " to node " + 
+					   n + "\n");
+
+			n.set(3, arguments);
+		    }
+
+		}
+		else if(n.getNode(0).hasName("SuperExpression")) {
+
+		    // Replace Java keyword super with actual class
+		    GNode pI = GNode.create("PrimaryIdentifier");
+		   
+		    GNode vtList = clp.getVTable(thisClass);
+		    GNode superNode = clp.getSuperclass(className);
+		    String superName = clp.getName(superNode);
+		    pI.add(0, superName);
+		    n.set(0, pI);
+		}
+       		else { // catch all
+		    //		    System.out.println("\t--- Didn't translate node " + 
+		    //				       n.getNode(0).toString());
+		}
+	   
+		// Necessary? If argument is another CallExpression
+		//		visit(n);
+	    }// End visitCall Expression
+  
+
+	    public void visitMethodDeclaration(GNode n) {
+		// If Parameters.size() of MethodDeclaration and clp's lookup
+		//  append CLASSNAME __this to parameters
+
+
+		GNode vt = clp.getVTable(thisClass);
+		String mName = n.getString(3);
+		GNode vtm = clp.getVTMethod(vt, mName);
+
+		if(null != vtm) {
+		    if( n.getNode(4).size() != vtm.getNode(2).size() ) {
+			// Append __this parameter
+			System.out.println("--- Need to add nodes for " + 
+					   vtm.getString(1));
+			// Add a new Formal Parameter
+			if(n.getNode(4).hasName("FormalParameters")) {
+			    GNode fps = clp.deepCopy((GNode)n.getNode(4));
+			    fps.addNode( createFormalParameter(thisClass, "__this") );
+			    n.set(4, fps);
+			    // Need to deep copy to ensure variable
+			    // then, replace the FormalParameters node
+			   
+>>>>>>> 7a6a96d20bfda9ccbfdb5c9ac1c80ad7c3d95c42
 			}
 			
 		}.dispatch(n);//end Visitor
@@ -650,8 +980,10 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	
     // Looks up the type of a primaryIdentifier.  Tells you if it is custom
     // Custom != String, Object, Class, etc.
-    // @param
+    // @param n Java AST ClassDeclaration
+    // @param s String name of the PrimaryIdentifier
     boolean isCustomType(GNode n, String s) {
+<<<<<<< HEAD
 		
 		final String p = s;
 		
@@ -679,6 +1011,40 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 				}
 				
 				return null;
+=======
+	// FIXME: Source of lots of bugs due to variable nature of Declarator 
+	// node.  Make more robust.
+	
+	final String p = s;
+
+	GNode isCT = (GNode) (new Visitor() {
+
+		public GNode visitDeclarator(GNode n) {
+		    
+		    if( p.equals(n.getString(0)) ) {
+			// We found where it is declared to get Type
+			String type;
+			if(n.getNode(2).hasName("Type")) {
+			    type = n.getNode(2).getNode(2).getString(0);
+			}
+			else if(n.getNode(2).hasName("NewClassExpression")) {
+			    type = n.getNode(2).getNode(2).getString(0);
+			}
+			else {
+			    // Going down one more level should be Type node
+			    type = 
+				n.getNode(2).getNode(0).getNode(0).getString(0);
+			}
+			if(isCustom(type))
+			    return n;
+		    }
+		    
+		    // Keep Searching
+		    for( Object o : n) {
+			if (o instanceof Node) {
+			    GNode returnValue = (GNode)dispatch((GNode)o);
+			    if( returnValue != null ) return returnValue;
+>>>>>>> 7a6a96d20bfda9ccbfdb5c9ac1c80ad7c3d95c42
 			}
 			
 			

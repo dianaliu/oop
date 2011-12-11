@@ -28,10 +28,15 @@ import xtc.tree.Visitor;
 import xtc.tree.Location;
 import xtc.tree.Printer;
 
+import xtc.util.SymbolTable;
+import xtc.util.SymbolTable.Scope;
+
 import xtc.lang.CParser;
 import xtc.lang.CPrinter;
 import xtc.lang.JavaFiveParser;
 import xtc.lang.JavaPrinter;
+import xtc.lang.JavaAnalyzer;
+import xtc.lang.JavaAstSimplifier;
 
 import xtc.util.SymbolTable;
 import xtc.util.SymbolTable.Scope;
@@ -149,28 +154,26 @@ public class Translator extends xtc.util.Tool {
 		runtime.console().pln("--- Finished trimming dependencies").flush();
 	    //-----------------------------------------------------------
 	    
+	    runtime.console().pln("--- Begin Symbol Table").flush();
+
+	    SymbolTable symTable = new SymbolTable();
+
+	    TranslatorSymbolTable tst = new TranslatorSymbolTable("Global");
+ 
+	    tst.addSymbols(trees[0]);
+	    tst.addProperty(trees[0]);
 	    
-	    /**	
-	   	
-	   	//FIXME: SymTable test; remove later
-	   	System.out.println("\nMESSING WITH THE SYMBOL TABLE\n");
-	   	TranslatorSymbolTable tst = new TranslatorSymbolTable("Global");
-	    System.out.println("Symbol identifier value : " + tst.getType("Global"));
-	   	System.out.println("Mangler:");
-	   	System.out.println(tst.symTable.toNameSpace("WheresMyCar", "Dude"));
-	   	System.out.println("UnMangler:");
-	   	//stem.out.println(tst.symTable.fromNameSpace("Dude(WheresMyCar)"));
- 		//find all variable names and their types
- 		tst.addSymbols(trees[0]);
- 		tst.addSymbols(trees[1]);
- 		
- 		System.out.println("\nDONE MESSING WITH THE SYMBOL TABLE\n");
-	   	
-	    **/ 
-	   	
-	   	
+	    tst.symTable.root();
+	    tst.symTable.root();
+	    //System.out.println("Get type intGlobal: " + tst.getType("intGlobal"));
+	    // System.out.println("Get type intMain: " + tst.getType("intGlobal"));
+	    // System.out.println("\nDONE MESSING WITH THE SYMBOL 2TABLE\n");
+	    
+	    runtime.console().pln("--- End Symbol Table").flush();
+
+	   		   	
 	    if(DEBUG) 
-			runtime.console().pln("--- Begin cpp translation").flush();
+		runtime.console().pln("--- Begin cpp translation").flush();
 	    // Create a translator to output a cpp tree for each java ast
 	    // FIXME: Do not hardcode size
 	    GNode[] returned = new GNode[500];
@@ -232,8 +235,11 @@ public class Translator extends xtc.util.Tool {
 		System.err.println(e.getMessage());
 	    }
 	    
+
+	    
 	} // end -translate
 	
+
 	
 	if(runtime.test("inherit")) {
 	    DEBUG = true;
@@ -272,6 +278,7 @@ public class Translator extends xtc.util.Tool {
 	    
 	    runtime.console().pln("--- Finish inheritance analysis").flush();
 	} // end -inherit
+	
 	
     } // end process
     

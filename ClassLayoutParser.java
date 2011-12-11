@@ -237,7 +237,12 @@ public class ClassLayoutParser extends Visitor {
 	// -----------------------------------
 	
 	public void visitConstructorDeclaration(GNode n) {
-	    if(DEBUG) System.out.println( "***constructor found in class " + className );
+
+	    // Need to move any Constructors from the ClassBody to HeaderDeclaration.  Need it in there twice, once to declare the signature and the second time to implement it. 
+
+
+
+	    if(DEBUG) System.out.println( "--- Processing constructor");
 	    GNode constructorSignature = GNode.create("ConstructorHeader");
 	    //	    constructorSignature.add(className);
 	    constructorSignature.add( n.get(2) ); //constructor name (just the class name)
@@ -325,11 +330,6 @@ public class ClassLayoutParser extends Visitor {
     // --------------- Overloading Coding ----------------- //
     // ---------------------------------------------------- //
 	
-	
-	
-	// Produces a mangled method name for the given method node
-	// @param methodNode the MethodDeclaration node for which to mangle a name
-	// @return a string containing the appropriate mangled name
 	public String mangleMethod( GNode methodNode ) {
 		String methodName = methodNode.getString(3);
 		GNode parametersBlock = (GNode)methodNode.getNode(4);

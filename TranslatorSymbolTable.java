@@ -13,6 +13,7 @@ import xtc.lang.JavaFiveParser;
 import xtc.lang.JavaPrinter;
 
 import java.util.StringTokenizer;
+import java.util.Iterator;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -26,10 +27,10 @@ public class TranslatorSymbolTable {
 	
 	//Our symbol table
 	SymbolTable symTable;
-	//SymbolTable.Scope symTableScope;
-	char scopeName = 'a';
+	String scopeName;//'a'
+	String blockName;
 	char prevName = 'a';
-
+	
 	//default constructor
    	public TranslatorSymbolTable(String rootName) {
    		symTable = new SymbolTable(rootName);
@@ -38,111 +39,220 @@ public class TranslatorSymbolTable {
 	
 	
 	//returns the type of a variable or class
-	public Object getType(String symbol) {
-		Object type = symTable.lookup(symbol);
-		return type;
-	} 
+	public Object getType(String symbol) {//also needs the scope as well as name of symbol
+		//Object type = symTable.current().lookup(symbol);
+		//return type;//
+//		System.out.println("Looking for symbol " + symbol);
+//		System.out.println("isRoot2? " +  symTable.current().isRoot());
+		Iterator nestedScopes = symTable.root().nested();
+		while(nestedScopes.hasNext()) {
+			nestedScopes.next();
+//			System.out.println("Nested scope : " + nestedScopes.next());
+			
+		}
+		//symTable.setScope(symTable.root());//
+//		System.out.println("before scope name? " +  symTable.current().getQualifiedName());
+//		System.out.println("scope? " + symTable.root().lookupScope(symbol));
+//		System.out.println("isDefined? " + symTable.isDefined(symbol));
+		//symTable.setScope(symTable.lookupScope(symbol));
+		
+//		System.out.println("after scope name? " +  symTable.current().getQualifiedName() + "\n");
+		return symTable.current().lookup(symbol);
+	}  
+	
 	
     public void addSymbols(GNode java) {
-	System.out.println("Now printing all the variable names and their types:");
-	symTable.enter(java);
-	System.out.println(symTable.current());
-	
-	
-	new Visitor() {
-	    GNode thisBlock;
-	    
-	    
-	    public void visitBlock(GNode n){
-		//store scope information
-		thisBlock = n;
-		scopeName++;
-		System.out.println("VISITED A NEW BLOCK " + scopeName);
-		visit(n);
-		scopeName--;
-	    }
-	    
-	    //add a method that exits one scope heirarchy in the symbol tabel if a scope is exited
-	    //if(a scope was left) then 
-	    //	symTable.exit();
-	    //  decrement current level counter by 1
-	    
-	    public void visitDeclarator(GNode n) {
-		//reference thisBlock as the scope of declarators
-		//SymbolTable.Scope Kirim = SymbolTable.new Scope();
+//		System.out.println("Now printing all the variable names and their types:");
+		symTable.enter(java);
+		//System.out.println(symTable.current());
 		
-		String name = "";
-		String type = "";
-		name = (String)(n.get(0));
-		System.out.print("Var name: " + name + "     ");
-		StringTokenizer st = new StringTokenizer((String)(n.getNode(2).toString()), "(");
-		type = st.nextToken();
-		if(type.compareTo("NewClassExpression") == 0){
-		    StringTokenizer stc = new StringTokenizer((String)(n.getNode(2).get(2).toString()), "\"");
-		    type = stc.nextToken();
-		    type = stc.nextToken();
-		}
-		System.out.println("Var type: " + type);
-		
-		//add the name-type pairs to the symbol table(symTable) here
-		System.out.println("Scopename : " + scopeName);
-		symTable.enter("" + scopeName);
-		symTable.current().addDefinition(name, type);
-		symTable.exit();
-		
-		System.out.println("Scope : " + symTable.current().lookupScope("DepFile1"));
-		
-		/*
-		  System.out.println("Unqualified name : " + symTable.current().getName());
-		  System.out.println("Look up i : " + symTable.current().lookup("i"));
-		  System.out.println("Scope i : " + symTable.lookupScope("i").getName());
-		  System.out.println("Look up dep : " + symTable.current().lookup("dep"));
-		  System.out.println("Look up iN : " + symTable.current().lookup("iN"));
-		  System.out.println("Look up deep : " + symTable.current().lookup("deep"));
-		  //symTable.enter("TestString");
-		  //symTable.exit();
-		  System.out.println("Is root : " + symTable.current().isRoot());
-		  System.out.println("Has symbols : " + symTable.current().hasSymbols());
-		  System.out.println("Has nested : " + symTable.current().hasNested());
-		  System.out.println("Qualified i : " + symTable.current().qualify("i"));
-		  //symTable.setScope(symTable.lookupScope("deep"));
-		  System.out.println("Scope deeper : " + symTable.current().lookupScope("deeper").getName());
-		*/
-		
-		/*
-		//symTable.freshJavaId("Grimm");
-		System.out.println("FreshJavaID : " + symTable.freshJavaId(name));
-		System.out.println("FreshNameID : " + symTable.freshName(name));
-		System.out.println("Tomethodname : " + symTable.toMethodName(name));
-		System.out.println(symTable.isDefined("Grimm"));
-		System.out.println("FreshNameCount : " + symTable.freshNameCount);
-		symTable.enter("Hello");
-		System.out.println("Scope : " + symTable.lookupScope("Hello"));
-		
-		//Kirim.addDefinition(name, type);
-		*/		
-		
-		try{
-		    PrintWriter fstream = new PrintWriter("Scope.txt");
-		    Printer babysFirstScope = new Printer(fstream);
+		new Visitor() {
+	   	 	GNode thisBlock;
+			
+			
+			public void visitBlock(GNode n){
+				//store scope information
+				thisBlock = n;
+				blockName = "" + (n.hashCode() + n.getLocation().line + n.getLocation().column);
+				//scopeName = 
+//				System.out.println("VISITED A NEW BLOCK " + scopeName);
+				symTable.enter("" + blockName);
+				visit(n);
+				symTable.exit();
+
+				
+			}
+		    public void visitMethodDeclaration(GNode n){
+			
+			
+			blockName = "" + (n.hashCode() + n.getLocation().line + n.getLocation().column);
+			
+			//				System.out.println("VISITED A NEW METHOD " + scopeName);
+			symTable.enter("" + blockName);
+			visit(n);
+			symTable.exit();
+			
+			
+		    }
 		    
-		    symTable.current().dump(babysFirstScope);
+		    public void visitFormalParameter(GNode n) {
+			
+			String name = n.getString(3);
+			String type = 
+			    n.getNode(1).getNode(0).getString(0);
+			
+			symTable.current().addDefinition(name, type);
+			
+			visit(n);
+		    } 
 		    
-		    babysFirstScope.flush();
-		}
-		catch(Exception e) {
-		    System.err.println(e.getMessage());
-		}
+		    
+		    
+		    public void visitFieldDeclaration(GNode n) {
+			
+			String name = n.getNode(2).getNode(0).getString(0);				
+			String type = n.getNode(1).getNode(0).getString(0);
+			
+			symTable.current().addDefinition(name, type);
+			//				System.out.println("Qualified name : " + symTable.current().getQualifiedName());
+			try{
+			    PrintWriter fstream = new PrintWriter("Scope.txt");
+			    Printer babysFirstScope = new Printer(fstream);
+			    symTable.root().dump(babysFirstScope);
+			    babysFirstScope.flush();
+			}
+			catch(Exception e) {
+			    System.err.println(e.getMessage());
+			}
+			System.out.println(" ");
+			visit(n);
+		    } 
+
+
+		    public void visitBasicForControl(GNode n) {
 		
-		
-		System.out.println(" ");
-		visit(n);
-	    } 
-	    
-	    public void visit(GNode n) {
-		for (Object o : n) if (o instanceof GNode) dispatch((GNode)o);
-	    }
-	}.dispatch(java);
+			// FIXME: Make name and type global variables for this 
+			// method
+			String name = null;
+			String type = null;
+
+			// Looking for variable type
+			if(n.getNode(1).hasName("Type")) {
+			    type = n.getNode(1).getNode(0).getString(0);
+			}
+			else {
+			    System.out.println("Node structure is " +
+					       n.toString());
+			}
+
+			// Looking for variable name
+			if(n.getNode(2).hasName("Declarators")) {
+			    if(n.getNode(2).getNode(0).hasName("Declarator")) {
+				
+				name = n.getNode(2).getNode(0).getString(0);
+
+			    }
+			}
+			else {
+			    System.out.println("Node structure is " 
+					       + n.toString());
+			}
+
+
+			// Time to add it to the symbol table
+			if(null != name && null != type) {
+
+			    System.out.println("Adding to SymbolTable: (" 
+					       + name + ", " + type + ")");
+			    symTable.current().addDefinition(name, type);
+			   
+			    try{
+				// FIXME: Need to use the same PrintWriter
+				// for all scope writing
+				PrintWriter fstream = new PrintWriter("Scope.txt");
+				Printer babysFirstScope = new Printer(fstream);
+				symTable.root().dump(babysFirstScope);
+				babysFirstScope.flush();
+			    }
+			    catch(Exception e) {
+				System.err.println(e.getMessage());
+			    }
+			    
+			}
+			else {
+			    System.out.println("ERR: Couldn't find name/type");
+			}
+
+			// Entering a new scope due to For Loop 
+			blockName = "" + (n.hashCode() + n.getLocation().line + n.getLocation().column);
+
+			symTable.enter("" + blockName);
+			visit(n);
+			symTable.exit();
+		    }
+		    
+			public void visit(GNode n) {
+				for (Object o : n) if (o instanceof GNode) dispatch((GNode)o);
+			}
+		}.dispatch(java);
     }
-    
+	
+	
+	public void addProperty(GNode java) {
+		//		symTable.enter(java);
+		
+		new Visitor() {
+			public void visitBlock(GNode n){
+			    //store scope information
+			    blockName = "" + (n.hashCode() + n.getLocation().line + n.getLocation().column);
+			    
+			    System.out.println("About to enter " + blockName);
+			    symTable.enter("" + blockName);
+			    visit(n);
+			    symTable.exit();
+			}
+			public void visitMethodDeclaration(GNode n){
+				
+				
+				blockName = "" + (n.hashCode() + n.getLocation().line + n.getLocation().column);
+				
+//				System.out.println("VISITED A NEW METHOD " + scopeName);
+				symTable.enter("" + blockName);
+				visit(n);
+				symTable.exit();
+				
+				
+			}
+			public void visitPrimaryIdentifier(GNode n) {
+				
+			    String name = n.getString(0);
+			    String type = null;
+			    
+			    if(!"System".equals(name)) {
+				System.out.println("--- Looking up type for " 
+						   + name);
+				type = symTable.lookup(name).toString();
+			    }
+			    
+			    if(null != type) {
+				n.setProperty(type,name);
+				System.out.println("Set Type = " + type 
+						   + " for var " + name);
+			    }
+			    else System.out.println("Couldn't find Type for " 
+						    + name);
+			    visit(n);
+			}
+			
+			
+			
+			
+			public void visit(GNode n) {
+				for (Object o : n) if (o instanceof GNode) dispatch((GNode)o);
+			}
+			//System.out.println(symTable.current());
+			
+		}.dispatch(java);
+		
+	}
 }
