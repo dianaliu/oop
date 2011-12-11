@@ -2538,20 +2538,22 @@ public class CPPPrinter extends Visitor {
 	
 	public void visitConstructorHeaderList(GNode n) {
 
-	    // Need to move Constructor declaration Node from ClassBody to here
-	    // and/or suppress printing of constructors in class body
-	    
 	    printer.pln();
-	    // FIXME: Hardcoding empty Constructor, since it's empty now
-	    //	    printer.indent().p("// Constructor").pln();
-	    //	    printer.indent().p("__").p(n.getString(0)).p("();").pln();
+	    // Print default constructor if none was declared
+	    if(n.size() == 1) {
+		printer.indent().p("// Constructor").pln();
+		printer.indent().p("__").p(n.getString(0)).p("();").pln();
+	    }
+	    else { 
+		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
+	    }
 
 	    printer.indent().pln("// Destructor");
 	    printer.indent().p("static void __delete(__");
 	    printer.p(n.getString(0)).p("*);");
 
 	    if(n.size() > 0) printer.pln();
-	    for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
+
 	}
 	
 	public void visitConstructorHeader(GNode n) {
