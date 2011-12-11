@@ -154,42 +154,26 @@ public class Translator extends xtc.util.Tool {
 		runtime.console().pln("--- Finished trimming dependencies").flush();
 	    //-----------------------------------------------------------
 	    
+	    runtime.console().pln("--- Begin Symbol Table").flush();
+
+	    SymbolTable symTable = new SymbolTable();
+
+	    TranslatorSymbolTable tst = new TranslatorSymbolTable("Global");
+ 
+	    tst.addSymbols(trees[0]);
+	    tst.addProperty(trees[0]);
 	    
+	    tst.symTable.root();
+	    tst.symTable.root();
+	    //System.out.println("Get type intGlobal: " + tst.getType("intGlobal"));
+	    // System.out.println("Get type intMain: " + tst.getType("intGlobal"));
+	    // System.out.println("\nDONE MESSING WITH THE SYMBOL 2TABLE\n");
 	    
-	   	
-	   	//FIXME: SymTable test; remove later
-	   	System.out.println("\nMESSING WITH THE SYMBOL TABLE\n");
-	   	
-	   	/*
-	   	TranslatorSymbolTable tst = new TranslatorSymbolTable("Global");
-	    //System.out.println("Symbol identifier value : " + tst.getType("intGlobal"));
- 		//find all variable names and their types
- 		
- 		tst.addSymbols(trees[0]);
-	 	tst.symTable.root();
- 		tst.addSymbols(trees[0]);
- 		String depScope = "dep";
- 		for(int i = 1; i < trees.length; i++) {
- 			if(trees[i] != null){
-		 		
-		 		tst.symTable.root();
-		 		tst.symTable.enter(depScope + i);
-		 		//tst.addSymbols(trees[1]);
-		 		tst.addSymbols(trees[i]);
-	 		}
-	 	}
- 		
- 		tst.symTable.root();
- 		//System.out.println("Get type intMain: " + tst.getType("intGlobal"));
- 		*/
- 		
- 		System.out.println("\nDONE MESSING WITH THE SYMBOL TABLE\n");
-	   	
-	    
-	   
-	   	
+	    runtime.console().pln("--- End Symbol Table").flush();
+
+	   		   	
 	    if(DEBUG) 
-			runtime.console().pln("--- Begin cpp translation").flush();
+		runtime.console().pln("--- Begin cpp translation").flush();
 	    // Create a translator to output a cpp tree for each java ast
 	    // FIXME: Do not hardcode size
 	    GNode[] returned = new GNode[500];

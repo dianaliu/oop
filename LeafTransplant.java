@@ -6,7 +6,6 @@ import xtc.tree.Visitor;
 
 import xtc.util.Runtime;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 
 /*
@@ -368,8 +367,6 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 			    templateNode.add(parent);
 			    templateNode.add(component);
 			    templateNodes.add(templateNode);
-			    
-
 			}
 			else {
 			    // Nothing to do. Standard array
@@ -382,9 +379,6 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
 		}
 		
-
-
-
 	    } // end visitFieldDeclaration
 
 	    public void visit(GNode n) {
@@ -408,30 +402,24 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     GNode constructorDeclarations = GNode.create("ConstructorDeclarations");
     public GNode findConstructors(GNode n) {
 
-	System.out.println("--- Entered findConstructors");
+	if(DEBUG) System.out.println("--- Entered findConstructors");
 	
 	new Visitor() {
 
 	    public void visitClassBody(GNode n) {
-
-
-		    for( Object o : n) {
-			if (o instanceof Node) { 
-
-			    GNode tmp = GNode.cast(o);
+		for( Object o : n) {  if (o instanceof Node) { 
+			GNode tmp = GNode.cast(o);
+			
+			if(tmp.hasName("ConstructorDeclaration")) {
+			    // Add it in the header
+			    constructorDeclarations.add(clp.deepCopy(tmp));
 			    
-			    if(tmp.hasName("ConstructorDeclaration")) {
-				// Add it in the header
-				constructorDeclarations.add(clp.deepCopy(tmp));
-				
-				// CPPPrinter ignores any 
-				// ConstructorDeclarations in the ClassBody
-				System.out.println("\t--- Moved a Constructor");
-			    }
+			    // CPPPrinter ignores any 
+			    // ConstructorDeclarations in the ClassBody
+			    System.out.println("\t--- Moved a Constructor");
 			}
 		    }
-
-	
+		}
 		
 		visit(n);
 	    }
@@ -448,7 +436,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	    // Does this still allow for a blank default constructor?
 	    // in CPPPrinter, if size()==0, print default constructor else,
 	    // do the custom stuff
-	    return constructorDeclarations;
+	return constructorDeclarations;
     }
     
 
@@ -603,6 +591,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    // If it's a custom class, need to pass it as the last param
 		    // Eventually, can use SymbolTable, but hacking it for now
 		    
+		    // ClassDeclaration node, String PrimaryIdentifier
 		    boolean yes = isCustomType(classD, primaryIdentifier);
 		    
 		    if(yes) {
@@ -721,7 +710,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
     // Looks up the type of a primaryIdentifier.  Tells you if it is custom
     // Custom != String, Object, Class, etc.
-    // @param
+    // @param n Java AST ClassDeclaration
+    // @param s String name of the PrimaryIdentifier
     boolean isCustomType(GNode n, String s) {
 	
 	final String p = s;
@@ -733,7 +723,19 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    if( p.equals(n.getString(0)) ) {
 			// We found where it is declared
 			// Now, check it's type
-		        String type = n.getNode(2).getNode(2).getString(0);
+			// Shoudl really use another visitor to get  Type node,
+			// But using simple if to check if the Type has been 
+			// wrapped in a Cast Node.
+			
+		        String type;
+			if(n.getNode(2).hasName("Type")) {
+			    type = n.getNode(2).getNode(2).getString(0);
+			}
+			else {
+			    // Going down one more level should be Type node
+			    type = 
+				n.getNode(2).getNode(0).getNode(0).getString(0);
+			}
 			if(isCustom(type))
 			    return n;
 		    }
