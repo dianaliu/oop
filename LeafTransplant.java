@@ -573,6 +573,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 			    strOut.add(GNode.create( kPrimID ).add(0, "std::endl") );
 			    
 			    expressionStatement.set(0, strOut);
+
 			}
 			
 			else if("print".equals(n.getString(2))) {
@@ -583,16 +584,20 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 				strOut.add(1, n.getNode(3).get(i) ); 
 			    }
 			    expressionStatement.set(0, strOut);
+
+			    // Must examine the arguments of this new std
+			    //			    visit(expressionStatement);
 			} 
 			
+
 		    }// end if "System"
 		} // end SelectionExpression
 		else if(n.getNode(0).hasName("PrimaryIdentifier")) {
 
 		    primaryIdentifier = n.getNode(0).getString(0);
 		    
-		    System.out.println("--- Found PrimaryIdentifier " +
-				       primaryIdentifier);
+		    if(DEBUG) System.out.println("--- Found PrimaryIdentifier " 
+						 + primaryIdentifier);
 
 		    // Need to lookup the Type of primaryIdentifier
 		    // If it's a custom class, need to pass it as the last param
@@ -602,7 +607,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    
 		    if(yes) {
 			// Add primaryIdentifier to Arguments
-			System.out.println("--- Must pass Argument " +
+			if(DEBUG) System.out.println("--- Must pass Argument " +
 					   primaryIdentifier + " to method " +
 					   n.getString(2));
 
@@ -613,7 +618,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 			GNode p = GNode.create("PrimaryIdentifier");
 			p.add(primaryIdentifier);
 			arguments.add(p);
-			System.out.println("\n\t--- Added argument " +
+			if(DEBUG) System.out.println("\n\t--- Added argument " +
 					   primaryIdentifier + " to node " + 
 					   n + "\n");
 

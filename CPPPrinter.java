@@ -1716,7 +1716,7 @@ public class CPPPrinter extends Visitor {
 			public void visitPrimaryIdentifier(GNode n) {
 			    if(!n.getString(0).startsWith("std")
 			       && !isConstructor) {
-				printer.indent().p(" __rt::checkNotNull(");
+				printer.indent().p("// __rt::checkNotNull(");
 				printer.p(n).p(");").pln();
 			    }
 			}
@@ -3346,7 +3346,7 @@ public class CPPPrinter extends Visitor {
 			if (o instanceof Node) {
 			    new Visitor() {
 				public void visitSubscriptExpression(GNode n) {
-				    printer.indent().p(" __rt::checkStore(");
+				    printer.indent().p("// __rt::checkStore(");
 				    printer.p(n.getNode(0)).p(",");
 	
 				}
