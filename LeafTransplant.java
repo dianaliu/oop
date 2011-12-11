@@ -101,6 +101,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	    public void visitClassDeclaration(GNode n) {
 		// Build and add header node
 		translateClassDeclaration(n);
+
 		// Build and add implementation node
    		translateClassBody(n);
        
@@ -153,11 +154,17 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	GNode hNode = buildHeader(n);
 	cppTree.add(hNode);
 
+
+	// Must move ConstructorDeclaration nodes from ClassBody into the
+	//	cppTree.add(constructors);
+
 	// Note: templateNodes has the same information as CustomClass nodes.
 	// It is built at the same time as the header, but must reside in a 
-	// a different branch as it is in a different namespace.
+	// a different branch as it is in a different namespace __rt.
 	GNode tNode = templateNodes;
 	cppTree.add(tNode);
+
+
 	
     }
 
@@ -181,6 +188,9 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	GNode arrayTemplates = findArrays(n);
 	hNode.addNode(arrayTemplates);
 
+	GNode constructors = findConstructors(n);
+	hNode.addNode(constructors);
+      
 	return hNode;
     }
 
@@ -391,6 +401,56 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	return customs;
     }
 
+
+    // Moves the ClassDeclaration node(s) into the header.
+    // @param n Java ClassDeclaration node
+    // @return Possibly null ConstructorDeclarations node to add to Header
+    GNode constructorDeclarations = GNode.create("ConstructorDeclarations");
+    public GNode findConstructors(GNode n) {
+
+	System.out.println("--- Entered findConstructors");
+	
+	new Visitor() {
+
+	    public void visitClassBody(GNode n) {
+
+
+		    for( Object o : n) {
+			if (o instanceof Node) { 
+
+			    GNode tmp = GNode.cast(o);
+			    
+			    if(tmp.hasName("ConstructorDeclaration")) {
+				// Add it in the header
+				constructorDeclarations.add(clp.deepCopy(tmp));
+				
+				// CPPPrinter ignores any 
+				// ConstructorDeclarations in the ClassBody
+				System.out.println("\t--- Moved a Constructor");
+			    }
+			}
+		    }
+
+	
+		
+		visit(n);
+	    }
+	    
+	    public void visit(GNode n) {
+		// Need to override visit to work for GNodes
+		for( Object o : n) {
+		    if (o instanceof Node) dispatch((GNode)o);
+		}
+	    } // end visit
+	    
+	}.dispatch(n);
+    
+	    // Does this still allow for a blank default constructor?
+	    // in CPPPrinter, if size()==0, print default constructor else,
+	    // do the custom stuff
+	    return constructorDeclarations;
+    }
+    
 
     // ------------------------------------------
     // -------------- Build ccNode --------------

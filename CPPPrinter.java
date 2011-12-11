@@ -1582,6 +1582,7 @@ public class CPPPrinter extends Visitor {
 	// Keep visiting unless it's a FieldDeclaration
 	for(Object o : n ) if( o instanceof GNode ) {
 		if(GNode.cast(o).hasName("FieldDeclaration")) {} // do nothing
+		else if(GNode.cast(o).hasName("ConstructorDeclaration")) {}
 		else printer.p((GNode)o);
 	    }
 		
@@ -1709,7 +1710,8 @@ public class CPPPrinter extends Visitor {
 		if (o instanceof Node) {
 		    new Visitor() {
 			public void visitPrimaryIdentifier(GNode n) {
-			    if(!n.getString(0).startsWith("std")) {
+			    if(!n.getString(0).startsWith("std")
+			       && !isConstructor) {
 				printer.indent().p(" __rt::checkNotNull(");
 				printer.p(n).p(");").pln();
 			    }
@@ -2262,7 +2264,7 @@ public class CPPPrinter extends Visitor {
 	    GNode dl = clp.getDataLayout(className); 
 	    
 	    boolean isField = clp.findPrimID(dl,n.getString(0));
-	    if(isField) printer.p("__this->");
+	    if(isField && !isConstructor) printer.p("__this->");
 	    
 	    // For all variables, check not null?
 	    // NO - std::cout and std::end lis a primary identifier....
@@ -2366,14 +2368,21 @@ public class CPPPrinter extends Visitor {
 
 	    // Before exiting namespace java::lang, write constructors for
 	    // Class and Class_VT
-	    // FIXME: Hardcoding for now - only works for empty constructors
-	    printer.indent().pln("// Empty constructors for class and vt");
 
-	    printer.incr().indent();
-	    printer.p("__").p(cn).p("::__").p(cn);
-	    printer.p("() :  __vptr(&__vtable) {").pln();
-	    printer.indent().p("}").pln();
-	    
+	    // If ConstructorDeclarations node is empty.  
+	    // Otherwise it has already been done.
+	    if(n.getNode(4).hasName("ConstructorDeclarations") &&
+	       n.getNode(4).isEmpty()) {
+
+		printer.indent().pln("// Empty constructors for class and vt");
+		
+		printer.incr().indent();
+		printer.p("__").p(cn).p("::__").p(cn);
+		printer.p("() :  __vptr(&__vtable) {").pln();
+		printer.indent().p("}").pln();
+		
+	    }
+
 	    printer.pln();
 
 	    printer.indent().p("__").p(cn).p("_VT __").p(cn);
@@ -2529,9 +2538,13 @@ public class CPPPrinter extends Visitor {
 	
 	public void visitConstructorHeaderList(GNode n) {
 
+	    // Need to move Constructor declaration Node from ClassBody to here
+	    // and/or suppress printing of constructors in class body
+	    
+	    printer.pln();
 	    // FIXME: Hardcoding empty Constructor, since it's empty now
-	    printer.indent().p("// Constructor").pln();
-	    printer.indent().p("__").p(n.getString(0)).p("();").pln();
+	    //	    printer.indent().p("// Constructor").pln();
+	    //	    printer.indent().p("__").p(n.getString(0)).p("();").pln();
 
 	    printer.indent().pln("// Destructor");
 	    printer.indent().p("static void __delete(__");
@@ -2542,7 +2555,8 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	public void visitConstructorHeader(GNode n) {
-		printer.indent().p(n.getString(0));
+	    printer.indent().p("// Constructor").pln();
+	    printer.indent().p("__").p(n.getString(0));
 		printer.p('(').p(n.getNode(1)).p(");").pln();	
 	}
 	
@@ -2594,16 +2608,49 @@ public class CPPPrinter extends Visitor {
     // ------ Begin via JavaPrinter.  Thanks Grimm! ---------
     // ------------------------------------------------------
 	
+    
+    // Hacking, don't want __this in the Constructor
+    public void visitConstructorDeclarations(GNode n) {
+	if(n.size() > 0) {
+	    for (Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
+		printer.p((Node)iter.next());
+	    }
+	}
+	else {
+	    // Print the default empty constructor
+	}
+    }
+
+
+    // Hacking it, don't want __this in Constructor
+    boolean isConstructor = false;
     /** Visit the specified constructor declaration. */
     public void visitConstructorDeclaration(GNode n) { 
-	printer.indent().p(n.getNode(0));
-	if (null != n.get(1)) printer.p(n.getNode(1));
-	printer.p(n.getString(2)).p(n.getNode(3));
+	isConstructor = true;
+
+	// Don't have to put initialization into header
+
+	printer.pln();
+	printer.indent().pln("// Constructor");
+	printer.indent();
+	// Ignore modifiers
+	//	printer.indent().p(n.getNode(0));
+	//	if (null != n.get(1))  printer.p(n.getNode(1));
+
+	printer.p("__").p(n.getString(2)).p("::").p("__").p(n.getString(2));
+	printer.p("(").p(n.getNode(3)).p(")");
+	printer.p(" : __vptr(&__vtable) ");
+
+	// What's in node 4!!!
 	if(null != n.get(4)) {
 	    printer.p(n.getNode(4));
 	}
 	isOpenLine = true;
 	printer.p(n.getNode(5));
+
+	printer.pln();
+	
+	isConstructor = false;
     }
     
     /** Visit the specified instance of expression. */
@@ -3089,7 +3136,9 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	public void visitFormalParameters(GNode n) {
-		
+	    // Where are the parentheses getting printed?
+	    //	    if(n.size() == 0) printer.p("()");
+
 	    for (Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
 			printer.p((Node)iter.next());
 			if (iter.hasNext()) printer.p(", ");
