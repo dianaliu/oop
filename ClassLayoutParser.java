@@ -39,8 +39,6 @@ public class ClassLayoutParser extends Visitor {
 			}
 		}
 		
-		
-		if(DEBUG) sequenceGenome();
 		if(DEBUG) printClassTree();
 		if(DEBUG) System.out.println("--- End Class Layout Parser\n");
     }
@@ -115,8 +113,11 @@ public class ClassLayoutParser extends Visitor {
 	    
 	    //Override check here -- if overrides, use vtdecl.set(overrideIndex, methodSig) else just add it
 	    String methodName = n.get(3).toString();
-	    
-	    if ("main".equals(methodName)) return; // Don't want main method
+		if ("main".equals(methodName)) return; // Don't want main method
+		
+		//the manglala 
+		String mangledName = mangleMethod(n);
+		methodSignature.set(1, mangledName );
 	    
 	    int overrideIndex = overridesMethod(n, (GNode)currentHeaderNode.getNode(0) );
 	    if( overrideIndex >= 0 ) {
@@ -127,7 +128,7 @@ public class ClassLayoutParser extends Visitor {
 			int index = currentHeaderNode.getNode(0).size()-1;
 			GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index).getNode(4);
 			GNode newPtr = GNode.create( "vtMethodPointer" );
-			newPtr.add( n.get(3) ); //method name
+			newPtr.add( mangledName ); //method name
 			newPtr.add( createTypeNode( "__"+className ) ); //target
 			newPtr.add( GNode.create( "FormalParameters" ) );
 			// FIXME: Add PointerCast to this Class, see below for ex.
@@ -144,7 +145,7 @@ public class ClassLayoutParser extends Visitor {
 		GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index+1).getNode(4);
 		// FIXME: Need to Flesh out for overriden as well?
 		GNode newPtr = GNode.create( "vtMethodPointer" );
-		newPtr.add( n.get(3) ); //method name
+		newPtr.add( mangledName ); //method name
 		newPtr.add( createTypeNode( "__"+className ) ); //Calling Class
 		newPtr.add( formalParameters );
 
@@ -167,7 +168,7 @@ public class ClassLayoutParser extends Visitor {
 		GNode dataLayoutMethList = (GNode)currentHeaderNode.getNode(1).getNode(3);
 		GNode hdr = GNode.create( "StaticMethodHeader" );
 		hdr.add( n.get(2) ); //return type
-		hdr.add( n.get(3) ); //method name
+		hdr.add( mangledName ); //method name
 		hdr.add( formalParameters ); //params
 		dataLayoutMethList.add( hdr );
 	    }
@@ -324,59 +325,24 @@ public class ClassLayoutParser extends Visitor {
     // --------------- Overloading Coding ----------------- //
     // ---------------------------------------------------- //
 	
-	// Tests the inheritance hierarchy for subclass relationships
-	// @param parentClassName The name of the parent class
-	// @param childClassName The name of the child class
-	// @return -1 if no relationship, 0 if parentClass == childClass, levels of inherited distance otherwise
-	public int paternityTest( String parentClassName, String childClassName ) {
-		GNode parentClassNode = getClass(parentClassName);
-		GNode childClassNode = getClass(childClassName);
-		int levels = 0; 
-		while( childClassNode != null ) {
-			System.out.println( "ccn: " + childClassNode.getProperty("name") + " : ");
-			if( parentClassNode.equals(childClassNode) ) return levels;
-			childClassNode = getSuperclass( childClassNode.getStringProperty("name") );
-			levels++;
-		}
-		return -1; // you are NOT the father.
-	}
 	
-	//[DEBUG - INTERNAL]
-	public void sequenceGenome() {
-		new Visitor () {
-			public void visit(GNode n) {
-				for( Object o : n) {
-					if (o instanceof Node) dispatch((GNode)o);
-				}
-			}
-			
-			public void visitClass(GNode n) {
-				final String parentName = n.getStringProperty("name");
-				new Visitor () {
-					public void visit(GNode n) {
-						for( Object o : n) {
-							if (o instanceof Node) dispatch((GNode)o);
-						}
-					}
-					
-					public void visitClass(GNode n) {
-						String childName = n.getStringProperty("name");
-						
-						System.out.println( "Testing " + parentName + " and " + childName + " : " + paternityTest(parentName, childName) );
-						
-						visit(n);
-					}
-				}.dispatch(classTree);
-				visit(n);
-			}
-		}.dispatch(classTree);
-	}
 	
-	// 
-	// @param methodNode
-	// @return 
+	// Produces a mangled method name for the given method node
+	// @param methodNode the MethodDeclaration node for which to mangle a name
+	// @return a string containing the appropriate mangled name
 	public String mangleMethod( GNode methodNode ) {
-		return null;
+		String methodName = methodNode.getString(3);
+		GNode parametersBlock = (GNode)methodNode.getNode(4);
+		int numParams = parametersBlock.size();
+		String paramsNames[] = new String[numParams];
+		for( int i = 0; i < numParams; i++) {
+			GNode thisTypeNode = (GNode)parametersBlock.getNode(i).getNode(1);
+			paramsNames[i] = thisTypeNode.getNode(0).getString(0);
+		}
+		for( String s : paramsNames ) {
+			methodName += "$" + s;
+		}
+		return methodName;
 	}
 	
 	// ---------------------------------------------------- //
