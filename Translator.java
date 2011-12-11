@@ -160,19 +160,6 @@ public class Translator extends xtc.util.Tool {
 	   	//FIXME: SymTable test; remove later
 	   	System.out.println("\nMESSING WITH THE SYMBOL TABLE\n");
 	   	
-	   	
-	   	//the symbol table is a public data member of myBacon 
-	   	MavisBeacon myBacon = new MavisBeacon(runtime);
-	  	myBacon.createTable(trees);
-	   	
-	   	//lookup a node's data type
-	   	myBacon.finder(trees[0]);
-	    
-	    //System.out.println("Bacon test: " + (String)myBacon.getType(bacon));
-	   	//System.out.println("Has a scope?: " + myBacon.symTable.hasScope(trees[0]));
-	   	
-	   	
-	   	
 	   	/*
 	   	TranslatorSymbolTable tst = new TranslatorSymbolTable("Global");
 	    //System.out.println("Symbol identifier value : " + tst.getType("intGlobal"));
