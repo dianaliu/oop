@@ -118,6 +118,16 @@ public class ClassLayoutParser extends Visitor {
 		//the manglala 
 		String mangledName = mangleMethod(n);
 		methodSignature.set(1, mangledName );
+		
+		//**MODIFICATIONS TO ORIGINAL METHOD DECLARATION NODE
+		n.set(3, mangledName); //change the name
+		GNode thisFormParam = GNode.create("FormalParameter");
+		thisFormParam.add(null); //modifiers null
+		thisFormParam.add(createTypeNode(className)); //type is the current class
+		thisFormParam.add(null); //2-null
+		thisFormParam.add("__this"); //name of the __this parameter
+		thisFormParam.add(null); //4-null
+		n.set(4, deepCopy((GNode)n.getNode(4)).add(thisFormParam) );//add the __this parameter
 	    
 	    int overrideIndex = overridesMethod(n, (GNode)currentHeaderNode.getNode(0) );
 	    if( overrideIndex >= 0 ) {
