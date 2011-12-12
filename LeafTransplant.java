@@ -340,7 +340,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 			// qID holds the component Type of the array
 			qID = n.getNode(1).getNode(0).getString(0);
 
-			System.out.println("-- Found ArrayDeclaration of Type  "
+			if(DEBUG) System.out.println("-- Found ArrayDeclaration of Type  "
 					   + qID);
 
 			if( dims.size() > 1 || 
@@ -418,8 +418,6 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     GNode constructorDeclarations = GNode.create("ConstructorDeclarations");
     public GNode findConstructors(GNode n) {
 
-	if(DEBUG) System.out.println("--- Entered findConstructors");
-	
 	new Visitor() {
 
 	    public void visitClassBody(GNode n) {
@@ -432,7 +430,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 			    
 			    // CPPPrinter ignores any 
 			    // ConstructorDeclarations in the ClassBody
-			    System.out.println("\t--- Moved a Constructor");
+			    if(DEBUG) System.out.println("\t--- Moved a Constructor");
 			}
 		    }
 		}
@@ -524,7 +522,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	    // Also, translate System methods
 	    public void visitCallExpression(GNode n) {
 		//n always has 4 children
-	
+
+        
 		// 1. Identify the PrimaryIdentifier - calling Class
 		String primaryIdentifier = null;
 
@@ -642,12 +641,55 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    pI.add(0, superName);
 		    n.set(0, pI);
 		}
+		else if(n.getNode(0).hasName("CallExpression")) {
+		    // keep on going!
+		    visit(GNode.cast(n.getNode(0)));
+		}
        		else { // catch all
+		    visit(n);
 		    //		    System.out.println("\t--- Didn't translate node " + 
 		    //				       n.getNode(0).toString());
 		}
+
+
+
+		// IDK if this is the right place to do it, but if it has 
+		// arguments, check to see if we need to append this target as
+		// an argument.  Same thing we did in MethodDeclaration.
+		// FIXME: Abstract to another method to avoid repeating code
+		if(n.size() >= 4 && n.getNode(3).hasName("Arguments")) {
+		    // Time to append arguments
+		    GNode vt = clp.getVTable(thisClass);
+		    String mName = n.getString(2);
+		    GNode vtm = clp.getVTMethod(vt, mName);
+
+		    if(null != vtm) {
+			if(n.getNode(3).size() != vtm.getNode(2).size()) {
+			    if(DEBUG) { 
+				System.out.println("--- Adding arguments for " 
+						   + vtm.getString(1)); 
+			    }
+			    // Being extra safe
+			    if(n.getNode(3).hasName("Arguments")) {
+				// Finally appending target
+				GNode arg = clp.deepCopy((GNode)n.getNode(3));
+
+				// Child should be PrimaryIdentifier node
+				GNode tmp = clp.deepCopy((GNode)n.getNode(0));
+				arg.add(tmp);
+
+				n.set(3, arg);
+			    }
+			    
+			}
+
+		    }
+
+		} // end check for Arguments
+		
+
 	   
-		// Necessary? If argument is another CallExpression
+		// Uncommenting this gives an error.
 		//		visit(n);
 	    }// End visitCall Expression
   
@@ -655,6 +697,9 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	    public void visitMethodDeclaration(GNode n) {
 		// If Parameters.size() of MethodDeclaration and clp's lookup
 		//  append CLASSNAME __this to parameters
+
+		// FIXME: FOr CallExpressions, do the same thing except the
+		// node is called Arguments
 
 
 		GNode vt = clp.getVTable(thisClass);
