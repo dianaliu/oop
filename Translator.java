@@ -158,14 +158,15 @@ public class Translator extends xtc.util.Tool {
 
 	    SymbolTable symTable = new SymbolTable();
 
-	    TranslatorSymbolTable tst = new TranslatorSymbolTable("Global", DEBUG);
+	    //	    TranslatorSymbolTable tst = new TranslatorSymbolTable("Global", DEBUG);
+	    TypeParser tp = new TypeParser("Global", DEBUG);
  
-	    tst.addSymbols(trees[0]);
-	    tst.addProperty(trees[0]);
+	    tp.addSymbols(trees[0]);
+	    tp.addProperty(trees[0]);
 	    
-	    tst.symTable.root();
+	    tp.symTable.root();
 	    // why is this called twice?
-	    tst.symTable.root();
+	    tp.symTable.root();
   
 	    runtime.console().pln("--- End Symbol Table").flush();
 
