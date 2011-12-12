@@ -271,9 +271,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	// ----------------------------------------------------------------
 	    
 	GNode typedefSpecifier = GNode.create("TypedefSpecifier");
-	
-	// removed * because Smart Pointers don't use *
-	// removed __ because need clean classname
+
 	GNode classIdentifier = 
 	    createPrimaryIdentifier(className);
 
@@ -308,7 +306,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     GNode customClasses = GNode.create("CustomClasses");
     GNode templateNodes = GNode.create("ArrayTemplates");
     public GNode findArrays(GNode n) {
-
+	
 	// To generate the template specialization, we need to create a new 
 	// Class object.  The class constructor is below.  He only passes the 
 	// first 3 parameters
@@ -318,6 +316,9 @@ public class LeafTransplant extends Visitor implements CPPUtil {
               Class component = (Class)__rt::null(),
               bool primitive = false);
 	*/
+
+	// Hack: To be accessible from Visitor
+	final GNode classDeclaration = n;
 
 	new Visitor() {
 	    
@@ -332,49 +333,64 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    if( n.getNode(1).getNode(1) != null &&
 			n.getNode(1).getNode(1).hasName("Dimensions") ) {
 
+		
+
 			// Found an array declaration
 			GNode dims = (GNode) n.getNode(1).getNode(1);
+			// qID holds the component Type of the array
 			qID = n.getNode(1).getNode(0).getString(0);
 
-			if( dims.size() > 1 || ( !"String".equals(qID) && 
-						 !"Object".equals(qID)
-						 && !"int".equals(qID)) ) {
-			    // Customization is needed
+			System.out.println("-- Found ArrayDeclaration of Type  "
+					   + qID);
+
+			if( dims.size() > 1 || 
+			    isCustomType(classDeclaration, qID)) {
+
+			    System.out.println("\t Array customization needed");
+
+			    // Customization is needed if it's a 
+			    // multi-dimensional array or it has custom 
+			    // component types
+
+			    // First, let's find the parent class
+			    GNode parent = GNode.create("ParentType");
+			    String pID = clp.getSuperclassName(qID);
+			    parent.add(clp.createTypeNode(pID));
+
+			    // Give component class the proper dimensions
 			    for(int i = 0; i < dims.size(); i++) {
 				qID = "[" + qID; 
 			    }
 
+			    // Then, add the component class
 			    GNode component = GNode.create("ComponentType");
-			    GNode parent = GNode.create("ParentType");
-
 			    component.add(clp.createTypeNode(qID));
-			    String pID =  n.getNode(1).getNode(0).getString(0);
-			    pID = clp.getSuperclassName(pID);
-			    parent.add(clp.createTypeNode(pID));
+
+			    /**
+			     * Now, add this info to two places in the tree
+			     * The same information is needed, but in different
+			     * namespaces
+			     */
 
 
-			    // Added to tree at an earlier point
+			    // Custom __class() is in java_lang namespace
 			    GNode customClass = GNode.create("CustomClass");
 			    customClass.add(parent);
 			    customClass.add(component);
-			    
 			    customClasses.add(customClass);
 			    
-			    // Array template specialization uses the same 
-			    // information as __class() so just copying to diff
-			    // . location
+			    // Template specialization is in the __rt namespace
 			    GNode templateNode = GNode.create("ArrayTemplate");
 			    templateNode.add(parent);
 			    templateNode.add(component);
 			    templateNodes.add(templateNode);
+
+			    System.out.println("--- Done adding array " + qID);
 			}
 			else {
 			    // Nothing to do. Standard array
 			}
 			
-			
-			
-
 		    }
 
 		}

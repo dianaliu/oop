@@ -2852,61 +2852,58 @@ public class CPPPrinter extends Visitor {
 	}
 	
 	public void visitDeclarator(GNode n) {
-		//---------------------------Handle Casts--------------------------------
-		//dynamic cast ing
-		if(n.get(2) != null) {
-			//System.out.println("Visted declarator " + (String)n.get(2).toString());
-			/*
-			if((n.getNode(2).hasName("BasicCastExpression"))) {
-				printer.p((String)(n.get(0).toString()) + " = __rt::java_cast<" + (String)(n.getNode(2).getNode(0).get(0).toString()) + ">(" + 
-					(String)(n.getNode(2).getNode(2).get(0).toString()) + ");").pln();
-			}
-			*/
-			if((n.getNode(2).hasName("CastExpression"))) {
-				printer.p((String)(n.get(0).toString()) + " = __rt::java_cast<" + (String)(n.getNode(2).getNode(0).getNode(0).get(0).toString()) + ">(" + 
-					(String)(n.getNode(2).getNode(1).get(0).toString()) + ");").pln();
-			}
-			
-		}
-		
-		
-		//--------------------------End Cast Handling--------------------------
+		//---------------------------Handle Casts
+		//dynamic casting
+		if(null != n.get(2)) {
 
-	    if(null != n.get(2)) {
-		if ( n.getNode(2).hasName("ArrayInitializer") ||
-		     n.getNode(2).hasName("NewArrayExpression") ) {
-		
-		    // suppress var name
+		    // OMG, FIXME! and do a semi-colon test in Declarator
+
+		    if((n.getNode(2).hasName("CastExpression"))) {
+			printer.p(n.getString(0));
+			printer.p(" = __rt::java_cast<");
+			printer.p(n.getNode(2).getNode(0).getNode(0).getString(0));
+			printer.p( ">(");
+			printer.p(n.getNode(2).getNode(1).getString(0));
+			printer.p(");").pln();
+		    }
 		}
 		
-		if( n.getNode(2).hasName("CastExpression")) {
-			printer.p("//");
-		}
-	
+		//--------------------------End Cast Handling
+
+		if(null != n.get(2)) 
+		    {
+			if ( n.getNode(2).hasName("ArrayInitializer") ||
+			     n.getNode(2).hasName("NewArrayExpression") ) {
+			    
+			    // suppress var name
+			}
+			else if( n.getNode(2).hasName("CastExpression")) {
+			    printer.p("//");
+			}
+			else printer.p(n.getString(0)); // var name
+		    }
 		else printer.p(n.getString(0)); // var name
-	    }
-	    else printer.p(n.getString(0)); // var name
-	    
-	    if(null != n.get(1)) {
-		if (Token.test(n.get(1))) {
-		    formatDimensions(n.getString(1).length());
-		} else {
-		    printer.p(n.getNode(1));
-		}
-	    }
-	    
-	    if(null != n.get(2)) {
 		
-		if(n.getNode(2).hasName("ArrayInitializer") ||
-		   n.getNode(2).hasName("NewArrayExpression")) {
-		    printer.p(n.getNode(2));
+		if(null != n.get(1)) {
+		    if (Token.test(n.get(1))) {
+			formatDimensions(n.getString(1).length());
+		    } else {
+			printer.p(n.getNode(1));
+		    }
 		}
-		else if((n.getNode(2).hasName("CastExpression"))) {
+		
+		if(null != n.get(2)) {
+		    
+		    if(n.getNode(2).hasName("ArrayInitializer") ||
+		       n.getNode(2).hasName("NewArrayExpression")) {
+			printer.p(n.getNode(2));
+		    }
+		    else if((n.getNode(2).hasName("CastExpression"))) {
 			//suppress assignment - handled by dynamic cast
+		    }
+		    else { printer.p(" = ").p(n.getNode(2)); }
 		}
-		else { printer.p(" = ").p(n.getNode(2)); }
-	    }
-	    
+		
 	}
     
     protected void formatDimensions(final int n) {
@@ -2925,8 +2922,8 @@ public class CPPPrinter extends Visitor {
 	    // Look for NewClassExpression to implement memroy mgmt
 
 	    // Look ahead for ArrayInitializer or NewArrayExpression translation
-	   
-	    GNode declarationType = GNode.cast(n.getNode(2).getNode(0).getNode(2));
+	    GNode declarationType = 
+		GNode.cast(n.getNode(2).getNode(0).getNode(2));
 
 	    if(null != declarationType && (declarationType.hasName("ArrayInitializer") || declarationType.hasName("NewArrayExpression") ) )
 		{
@@ -2959,6 +2956,7 @@ public class CPPPrinter extends Visitor {
 		    for(int i = 0; i < dim; i++) {
 			printer.p("__rt::Array<");
 		    }
+		    // Print type again
 		    printer.p(n.getNode(1).getNode(0));
 		    for(int i = 0; i < dim; i++) {
 			printer.p(" >");
@@ -2969,7 +2967,10 @@ public class CPPPrinter extends Visitor {
 	    if(null != declarationType && (declarationType.hasName("ArrayInitializer") || declarationType.hasName("NewArrayExpression") ) ) { /** don't print type here*/	}
 	    else printer.indent().p(n.getNode(0)).p(n.getNode(1)).p(" ");
 
+	    // var name suppression is done in visitDeclarator
 	    printer.p(n.getNode(2)).p(';').pln();
+
+
 	    isDeclaration = true;
 	    isOpenLine    = false;
 	}
