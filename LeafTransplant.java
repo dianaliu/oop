@@ -694,13 +694,24 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	    }// End visitCall Expression
   
 
+	    public void visitArguments(GNode n) {
+
+		for (Object o : n) {
+		    if(o instanceof GNode) {
+			if(GNode.cast(o).hasName("CallExpression")) {
+			    visit(GNode.cast(o));
+			}
+		    }
+		}
+		// duplicate?
+		visit(n);
+	    }
+
 	    public void visitMethodDeclaration(GNode n) {
 		// If Parameters.size() of MethodDeclaration and clp's lookup
 		//  append CLASSNAME __this to parameters
 
-		// FIXME: FOr CallExpressions, do the same thing except the
-		// node is called Arguments
-
+		// FIXME: Rob has duplicate and more robust? implementation
 
 		GNode vt = clp.getVTable(thisClass);
 		String mName = n.getString(3);
@@ -720,12 +731,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 			    // then, replace the FormalParameters node
 			   
 			}
-			   
 		    }
-		    
 		}
-        
-
 		visit(n);
 		
 	    }
