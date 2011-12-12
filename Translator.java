@@ -158,17 +158,15 @@ public class Translator extends xtc.util.Tool {
 
 	    SymbolTable symTable = new SymbolTable();
 
-	    TranslatorSymbolTable tst = new TranslatorSymbolTable("Global");
+	    TranslatorSymbolTable tst = new TranslatorSymbolTable("Global", DEBUG);
  
 	    tst.addSymbols(trees[0]);
 	    tst.addProperty(trees[0]);
 	    
 	    tst.symTable.root();
+	    // why is this called twice?
 	    tst.symTable.root();
-	    //System.out.println("Get type intGlobal: " + tst.getType("intGlobal"));
-	    // System.out.println("Get type intMain: " + tst.getType("intGlobal"));
-	    // System.out.println("\nDONE MESSING WITH THE SYMBOL 2TABLE\n");
-	    
+  
 	    runtime.console().pln("--- End Symbol Table").flush();
 
 	   		   	
