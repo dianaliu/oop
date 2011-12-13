@@ -2756,10 +2756,11 @@ public class CPPPrinter extends Visitor {
 
     /** Visit the specified throws clause. */
     public void visitThrowsClause(GNode n) {
-	printer.p("throws ");
+	printer.p("throw (");
 	for (Iterator<Object> iter = n.iterator(); iter.hasNext(); ) {
-	    printer.p((Node)iter.next());
+	    printer.p("__").p((Node)iter.next());
 	    if (iter.hasNext()) printer.p(", ");
+		printer.p(")");
 	}
     }
     
@@ -2768,6 +2769,8 @@ public class CPPPrinter extends Visitor {
     /** Visit the specified throw statement. */
     public void visitThrowStatement(GNode n) {
 	final boolean nested = startStatement(STMT_ANY, n);
+		//n.getNode(0).getNode(2).set(0, "ibneFener");
+		//System.out.println(	" siktir git " + n.getNode(0).getNode(2).get(0));
 	printer.indent().p("throw").p(' ').p(n.getNode(0));
 	printer.pln(';');
 	endStatement(nested);

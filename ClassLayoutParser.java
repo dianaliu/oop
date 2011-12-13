@@ -29,6 +29,9 @@ public class ClassLayoutParser extends Visitor {
 		DEBUG = db;
 		if(DEBUG) System.out.println("--- Begin Class Layout Parser\n");
 		
+		
+		
+		
 		//preinitialize the hardcoded Grimm types
 		initGrimmTypes();
 		
@@ -41,6 +44,11 @@ public class ClassLayoutParser extends Visitor {
 		
 		if(DEBUG) printClassTree();
 		if(DEBUG) System.out.println("--- End Class Layout Parser\n");
+		//
+		String damar[] = new String[2];
+		damar[0] = "muslum";
+		//degisken adi, metod adi, giren cesitleri
+		//		kirimbaba("arabesk", "orhan", damar);
     }
     
 	// ----------------------------------
@@ -327,6 +335,133 @@ public class ClassLayoutParser extends Visitor {
     // --------------- Overloading Coding ----------------- //
     // ---------------------------------------------------- //
 	
+	// Tests the inheritance hierarchy for subclass relationships
+	// @param parentClassName The name of the parent class
+	// @param childClassName The name of the child class
+	// @return -1 if no relationship, 0 if parentClass == childClass, levels of inherited distance otherwise
+	public int paternityTest( String parentClassName, String childClassName ) {
+		GNode parentClassNode = getClass(parentClassName);
+		GNode childClassNode = getClass(childClassName);
+		int levels = 0; 
+		while( childClassNode != null ) {
+			System.out.println( "ccn: " + childClassNode.getProperty("name") + " : ");
+			if( parentClassNode.equals(childClassNode) ) return levels;
+			childClassNode = getSuperclass( childClassNode.getStringProperty("name") );
+			levels++;
+		}
+		return -1; // you are NOT the father.
+	}
+	
+	
+	// degisken adi, metod adi, giren cesitleri
+	// thing1.getNumber(int bok)
+	// duydum = object, ki = getNumber, unutmussun = bok
+	
+	// once dudum un classini bul, ardindan vtable i al, ardindan o table dan soz konusu metodun datasini al
+	// sonra dagiren cikanla karsilastir datasini alirken bir kac kali bir arraye almak isteyebilirsin
+	// ondan sonra da ki absolute superiority gosteriyorsa onu sec
+
+	public String kirimbaba(String duydum, String ki, String unutmussun[]) {
+		duydum = "Testere";
+		String result = "";
+		
+		int mCount = 0;
+		int a = 6;
+		Node ana = getVTable(duydum).getNode(a);
+
+		while(getVTable(duydum).getNode(a).getString(1) != null) {
+			ana = getVTable(duydum).getNode(a);
+			if(ana.getNode(2).size() == unutmussun.length && ki.equals(ana.getString(1))) {
+				mCount++;
+			}
+			a++;
+		}
+		
+		System.out.println(" Number of methods with same name " + mCount);
+		String damar[][] = new String[mCount][unutmussun.length];
+		int count = 0;
+		a = 6;
+		
+		while(getVTable(duydum).getNode(a).getString(1) != null) {
+			ana = getVTable(duydum).getNode(a);
+			if(ana.getNode(2).size() == unutmussun.length && ki.equals(ana.getString(1))) {
+				for(int k = 0; k < ana.getNode(2).size(); k++) {
+					damar[count][k] = ana.getNode(2).getNode(k).getNode(0).getString(0);
+				}
+				count++;
+			}
+			a++;
+		}
+		
+		
+		
+		// unutmussun ve nuhtelif dmarlri karsilastir ondan sonra en kiyak olani sec
+		// kod ise yarar bir pust oldugu icin mutlaka birini secmek meccburiyetinndesin
+		
+		// butun degerlerde herife ulasana dek getSuperClass yap sonra degerleri tut ve en krali al
+		String kral[] = new String[mCount];
+		int netice = 100;
+		for(int j = 0; j < unutmussun.length; j++) {
+			int g = 0;
+			for(int p = 0; p < mCount; p++) {
+				
+				String dene = "";/*
+				while (dene != unutmussun[j]) {
+					dene = getSuperclassName(damar[p][j]);
+					g++;
+				}*/
+				if(g < netice) {
+					netice = g;
+					kral[j] = "" + p;
+				}
+				
+			}
+		}
+		for(int j = 0; j < kral.length; j++) {
+			System.out.println(kral[j]);
+		}
+		
+		return result;
+			
+		}
+		
+		
+	
+	
+	//[DEBUG - INTERNAL]
+	public void sequenceGenome() {
+		new Visitor () {
+			public void visit(GNode n) {
+				for( Object o : n) {
+					if (o instanceof Node) dispatch((GNode)o);
+				}
+			}
+			
+			public void visitClass(GNode n) {
+				final String parentName = n.getStringProperty("name");
+				new Visitor () {
+					public void visit(GNode n) {
+						for( Object o : n) {
+							if (o instanceof Node) dispatch((GNode)o);
+						}
+					}
+					
+					public void visitClass(GNode n) {
+						String childName = n.getStringProperty("name");
+						
+						System.out.println( "Testing " + parentName + " and " + childName + " : " + paternityTest(parentName, childName) );
+						
+						visit(n);
+					}
+				}.dispatch(classTree);
+				visit(n);
+			}
+		}.dispatch(classTree);
+	}
+	
+	// 
+	// @param methodNode
+	// @return 
 	public String mangleMethod( GNode methodNode ) {
 		return null;
 	}

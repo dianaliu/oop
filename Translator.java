@@ -37,6 +37,8 @@ import xtc.lang.JavaFiveParser;
 import xtc.lang.JavaPrinter;
 import xtc.lang.JavaAnalyzer;
 import xtc.lang.JavaAstSimplifier;
+import xtc.lang.JavaAnalyzer;
+import xtc.lang.JavaExternalAnalyzer;
 
 import xtc.util.SymbolTable;
 import xtc.util.SymbolTable.Scope;
@@ -277,8 +279,8 @@ public class Translator extends xtc.util.Tool {
 	    
 	    runtime.console().pln("--- Finish inheritance analysis").flush();
 	} // end -inherit
-	
-	
+
+
     } // end process
     
     /**
