@@ -44,11 +44,14 @@ public class ClassLayoutParser extends Visitor {
 		
 		if(DEBUG) printClassTree();
 		if(DEBUG) System.out.println("--- End Class Layout Parser\n");
-		//
-		String damar[] = new String[2];
-		damar[0] = "muslum";
-		//degisken adi, metod adi, giren cesitleri
-		//		kirimbaba("arabesk", "orhan", damar);
+		
+		
+		String parameters[] = new String[]{"Object"};
+		String objectName = "Object";
+		String methodName = "toString";
+		String kirimsResult = kirimbaba(objectName, methodName, parameters);
+		System.out.print( objectName + "." + methodName + "( " ); for(String s : parameters) System.out.print(s + " "); System.out.println(") --> " + kirimsResult);
+		
     }
     
 	// ----------------------------------
@@ -207,7 +210,7 @@ public class ClassLayoutParser extends Visitor {
 		for(int i = 1; i < currentVTable.size()-1; i++) { //start at one to ignore __isa, end at size-1 to ignore constructor
 			if(methodName.equals(currentVTable.getNode(i).get(1).toString())) {
 				//if (n.getNode(4) == currentVTable.getNode(i).getNode(2)) // Compare Formal Parameters - equals()?
-					return i; //string comparison, return indexof
+				return i; //string comparison, return indexof
 			}
 		}
 		
@@ -256,11 +259,11 @@ public class ClassLayoutParser extends Visitor {
 	// -----------------------------------
 	
 	public void visitConstructorDeclaration(GNode n) {
-
+		
 	    // Need to move any Constructors from the ClassBody to HeaderDeclaration.  Need it in there twice, once to declare the signature and the second time to implement it. 
-
-
-
+		
+		
+		
 	    if(DEBUG) System.out.println( "--- Processing constructor");
 	    GNode constructorSignature = GNode.create("ConstructorHeader");
 	    //	    constructorSignature.add(className);
@@ -369,36 +372,35 @@ public class ClassLayoutParser extends Visitor {
 	
 	// degisken adi, metod adi, giren cesitleri
 	// thing1.getNumber(int bok)
-	// duydum = object, ki = getNumber, unutmussun = bok
+	// targetObject = object, ki = getNumber, unutmussun = bok
 	
 	// once dudum un classini bul, ardindan vtable i al, ardindan o table dan soz konusu metodun datasini al
 	// sonra dagiren cikanla karsilastir datasini alirken bir kac kali bir arraye almak isteyebilirsin
 	// ondan sonra da ki absolute superiority gosteriyorsa onu sec
-
-	public String kirimbaba(String duydum, String ki, String unutmussun[]) {
-		duydum = "Testere";
+	
+	public String kirimbaba(String targetObject, String methodName, String params[]) {
 		String result = "";
 		
 		int mCount = 0;
 		int a = 6;
-		Node ana = getVTable(duydum).getNode(a);
-
-		while(getVTable(duydum).getNode(a).getString(1) != null) {
-			ana = getVTable(duydum).getNode(a);
-			if(ana.getNode(2).size() == unutmussun.length && ki.equals(ana.getString(1))) {
+		Node ana = getVTable(targetObject).getNode(a);
+		
+		while(getVTable(targetObject).getNode(a).getString(1) != null) {
+			ana = getVTable(targetObject).getNode(a);
+			if(ana.getNode(2).size() == params.length && methodName.equals(ana.getString(1))) {
 				mCount++;
 			}
 			a++;
 		}
 		
 		System.out.println(" Number of methods with same name " + mCount);
-		String damar[][] = new String[mCount][unutmussun.length];
+		String damar[][] = new String[mCount][params.length];
 		int count = 0;
 		a = 6;
 		
-		while(getVTable(duydum).getNode(a).getString(1) != null) {
-			ana = getVTable(duydum).getNode(a);
-			if(ana.getNode(2).size() == unutmussun.length && ki.equals(ana.getString(1))) {
+		while(getVTable(targetObject).getNode(a).getString(1) != null) {
+			ana = getVTable(targetObject).getNode(a);
+			if(ana.getNode(2).size() == params.length && methodName.equals(ana.getString(1))) {
 				for(int k = 0; k < ana.getNode(2).size(); k++) {
 					damar[count][k] = ana.getNode(2).getNode(k).getNode(0).getString(0);
 				}
@@ -415,15 +417,15 @@ public class ClassLayoutParser extends Visitor {
 		// butun degerlerde herife ulasana dek getSuperClass yap sonra degerleri tut ve en krali al
 		String kral[] = new String[mCount];
 		int netice = 100;
-		for(int j = 0; j < unutmussun.length; j++) {
+		for(int j = 0; j < params.length; j++) {
 			int g = 0;
 			for(int p = 0; p < mCount; p++) {
 				
 				String dene = "";/*
-				while (dene != unutmussun[j]) {
-					dene = getSuperclassName(damar[p][j]);
-					g++;
-				}*/
+								  while (dene != unutmussun[j]) {
+								  dene = getSuperclassName(damar[p][j]);
+								  g++;
+								  }*/
 				if(g < netice) {
 					netice = g;
 					kral[j] = "" + p;
@@ -436,10 +438,10 @@ public class ClassLayoutParser extends Visitor {
 		}
 		
 		return result;
-			
-		}
 		
-		
+	}
+	
+	
 	
 	
 	//[DEBUG - INTERNAL]
