@@ -37,7 +37,6 @@ import xtc.lang.JavaFiveParser;
 import xtc.lang.JavaPrinter;
 import xtc.lang.JavaAnalyzer;
 import xtc.lang.JavaAstSimplifier;
-import xtc.lang.JavaAnalyzer;
 import xtc.lang.JavaExternalAnalyzer;
 
 import xtc.util.SymbolTable;
@@ -51,15 +50,12 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
 
-import java.util.ArrayList;
-
 import xtc.oop.LeafTransplant;
 
 public class Translator extends xtc.util.Tool {
 	
 	
     public static boolean DEBUG = false;
-	public static boolean DEBUGBARF = false;
 	
 	/** Create a new translator. */
     public Translator() {
@@ -75,7 +71,7 @@ public class Translator extends xtc.util.Tool {
 	}
 	
     public String getVersion() {
-		return "0.2";
+		return "0.3";
     }
     
     public void init() {
@@ -83,8 +79,6 @@ public class Translator extends xtc.util.Tool {
 	    runtime.
 		bool("printAST", "printAST", false, "Print Java AST.").
 		bool("debug", "debug", false, "Extra output for debugging").
-		bool("barf", "barf", false, "Translated Tree Output").
-		bool("inherit", "inherit", false, "Test inheritance analysis, includes DEBUG flag.").
 		bool("translate", "translate", false, 
 		     "Translate Java code to C++ without inheritance.");
     }
@@ -103,10 +97,6 @@ public class Translator extends xtc.util.Tool {
 	
 	if(runtime.test("debug")) {
 	    DEBUG = true;
-	}
-	
-	if(runtime.test("barf")) {
-	    DEBUGBARF = true;
 	}
 
 	if( runtime.test("translate") ) {
@@ -144,7 +134,7 @@ public class Translator extends xtc.util.Tool {
 	    // Parse all classes to create vtables and data layouts
 	    final ClassLayoutParser clp = new ClassLayoutParser(trees, DEBUG);
 	    if(DEBUG) 
-			runtime.console().pln("--- Finish inheritance analysis").flush();
+		runtime.console().pln("--- Finish inheritance analysis").flush();
 	    //---------------------------------------------------------------
 	   	
 	    
@@ -236,51 +226,8 @@ public class Translator extends xtc.util.Tool {
 		System.err.println(e.getMessage());
 	    }
 	    
-
-	    
 	} // end -translate
 	
-
-	
-	if(runtime.test("inherit")) {
-	    DEBUG = true;
-	    
-	    runtime.console().pln("--- Begin translation").flush();
-	    
-	    // Create an array of AST trees to hold each dependency file
-	    // FIXME: Do not hardcode
-	    GNode[] trees = new GNode[100];
-	    trees[0] = (GNode)node;
-	    
-	    runtime.console().pln("--- Begin dependency analysis").flush();
-	    
-	    // Analyze the main Java AST to find & resolve dependencies
-	    DependencyResolver depResolver = new DependencyResolver();
-	    depResolver.processDependencies(trees);
-	    try {
-		trees = depResolver.parseDependencies();
-		trees[0] = (GNode)node;
-	    }
-	    catch (IOException e) {
-		trees = null;
-		System.out.println("IOException: " + e);
-	    }
-	    catch (ParseException e) {
-		trees = null;
-		System.out.println("ParseException: " + e);
-	    }
-	    
-	    runtime.console().pln("--- Finish dependency analysis").flush();
-	    
-	    runtime.console().pln("--- Begin inheritance analysis").flush();
-	    
-	    // Parse all classes to create vtables and data layouts
-	    final ClassLayoutParser clp = new ClassLayoutParser(trees, DEBUG);
-	    
-	    runtime.console().pln("--- Finish inheritance analysis").flush();
-	} // end -inherit
-
-
     } // end process
     
     /**
