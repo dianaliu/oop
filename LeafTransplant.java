@@ -40,6 +40,7 @@ interface CPPUtil {
     public static final String kStructDecl = "StructureDeclaration";
     public static final String kStructDeclList = "StructureDeclarationList";
     public static final String kTypedef = "TypedefSpecifier";
+	
 
 }
 
@@ -57,6 +58,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     String className;
     GNode classImplementation;
     GNode expressionStatement;
+	GNode newClassExpression;
 
 
     GNode thisClassDataLayoutStructDeclList; 
@@ -550,6 +552,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    if (o instanceof Node) dispatch((GNode)o);
 		}
 	    }
+		
 	    
 	}.dispatch(n);//end Visitor
 	
