@@ -28,10 +28,7 @@ public class ClassLayoutParser extends Visitor {
     public ClassLayoutParser(GNode[] ast, boolean db) {
 		DEBUG = db;
 		if(DEBUG) System.out.println("--- Begin Class Layout Parser\n");
-		
-		
-		
-		
+				
 		//preinitialize the hardcoded Grimm types
 		initGrimmTypes();
 		
@@ -45,8 +42,8 @@ public class ClassLayoutParser extends Visitor {
 		if(DEBUG) printClassTree();
 		if(DEBUG) System.out.println("--- End Class Layout Parser\n");
 		//
-		String damar[] = new String[2];
-		damar[0] = "muslum";
+		//		String damar[] = new String[2];
+		//		damar[0] = "muslum";
 		//degisken adi, metod adi, giren cesitleri
 		//		kirimbaba("arabesk", "orhan", damar);
     }

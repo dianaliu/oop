@@ -53,11 +53,11 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     GNode cppTree;
     ClassLayoutParser clp;
     
-    // Pros/Cons of global variables?
+    // Pros/Cons of global variables? Too bad!
     String className;
     GNode classImplementation;
     GNode expressionStatement;
-	GNode newClassExpression;
+    GNode newClassExpression;
 
 
     GNode thisClassDataLayoutStructDeclList; 
@@ -118,7 +118,6 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	    
 	}.dispatch(javaTree);
 
-
 	cppTree.add(className);
     }
 
@@ -137,35 +136,29 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
 	GNode importNode  = n;
 	importDeclarations.add(importNode);
+
     }
 
     // ------------------------------------------
     // -------- Build HeaderDeclaration ---------
     // ------------------------------------------
 
-
     // At ClassDeclaration, we build hNode to hold info. for the header file
     // @param n ClassDeclaration node from Java AST
     public void translateClassDeclaration (GNode n) {
 
-	// TODO: Use className to name output files
+	// TODO: Use className to name output files and other hacks
 	className = n.get(1).toString();
 
 	// hNode contains all information for the .h file to be printed
 	GNode hNode = buildHeader(n);
 	cppTree.add(hNode);
 
-
-	// Must move ConstructorDeclaration nodes from ClassBody into the
-	//	cppTree.add(constructors);
-
-	// Note: templateNodes has the same information as CustomClass nodes.
+	// templateNodes has the same information as CustomClass nodes.
 	// It is built at the same time as the header, but must reside in a 
 	// a different branch as it is in a different namespace __rt.
 	GNode tNode = templateNodes;
 	cppTree.add(tNode);
-
-
 	
     }
 
@@ -507,8 +500,6 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	    // PrimaryIdentifiers?
 	    public void visitConstructorDeclaration(GNode n) {
 		// Get .this' Class for explicit method invocation
-		// FIXME: In Java AST, the instance name is not stored.
-		// Do we need it for cpp, and how do we get it?
 		//		thisClass = n.getString(2);
 		//		System.out.println("\t--- Entered class " + thisClass);
 		visit(n);
@@ -523,9 +514,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	    // Make the Class calling a method explicit
 	    // Also, translate System methods
 	    public void visitCallExpression(GNode n) {
-		//n always has 4 children
-
-        
+	        
 		// 1. Identify the PrimaryIdentifier - calling Class
 		String primaryIdentifier = null;
 
@@ -597,6 +586,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
 		    }// end if "System"
 		} // end SelectionExpression
+		// Reminder, n is a CallExpression node
 		else if(n.getNode(0).hasName("PrimaryIdentifier")) {
 
 		    primaryIdentifier = n.getNode(0).getString(0);
