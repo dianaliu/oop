@@ -93,12 +93,17 @@ public class ClassLayoutParser extends Visitor {
 	// Visits the method declarations in a class, adding them as virtual methods to the vtable
 	// @param n MethodDeclaration node from a Java AST
 	public void visitMethodDeclaration(GNode n) {
+		String methodName = n.get(3).toString();
+		if ("main".equals(methodName)) return; // Don't want main method
 		
-	    // new VirtualMethodDeclaration: (0) return type, (1) method name, (2) parameters
-	    
+		//Time to mangle up some method names
+		String mangledName = mangleMethod(n);
+		
+		// new VirtualMethodDeclaration: (0) return type, (1) method name, (2) parameters
 	    GNode methodSignature = GNode.create("VirtualMethodDeclaration");
 	    methodSignature.add(n.get(2)); //return type
-	    methodSignature.add(n.get(3)); //method name
+	    methodSignature.add(mangledName); //method name
+		
 	    GNode formalParameters = deepCopy((GNode)n.getNode(4));
 	    for( int i = 0; i < formalParameters.size(); i++ ) {
 			formalParameters.set(i, formalParameters.getNode(i).getNode(1) ); // this kills the parameter name
@@ -112,23 +117,19 @@ public class ClassLayoutParser extends Visitor {
 	    methodSignature.add(formalParameters); //parameter types
 	    
 	    //Override check here -- if overrides, use vtdecl.set(overrideIndex, methodSig) else just add it
-	    String methodName = n.get(3).toString();
-		if ("main".equals(methodName)) return; // Don't want main method
-		
-		//the manglala 
-		String mangledName = mangleMethod(n);
-		methodSignature.set(1, mangledName );
 		
 		//**MODIFICATIONS TO ORIGINAL METHOD DECLARATION NODE
 		n.set(3, mangledName); //change the name
+		//***ADDING --THIS PARAMETER TO METHOD NODE
 		GNode thisFormParam = GNode.create("FormalParameter");
 		thisFormParam.add(null); //modifiers null
 		thisFormParam.add(createTypeNode(className)); //type is the current class
 		thisFormParam.add(null); //2-null
 		thisFormParam.add("__this"); //name of the __this parameter
 		thisFormParam.add(null); //4-null
-		n.set(4, deepCopy((GNode)n.getNode(4)).add(thisFormParam) );//add the __this parameter
-	    
+		n.set(4, GNode.ensureVariable((GNode)n.getNode(4)).add(thisFormParam) );//add the __this parameter, need to ensure variable
+	    //***
+		//**
 	    int overrideIndex = overridesMethod(n, (GNode)currentHeaderNode.getNode(0) );
 	    if( overrideIndex >= 0 ) {
 			if(DEBUG) System.out.println( "overriding method: " + methodName );
