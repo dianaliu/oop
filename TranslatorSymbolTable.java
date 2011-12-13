@@ -41,27 +41,28 @@ public class TranslatorSymbolTable {
 	//returns the type of a variable or class
 	public Object getType(String symbol) {//also needs the scope as well as name of symbol
 		//Object type = symTable.current().lookup(symbol);
-		//return type;
-		System.out.println("Looking for symbol " + symbol);
-		System.out.println("isRoot2? " +  symTable.current().isRoot());
+		//return type;//
+//		System.out.println("Looking for symbol " + symbol);
+//		System.out.println("isRoot2? " +  symTable.current().isRoot());
 		Iterator nestedScopes = symTable.root().nested();
 		while(nestedScopes.hasNext()) {
-			System.out.println("Nested scope : " + nestedScopes.next());
+			nestedScopes.next();
+//			System.out.println("Nested scope : " + nestedScopes.next());
 			
 		}
-		//symTable.setScope(symTable.root());
-		System.out.println("before scope name? " +  symTable.current().getQualifiedName());
-		System.out.println("scope? " + symTable.root().lookupScope(symbol));
-		System.out.println("isDefined? " + symTable.isDefined(symbol));
+		//symTable.setScope(symTable.root());//
+//		System.out.println("before scope name? " +  symTable.current().getQualifiedName());
+//		System.out.println("scope? " + symTable.root().lookupScope(symbol));
+//		System.out.println("isDefined? " + symTable.isDefined(symbol));
 		//symTable.setScope(symTable.lookupScope(symbol));
 		
-		System.out.println("after scope name? " +  symTable.current().getQualifiedName() + "\n");
+//		System.out.println("after scope name? " +  symTable.current().getQualifiedName() + "\n");
 		return symTable.current().lookup(symbol);
 	}  
 	
 	
     public void addSymbols(GNode java) {
-		System.out.println("Now printing all the variable names and their types:");
+//		System.out.println("Now printing all the variable names and their types:");
 		symTable.enter(java);
 		//System.out.println(symTable.current());
 		
@@ -74,7 +75,7 @@ public class TranslatorSymbolTable {
 				thisBlock = n;
 				blockName = "" + (n.hashCode() + n.getLocation().line + n.getLocation().column);
 				//scopeName = 
-				System.out.println("VISITED A NEW BLOCK " + scopeName);
+//				System.out.println("VISITED A NEW BLOCK " + scopeName);
 				symTable.enter("" + blockName);
 				visit(n);
 				symTable.exit();
@@ -86,7 +87,7 @@ public class TranslatorSymbolTable {
 				
 				blockName = "" + (n.hashCode() + n.getLocation().line + n.getLocation().column);
 
-				System.out.println("VISITED A NEW METHOD " + scopeName);
+//				System.out.println("VISITED A NEW METHOD " + scopeName);
 				symTable.enter("" + blockName);
 				visit(n);
 				symTable.exit();
@@ -94,15 +95,15 @@ public class TranslatorSymbolTable {
 				
 			}
 			
-			public void visitFormalParameters(GNode n) {
+			public void visitFormalParameter(GNode n) {
 
-				String name = n.getNode(0).getString(3);
+				String name = n.getString(3);
 
-				System.out.println("name of this " + name);
+//				System.out.println("name of this " + name);
 				
-				String type = n.getNode(0).getNode(1).getNode(0).getString(0);
+				String type = n.getNode(1).getNode(0).getString(0);
 				
-				System.out.println("type of this " + type);
+//				System.out.println("type of this " + type);
 
 				symTable.current().addDefinition(name, type);
 				
@@ -118,7 +119,7 @@ public class TranslatorSymbolTable {
 				String type = n.getNode(1).getNode(0).getString(0);
 				
 				symTable.current().addDefinition(name, type);
-				System.out.println("Qualified name : " + symTable.current().getQualifiedName());
+//				System.out.println("Qualified name : " + symTable.current().getQualifiedName());
 				try{
 					PrintWriter fstream = new PrintWriter("Scope.txt");
 					Printer babysFirstScope = new Printer(fstream);
@@ -156,7 +157,7 @@ public class TranslatorSymbolTable {
 				
 				blockName = "" + (n.hashCode() + n.getLocation().line + n.getLocation().column);
 				
-				System.out.println("VISITED A NEW METHOD " + scopeName);
+//				System.out.println("VISITED A NEW METHOD " + scopeName);
 				symTable.enter("" + blockName);
 				visit(n);
 				symTable.exit();
@@ -166,14 +167,14 @@ public class TranslatorSymbolTable {
 			public void visitPrimaryIdentifier(GNode n) {
 				
 				String name = (String)(n.get(0));
-				System.out.println("This is name " + name);
+//				System.out.println("This is name " + name);
 				String type = "";
 				if(!name.equals("System"))	
 					type = symTable.lookup(name).toString();
 				
 				n.setProperty(type,name);
 				
-				System.out.println("This is type " + type + ",This is name " + name);
+//				System.out.println("This is type " + type + ",This is name " + name);
 				visit(n);
 				
 			}
