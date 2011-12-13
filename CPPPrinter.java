@@ -3350,7 +3350,7 @@ public class CPPPrinter extends Visitor {
 				public void visitSubscriptExpression(GNode n) {
 				    printer.indent().p("// __rt::checkStore(");
 				    printer.p(n.getNode(0)).p(",");
-				    printer.p(n.getNode(2)).p(");").pln();
+				    printer.p(n.getNode(1)).p(");").pln();
 	
 				}
 				
@@ -3364,7 +3364,8 @@ public class CPPPrinter extends Visitor {
 			    
 			} // end if
 		    } // end for loop
-
+		    // FIXME: Is this in the right place?
+		    //		     printer.p(n.getNode(2)).p(");").pln();
 		}
 
 		final int prec1 = startExpression(10);
