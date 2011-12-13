@@ -1706,6 +1706,7 @@ public class CPPPrinter extends Visitor {
 		endStatement(nested);
 	}
 	
+
 	/** Visit the specified expression statement node. */
 	public void visitExpressionStatement(GNode n) {
 
@@ -1722,8 +1723,8 @@ public class CPPPrinter extends Visitor {
 			}
 
 			public void visitSubscriptExpression(GNode n) {
-			    //			    printer.indent().p(" __rt::checkIndex(").p(n.getNode(0)).p(", ");
-			    //			    printer.p(n.getNode(1)).p(");").pln();
+			    // printer.indent().p(" __rt::checkIndex(").p(n.getNode(0)).p(", ");
+			    // printer.p(n.getNode(1)).p(");").pln();
 
 			}
 			
@@ -1732,19 +1733,16 @@ public class CPPPrinter extends Visitor {
 				if (o instanceof Node) dispatch((GNode)o);
 			    }
 			}
-			
 		    }.dispatch(GNode.cast(o));
 
 		} // end if
 	    } // end for loop
-
 	    
-
-
 	    // Continue like normal
 	    boolean nested = startStatement(STMT_ANY, n);
 	    printer.indent().p(n.getNode(0)).pln(';');
 	    endStatement(nested);
+	    
 
 	}
     
@@ -3352,6 +3350,7 @@ public class CPPPrinter extends Visitor {
 				public void visitSubscriptExpression(GNode n) {
 				    printer.indent().p("// __rt::checkStore(");
 				    printer.p(n.getNode(0)).p(",");
+				    printer.p(n.getNode(2)).p(");").pln();
 	
 				}
 				
@@ -3365,7 +3364,7 @@ public class CPPPrinter extends Visitor {
 			    
 			} // end if
 		    } // end for loop
-		    printer.p(n.getNode(2)).p(");").pln();
+
 		}
 
 		final int prec1 = startExpression(10);
