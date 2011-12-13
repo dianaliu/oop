@@ -23,8 +23,10 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
 
-public class TranslatorSymbolTable {
+public class TypeParser {
 	
+    public static boolean DEBUG = false;
+
 	//Our symbol table
 	SymbolTable symTable;
 	String scopeName;//'a'
@@ -32,9 +34,10 @@ public class TranslatorSymbolTable {
 	char prevName = 'a';
 	
 	//default constructor
-   	public TranslatorSymbolTable(String rootName) {
+    public TypeParser(String rootName, boolean db) {
    		symTable = new SymbolTable(rootName);
    		symTable.freshJavaId(rootName);
+		DEBUG = db;
 	}
 	
 	
@@ -124,7 +127,7 @@ public class TranslatorSymbolTable {
 			catch(Exception e) {
 			    System.err.println(e.getMessage());
 			}
-			System.out.println(" ");
+			//			System.out.println(" ");
 			visit(n);
 		    } 
 
@@ -162,8 +165,10 @@ public class TranslatorSymbolTable {
 			// Time to add it to the symbol table
 			if(null != name && null != type) {
 
-			    System.out.println("Adding to SymbolTable: (" 
-					       + name + ", " + type + ")");
+			    if(DEBUG) 
+				System.out.println("Adding to SymbolTable: ("  
+						   + name + ", " + type + ")");
+
 			    symTable.current().addDefinition(name, type);
 			   
 			    try{
@@ -206,7 +211,7 @@ public class TranslatorSymbolTable {
 			    //store scope information
 			    blockName = "" + (n.hashCode() + n.getLocation().line + n.getLocation().column);
 			    
-			    System.out.println("About to enter " + blockName);
+			    if(DEBUG) System.out.println("About to enter " + blockName);
 			    symTable.enter("" + blockName);
 			    visit(n);
 			    symTable.exit();
@@ -229,18 +234,23 @@ public class TranslatorSymbolTable {
 			    String type = null;
 			    
 			    if(!"System".equals(name)) {
-				System.out.println("--- Looking up type for " 
-						   + name);
+				if(DEBUG) {
+				    System.out.println("--- Looking up type for "  + name); 
+				}
 				type = symTable.lookup(name).toString();
 			    }
 			    
 			    if(null != type) {
 				n.setProperty(type,name);
-				System.out.println("Set Type = " + type 
-						   + " for var " + name);
+				if(DEBUG) {
+				    System.out.println("Set Type = " + type 
+						       + " for var " + name);
+				}
 			    }
-			    else System.out.println("Couldn't find Type for " 
-						    + name);
+			    else {
+				if(DEBUG) 
+				    System.out.println("Couldn't find Type for " + name);
+			    }
 			    visit(n);
 			}
 			
