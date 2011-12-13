@@ -50,7 +50,7 @@ public class ClassLayoutParser extends Visitor {
 		String damar[] = new String[2];
 		damar[0] = "muslum";
 		//degisken adi, metod adi, giren cesitleri
-		kirimbaba("arabesk", "orhan", damar);
+		//		kirimbaba("arabesk", "orhan", damar);
     }
     
 	// ----------------------------------
