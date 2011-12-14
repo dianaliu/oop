@@ -65,6 +65,33 @@ public class ClassLayoutParser extends Visitor {
 			if (o instanceof Node) dispatch((Node)o);
 		}
 	}
+	
+	// *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+	// *-*-*-*-*-*-*-*-*-* HACK:  METHOD INVOCATIONS *-*-*-*-*-*-*-*-*-*-*
+	// *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+	
+	public void replaceMethodCalls() {
+		new Visitor() {
+			public void visitCallExpression(GNode n) {
+				String originalMethod = n.getString(2);
+				System.out.println( "VISITED A CALL EXPRESSION");
+				n.set(2, "THISISAFAKEMETHODCALL" );
+				String targetObject;
+				
+				if ( null == n.getNode(0) || n.getNode(0).hasName("ThisExpression") ) {
+					targetObject = className;
+				}
+				else {
+					targetObject = getType((GNode)n.getNode(0));
+				}
+			}
+			
+			String getType( GNode n ) {
+				if( n.hasProperty("type") ) return (String)n.getProperty("type");
+				else return "Object";
+			}
+		};
+	}
     
     // Adds class in proper hierarchal location to classTree
     // Calls methods to addVTable and addDataLayout

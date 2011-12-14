@@ -48,6 +48,7 @@ import java.io.IOException;
 import java.io.Reader;
 
 import xtc.oop.LeafTransplant;
+import xtc.oop.TypeParser;
 
 public class Translator extends xtc.util.Tool {
 	
@@ -143,6 +144,18 @@ public class Translator extends xtc.util.Tool {
 				runtime.console().pln("--- Finished trimming dependencies").flush();
 			//-----------------------------------------------------------
 			
+			
+			if(DEBUG) runtime.console().pln( "--- Begin type parsing").flush();
+			
+			TypeParser parsadora = new TypeParser("Global", DEBUG);
+			for(int i = 0; i < trees.length; i++) {
+				if(trees[i] != null) {
+					parsadora.addSymbols(trees[i]);
+					parsadora.addProperty(trees[i]);
+				}
+			}
+			
+			if(DEBUG) runtime.console().pln( "--- End type parsing").flush();
 			
 			/**	
 			 
