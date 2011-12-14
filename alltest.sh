@@ -53,16 +53,17 @@ fi
 
 	 if diff j.txt c.txt  > /dev/null ; then
 	
-	  echo "--- Pass"
+	  echo "Pass"
 	  # cat c.txt
 
    	 else 
- 	  echo "--- ERR: Outputs were different."
+ 	  echo "ERR: Outputs were different."
 	  # echo "--- See diff --side-by-side below:"
 	  # diff j.txt c.txt --side-by-side
 
+	# ? Do I need to cd back to the original directory?
    done
 
-# read -p "End of program - Press Enter to quit."
+read -p "End of program - Press Enter to quit."
 
 
