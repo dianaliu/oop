@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.Reader;
 
 import java.util.ArrayList;
+import java.util.StringTokenizer;
 
 /* 
  * Creates a helper class hierarchy tree of vtables and data layouts
@@ -46,9 +47,10 @@ public class ClassLayoutParser extends Visitor {
 		if(DEBUG) System.out.println("--- End Class Layout Parser\n");
 		//
 		String varArray[] = new String[2];
-		varArray[0] = "muslum";
+		varArray[0] = "B";
+		varArray[1] = "B";
 		//degisken adi, metod adi, giren cesitleri
-				kirimbaba("arabesk", "orhan", varArray);
+				kirimbaba("Testere", "orhan", varArray);
     }
     
 	// ----------------------------------
@@ -376,17 +378,19 @@ public class ClassLayoutParser extends Visitor {
 	// ondan sonra da methodName absolute superiority gosteriyorsa onu sec
 
 	public String kirimbaba(String objectType, String methodName, String varTypes[]) {
-		objectType = "Testere";
-		String result = "";
+		String result = methodName;
 		
 		int mCount = 0;
 		int a = 6;
 		Node node = getVTable(objectType).getNode(a);
 
 		while(getVTable(objectType).getNode(a).getString(1) != null) {
-			node = getVTable(objectType).getNode(a);
+			System.out.println("candy " );
 
-			if((node.getNode(2).size()-1) == varTypes.length && methodName.equals(node.getString(1))) {
+			node = getVTable(objectType).getNode(a);
+			StringTokenizer st = new StringTokenizer(node.getString(1), "$");
+			String candy = st.nextToken();
+			if((node.getNode(2).size()-1) == varTypes.length && methodName.equals(candy)) {
 				mCount++;
 			}
 			a++;
@@ -398,10 +402,17 @@ public class ClassLayoutParser extends Visitor {
 		a = 6;
 		
 		while(getVTable(objectType).getNode(a).getString(1) != null) {
+
 			node = getVTable(objectType).getNode(a);
-			if(node.getNode(2).size() == varTypes.length && methodName.equals(node.getString(1))) {
-				for(int k = 0; k < node.getNode(2).size(); k++) {
-					varArray[count][k] = node.getNode(2).getNode(k).getNode(0).getString(0);
+			StringTokenizer st = new StringTokenizer(node.getString(1), "$");
+			String bust = st.nextToken();
+
+			if((node.getNode(2).size() - 1) == varTypes.length && methodName.equals(bust)) {
+				System.out.println("candy or bust");
+				for(int k = 0; k < (node.getNode(2).size() - 1); k++) {
+					varArray[count][k] = st.nextToken();
+					System.out.println("bust " + varArray[count][k]);
+
 				}
 				count++;
 			}
@@ -415,28 +426,41 @@ public class ClassLayoutParser extends Visitor {
 		// kod ise yarar bir pust oldugu icin mutlaka birini secmek meccburiyetinndesin
 		
 		// butun degerlerde herife ulasana dek getSuperClass yap sonra degerleri tut ve en bestMethodi al
-		String bestMethod[] = new String[mCount];
-		int result2 = 100;
+		int atLast = 0;
+		boolean tie = false;
 		for(int j = 0; j < varTypes.length; j++) {
-			int g = 0;
+			int result2 = 100;
+			tie = false;
+			boolean seen = false;
+
 			for(int p = 0; p < mCount; p++) {
-				
-				String dene = "";
-				while (dene != varTypes[j] && ) {
-					dene = getSuperclassName(varArray[p][j]);
+				int g = 0;
+				String dummy = "" + varTypes[j] ;
+				System.out.println(varArray[p][j] + " hasSuperclass, " +varTypes[j] + " varTypes"); 
+				while (!dummy.equals( varArray[p][j]) && hasSuperclass(dummy)) {
+					dummy = getSuperclassName(dummy);
 					g++;
+					System.out.println(dummy + " dummy " + varArray[p][j] + " varArray[p][j] ");
 				}
-				if(g < result2) {
+				if(g <= result2) {
 					result2 = g;
-					bestMethod[j] = "" + p;
+					atLast  = p;
+					if(seen)
+						tie = true;
+					seen = true;
 				}
 				
 			}
-		}
-		for(int j = 0; j < bestMethod.length; j++) {
-			System.out.println(bestMethod[j] + " best");
+			if(!tie) 
+				break;
 		}
 		
+		for(int j = 0; j < varTypes.length; j++) {
+			result +=  '$' + varArray[atLast][j] ;
+		}
+		
+		System.out.println(result);
+
 		return result;
 			
 		}
