@@ -45,10 +45,10 @@ public class ClassLayoutParser extends Visitor {
 		if(DEBUG) printClassTree();
 		if(DEBUG) System.out.println("--- End Class Layout Parser\n");
 		//
-		String damar[] = new String[2];
-		damar[0] = "muslum";
+		String varArray[] = new String[2];
+		varArray[0] = "muslum";
 		//degisken adi, metod adi, giren cesitleri
-		//		kirimbaba("arabesk", "orhan", damar);
+				kirimbaba("arabesk", "orhan", varArray);
     }
     
 	// ----------------------------------
@@ -355,70 +355,72 @@ public class ClassLayoutParser extends Visitor {
 	
 	// degisken adi, metod adi, giren cesitleri
 	// thing1.getNumber(int bok)
-	// duydum = object, ki = getNumber, unutmussun = bok
+	// objectType = object, methodName = getNumber, varTypes = bok
 	
 	// once dudum un classini bul, ardindan vtable i al, ardindan o table dan soz konusu metodun datasini al
 	// sonra dagiren cikanla karsilastir datasini alirken bir kac kali bir arraye almak isteyebilirsin
-	// ondan sonra da ki absolute superiority gosteriyorsa onu sec
+	// ondan sonra da methodName absolute superiority gosteriyorsa onu sec
 
-	public String kirimbaba(String duydum, String ki, String unutmussun[]) {
-		duydum = "Testere";
+	public String kirimbaba(String objectType, String methodName, String varTypes[]) {
+		objectType = "Testere";
 		String result = "";
 		
 		int mCount = 0;
 		int a = 6;
-		Node ana = getVTable(duydum).getNode(a);
+		Node node = getVTable(objectType).getNode(a);
 
-		while(getVTable(duydum).getNode(a).getString(1) != null) {
-			ana = getVTable(duydum).getNode(a);
-			if(ana.getNode(2).size() == unutmussun.length && ki.equals(ana.getString(1))) {
+		while(getVTable(objectType).getNode(a).getString(1) != null) {
+			node = getVTable(objectType).getNode(a);
+
+			if((node.getNode(2).size()-1) == varTypes.length && methodName.equals(node.getString(1))) {
 				mCount++;
 			}
 			a++;
 		}
 		
 		System.out.println(" Number of methods with same name " + mCount);
-		String damar[][] = new String[mCount][unutmussun.length];
+		String varArray[][] = new String[mCount][varTypes.length];
 		int count = 0;
 		a = 6;
 		
-		while(getVTable(duydum).getNode(a).getString(1) != null) {
-			ana = getVTable(duydum).getNode(a);
-			if(ana.getNode(2).size() == unutmussun.length && ki.equals(ana.getString(1))) {
-				for(int k = 0; k < ana.getNode(2).size(); k++) {
-					damar[count][k] = ana.getNode(2).getNode(k).getNode(0).getString(0);
+		while(getVTable(objectType).getNode(a).getString(1) != null) {
+			node = getVTable(objectType).getNode(a);
+			if(node.getNode(2).size() == varTypes.length && methodName.equals(node.getString(1))) {
+				for(int k = 0; k < node.getNode(2).size(); k++) {
+					varArray[count][k] = node.getNode(2).getNode(k).getNode(0).getString(0);
 				}
 				count++;
 			}
 			a++;
 		}
 		
+		System.out.println(" varArray.length " + varArray.length);
+
 		
-		
-		// unutmussun ve nuhtelif dmarlri karsilastir ondan sonra en kiyak olani sec
+		// varTypes ve nuhtelif dmarlri karsilastir ondan sonra en methodNameyak olani sec
 		// kod ise yarar bir pust oldugu icin mutlaka birini secmek meccburiyetinndesin
 		
-		// butun degerlerde herife ulasana dek getSuperClass yap sonra degerleri tut ve en krali al
-		String kral[] = new String[mCount];
-		int netice = 100;
-		for(int j = 0; j < unutmussun.length; j++) {
+		// butun degerlerde herife ulasana dek getSuperClass yap sonra degerleri tut ve en bestMethodi al
+		String bestMethod[] = new String[mCount];
+		int result2 = 100;
+		for(int j = 0; j < varTypes.length; j++) {
 			int g = 0;
 			for(int p = 0; p < mCount; p++) {
 				
-				String dene = "";/*
-				while (dene != unutmussun[j]) {
-					dene = getSuperclassName(damar[p][j]);
+				String dene = "";
+				while (dene != varTypes[j] && ) {
+					dene = getSuperclassName(varArray[p][j]);
 					g++;
-				}*/
-				if(g < netice) {
-					netice = g;
-					kral[j] = "" + p;
+				}
+				if(g < result2) {
+					result2 = g;
+					bestMethod[j] = "" + p;
 				}
 				
 			}
 		}
-		for(int j = 0; j < kral.length; j++) {
-			System.out.println(kral[j]);
+		for(int j = 0; j < bestMethod.length; j++) {
+			System.out.println(bestMethod[j] + " best");
 		}
 		
 		return result;
@@ -705,7 +707,13 @@ public class ClassLayoutParser extends Visitor {
 		if (child.getProperty("name").equals("Object")) return null;
 		return (GNode)child.getProperty("parentClassNode");
 	}
-	
+	public boolean hasSuperclass(String sc) {
+		if (getSuperclass(sc) != null) {
+			return true;
+		}
+		else
+			return false;
+	}
 	//Returns a Class node representing the parent class of the specified class node
 	//@param n class node
 	//@return the node of the superclass
