@@ -2,13 +2,13 @@
 
 clear
 
- echo  "Test Script: Translate all test files."
+ echo  "Translates and compiles/runs all java files in src/xtc/oop/examples/"
 
  # 0. Make/clean output directory
 if [ ! -d "output" ]
        then
            mkdir "output"
-	   echo "Created directory output/"
+	   echo "--- Created directory output/"
       else
 	   echo "Found existing directory output/"
            read -p "rm all files in output/ (y/n)?" choice
@@ -23,73 +23,45 @@ if [ ! -d "output" ]
            echo "Files will write to output/"
 fi
 
- source setup.sh
- make
- 
 
-  # 1. Get Java file(s) from the examples folder
  cd src/xtc/oop/examples
- for file in *.java ; do
+
+   for file in *.java ; do
 	JavaFiles=("${JavaFiles[@]}" "$file")
- done
- cd ..
- cd ..
- cd ..
- cd ..
+	echo "$file: "
 
- 
- 
- # 2. Put Java files into output folder
-directoryExamples='src/xtc/oop/examples/'
- for var in "${JavaFiles[@]}"
-     do
-     #echo "$var"
-     cp "$directoryExamples$var" "output/"$var""
-	 # FIXME: For some programs, exits without printing err below
-	 #java -cp output/ "$fileName" > "output/j.txt" || { echo "--- ERR: Java runtime error"; return 1; }
-	 #echo "--- Ran $var and saved output to output/j.txt"
-done 
+	# Compile and run Java file
+	javac "$file" || {echo "ERR: Java compile time"}
+	java "$file" > ../../../../../output/j.txt || {echo "ERR: Java run time"}
 
+	# Translate the file
+	cd ../../../..
+	source setup.sh
+	make > /dev/null || {echo "ERR: Translator compile time"}
+	java xtc.oop.Translator -translate $file > /dev/null || {echo "ERR: Translator run time"}
+	
+	# Compile and run CC file, check output
+	# May need to force overwriting
+	cd output/
 
- # 3. Translate Java files 
- directoryOutputs='output/'
- for java in "${JavaFiles[@]}"
-     do
-     java xtc.oop.Translator -translate $directoryOutputs$java
+	cp ../src/xtc/oop/include/* .
+	for file in *.cc ; do
+		g++ "$file" java_lang.cc || {echo "ERR: CPP compile time"}
+		./a.out > "c.txt" || {echo "ERR: CPP run time"}
+ 	done
+	cd ..
 
-	 echo "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&  Translated input file: $java"
-done 
- 
+	 if diff j.txt c.txt  > /dev/null ; then
+	
+	  echo "--- Pass"
+	  # cat c.txt
 
- # 5. Get .cpp files from output/
- cd output/
- for file in *.cc ; do
-	cppOutput=("${cppOutput[@]}" "$file")
- done
+   	 else 
+ 	  echo "--- ERR: Outputs were different."
+	  # echo "--- See diff --side-by-side below:"
+	  # diff j.txt c.txt --side-by-side
 
-
-# 5.5 Copy Grimm's java_lang etc. files to output/
- cp ../src/xtc/oop/include/* .
-
- # 6. Compile CPP files. Form string for cpp arguments
-failed=()
-numbad=0
-  for file in "${cppOutput[@]}"
-     do
-	echo "***************************************************  Compiling $file java_lang.cc"
-    g++ $file java_lang.cc || { echo "*************************************************** ERR: CPP compile time error for file $file"; failed[numbad]=$file; numbad=`expr $numbad + 1`; }
-done 
-	echo "The following cpp files failed to compile:"
-	echo ${failed[@]}
-
- # 7. Run and save output from CPP files
- # ./a.out > "c.txt" || { echo "--- ERR: CPP runtime error"; cd ..; return 1; }
- #   echo "--- Ran $allCPP java_lang.cc and saved output to output/c.txt"
-
-
- #  Return to xtc/  
- cd ..
- return 0;
+   done
 
 # read -p "End of program - Press Enter to quit."
 
