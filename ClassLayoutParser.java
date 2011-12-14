@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.Reader;
 
 import java.util.ArrayList;
+import java.util.StringTokenizer;
 
 /* 
  * Creates a helper class hierarchy tree of vtables and data layouts
@@ -44,14 +45,12 @@ public class ClassLayoutParser extends Visitor {
 		
 		if(DEBUG) printClassTree();
 		if(DEBUG) System.out.println("--- End Class Layout Parser\n");
-		
-		
-		String parameters[] = new String[]{"Object"};
-		String objectName = "Object";
-		String methodName = "toString";
-		String kirimsResult = kirimbaba(objectName, methodName, parameters);
-		System.out.print( objectName + "." + methodName + "( " ); for(String s : parameters) System.out.print(s + " "); System.out.println(") --> " + kirimsResult);
-		
+		//
+		String varArray[] = new String[2];
+		varArray[0] = "B";
+		varArray[1] = "B";
+		//degisken adi, metod adi, giren cesitleri
+				kirimbaba("Testere", "orhan", varArray);
     }
     
 	// ----------------------------------
@@ -403,72 +402,97 @@ public class ClassLayoutParser extends Visitor {
 	
 	// once dudum un classini bul, ardindan vtable i al, ardindan o table dan soz konusu metodun datasini al
 	// sonra dagiren cikanla karsilastir datasini alirken bir kac kali bir arraye almak isteyebilirsin
-	// ondan sonra da ki absolute superiority gosteriyorsa onu sec
-	
-	public String kirimbaba(String targetObject, String methodName, String params[]) {
-		String result = "";
+	// ondan sonra da methodName absolute superiority gosteriyorsa onu sec
+
+	public String kirimbaba(String objectType, String methodName, String varTypes[]) {
+		String result = methodName;
 		
 		int mCount = 0;
 		int a = 6;
-		Node ana = getVTable(targetObject).getNode(a);
-		
-		while(getVTable(targetObject).getNode(a).getString(1) != null) {
-			ana = getVTable(targetObject).getNode(a);
-			if(ana.getNode(2).size() == params.length && methodName.equals(ana.getString(1))) {
+		Node node = getVTable(objectType).getNode(a);
+
+		while(getVTable(objectType).getNode(a).getString(1) != null) {
+			System.out.println("candy " );
+
+			node = getVTable(objectType).getNode(a);
+			StringTokenizer st = new StringTokenizer(node.getString(1), "$");
+			String candy = st.nextToken();
+			if((node.getNode(2).size()-1) == varTypes.length && methodName.equals(candy)) {
 				mCount++;
 			}
 			a++;
 		}
 		
 		System.out.println(" Number of methods with same name " + mCount);
-		String damar[][] = new String[mCount][params.length];
+		String varArray[][] = new String[mCount][varTypes.length];
 		int count = 0;
 		a = 6;
 		
-		while(getVTable(targetObject).getNode(a).getString(1) != null) {
-			ana = getVTable(targetObject).getNode(a);
-			if(ana.getNode(2).size() == params.length && methodName.equals(ana.getString(1))) {
-				for(int k = 0; k < ana.getNode(2).size(); k++) {
-					damar[count][k] = ana.getNode(2).getNode(k).getNode(0).getString(0);
+		while(getVTable(objectType).getNode(a).getString(1) != null) {
+
+			node = getVTable(objectType).getNode(a);
+			StringTokenizer st = new StringTokenizer(node.getString(1), "$");
+			String bust = st.nextToken();
+
+			if((node.getNode(2).size() - 1) == varTypes.length && methodName.equals(bust)) {
+				System.out.println("candy or bust");
+				for(int k = 0; k < (node.getNode(2).size() - 1); k++) {
+					varArray[count][k] = st.nextToken();
+					System.out.println("bust " + varArray[count][k]);
+
 				}
 				count++;
 			}
 			a++;
 		}
 		
+		System.out.println(" varArray.length " + varArray.length);
+
 		
-		
-		// unutmussun ve nuhtelif dmarlri karsilastir ondan sonra en kiyak olani sec
+		// varTypes ve nuhtelif dmarlri karsilastir ondan sonra en methodNameyak olani sec
 		// kod ise yarar bir pust oldugu icin mutlaka birini secmek meccburiyetinndesin
 		
-		// butun degerlerde herife ulasana dek getSuperClass yap sonra degerleri tut ve en krali al
-		String kral[] = new String[mCount];
-		int netice = 100;
-		for(int j = 0; j < params.length; j++) {
-			int g = 0;
+		// butun degerlerde herife ulasana dek getSuperClass yap sonra degerleri tut ve en bestMethodi al
+		int atLast = 0;
+		boolean tie = false;
+		for(int j = 0; j < varTypes.length; j++) {
+			int result2 = 100;
+			tie = false;
+			boolean seen = false;
+
 			for(int p = 0; p < mCount; p++) {
-				
-				String dene = "";/*
-								  while (dene != unutmussun[j]) {
-								  dene = getSuperclassName(damar[p][j]);
-								  g++;
-								  }*/
-				if(g < netice) {
-					netice = g;
-					kral[j] = "" + p;
+				int g = 0;
+				String dummy = "" + varTypes[j] ;
+				System.out.println(varArray[p][j] + " hasSuperclass, " +varTypes[j] + " varTypes"); 
+				while (!dummy.equals( varArray[p][j]) && hasSuperclass(dummy)) {
+					dummy = getSuperclassName(dummy);
+					g++;
+					System.out.println(dummy + " dummy " + varArray[p][j] + " varArray[p][j] ");
+				}
+				if(g <= result2) {
+					result2 = g;
+					atLast  = p;
+					if(seen)
+						tie = true;
+					seen = true;
 				}
 				
 			}
-		}
-		for(int j = 0; j < kral.length; j++) {
-			System.out.println(kral[j]);
+			if(!tie) 
+				break;
 		}
 		
+		for(int j = 0; j < varTypes.length; j++) {
+			result +=  '$' + varArray[atLast][j] ;
+		}
+		
+		System.out.println(result);
+
 		return result;
+			
+		}
 		
-	}
-	
-	
+		
 	
 	
 	//[DEBUG - INTERNAL]
@@ -758,7 +782,13 @@ public class ClassLayoutParser extends Visitor {
 		if (child.getProperty("name").equals("Object")) return null;
 		return (GNode)child.getProperty("parentClassNode");
 	}
-	
+	public boolean hasSuperclass(String sc) {
+		if (getSuperclass(sc) != null) {
+			return true;
+		}
+		else
+			return false;
+	}
 	//Returns a Class node representing the parent class of the specified class node
 	//@param n class node
 	//@return the node of the superclass
