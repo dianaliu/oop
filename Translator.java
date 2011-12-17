@@ -127,6 +127,19 @@ public class Translator extends xtc.util.Tool {
 			
 			runtime.console().pln("--- Finish dependency analysis").flush();
 			
+			
+			if(DEBUG) runtime.console().pln( "--- Begin type parsing").flush();
+			
+			TypeParser parsadora = new TypeParser("Global", DEBUG);
+			for(int i = 0; i < trees.length; i++) {
+				if(trees[i] != null) {
+					parsadora.addSymbols(trees[i]);
+					parsadora.addProperty(trees[i]);
+				}
+			}
+			
+			if(DEBUG) runtime.console().pln( "--- End type parsing").flush();
+			
 			runtime.console().pln("--- Begin inheritance analysis").flush();
 			
 			// Parse all classes to create vtables and data layouts
@@ -144,18 +157,6 @@ public class Translator extends xtc.util.Tool {
 				runtime.console().pln("--- Finished trimming dependencies").flush();
 			//-----------------------------------------------------------
 			
-			
-			if(DEBUG) runtime.console().pln( "--- Begin type parsing").flush();
-			
-			TypeParser parsadora = new TypeParser("Global", DEBUG);
-			for(int i = 0; i < trees.length; i++) {
-				if(trees[i] != null) {
-					parsadora.addSymbols(trees[i]);
-					parsadora.addProperty(trees[i]);
-				}
-			}
-			
-			if(DEBUG) runtime.console().pln( "--- End type parsing").flush();
 			
 			/**	
 			 

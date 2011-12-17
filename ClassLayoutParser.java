@@ -30,9 +30,6 @@ public class ClassLayoutParser extends Visitor {
 		DEBUG = db;
 		if(DEBUG) System.out.println("--- Begin Class Layout Parser\n");
 		
-		
-		
-		
 		//preinitialize the hardcoded Grimm types
 		initGrimmTypes();
 		
@@ -43,15 +40,89 @@ public class ClassLayoutParser extends Visitor {
 			}
 		}
 		
+		dispatchCallExpressionVisitor(ast);
+		
 		if(DEBUG) printClassTree();
 		if(DEBUG) System.out.println("--- End Class Layout Parser\n");
-		//
-		String varArray[] = new String[2];
-		varArray[0] = "B";
-		varArray[1] = "B";
+		
+		//String varArray[] = new String[2];
+		//varArray[0] = "B";
+		//varArray[1] = "B";
 		//degisken adi, metod adi, giren cesitleri
-				kirimbaba("Testere", "orhan", varArray);
+		//kirimbaba("Testere", "orhan", varArray);
     }
+	
+	void dispatchCallExpressionVisitor(GNode[] ast) {
+		Visitor cev = new Visitor() {
+			
+			String className;
+			public void visitClassDeclaration(GNode n) {
+				className = n.get(1).toString();
+				visit(n);
+			}
+			
+			public void visitCallExpression(GNode n) {
+				String targetClassName;
+				String targetMethodName;
+				String[] params;
+				if(n.getNode(0) == null || n.getNode(0).hasName("ThisExpression")) {
+					//__this method
+					targetClassName = className;
+					targetMethodName = n.getString(2);
+					params = stringifyParams((GNode)n.getNode(3));
+				} else if(n.getNode(0).hasName("PrimaryIdentifier")) {
+					// standard expression
+					targetClassName = getType((GNode)n.getNode(0));
+					targetMethodName = n.getString(2);
+					params = stringifyParams((GNode)n.getNode(3));
+//				} else if(n.getNode(0).hasName("SuperExpression")) {
+					// SOOPER expression
+				} else {
+					System.out.println( "did not visit call expression" );
+					visit(n);
+					return;
+				}
+				System.out.print( targetClassName + "." + targetMethodName + "(" );
+				for( String s : params ) System.out.print( s + " " );
+				System.out.println( ") " + methodRank( targetClassName, targetMethodName, params ) );
+				visit(n);
+			}
+			
+			public void visit(Node n) {
+				for( Object o : n ) {
+					if (o instanceof Node) dispatch((Node)o);
+				}
+			}
+		};
+		System.out.println( "call expression visitor" );
+		for(int i = 0; i < ast.length; i++) {
+			if(ast[i] != null) {
+				cev.dispatch(ast[i]);
+			}
+		}
+	}
+	
+	//Gets a string list of object types out of an arguments node
+	String[] stringifyParams( GNode n ) {
+		String[] retVal = new String[n.size()];
+		int index = 0;
+		for( Object o : n ) {
+			retVal[index++] = getType((GNode)o);
+		}
+		return retVal;
+	}	
+	
+	String getType( GNode n ) {
+		if( n.hasName( "PrimaryIdentifier" ) && n.hasProperty("type") ) return (String)n.getProperty("type");
+		else if( n.hasName( "CallExpression" )) return "WELLSHIT";
+		else if( n.hasName( "BooleanLiteral" )) return "boolean";
+		else if( n.hasName( "CharacterLiteral" )) return "char";
+		else if( n.hasName( "FloatingPointLiteral" )) return "float";
+		else if( n.hasName( "IntegerLiteral" )) return "int";
+		else if( n.hasName( "NullLiteral" )) return "null";
+		else if( n.hasName( "StringLiteral" )) return "String";
+		else return "$#$%&#$&#";
+	}
     
 	// ----------------------------------
 	//         Tree Processing
@@ -63,33 +134,6 @@ public class ClassLayoutParser extends Visitor {
 		for( Object o : n ) {
 			if (o instanceof Node) dispatch((Node)o);
 		}
-	}
-	
-	// *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-	// *-*-*-*-*-*-*-*-*-* HACK:  METHOD INVOCATIONS *-*-*-*-*-*-*-*-*-*-*
-	// *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-	
-	public void replaceMethodCalls() {
-		new Visitor() {
-			public void visitCallExpression(GNode n) {
-				String originalMethod = n.getString(2);
-				System.out.println( "VISITED A CALL EXPRESSION");
-				n.set(2, "THISISAFAKEMETHODCALL" );
-				String targetObject;
-				
-				if ( null == n.getNode(0) || n.getNode(0).hasName("ThisExpression") ) {
-					targetObject = className;
-				}
-				else {
-					targetObject = getType((GNode)n.getNode(0));
-				}
-			}
-			
-			String getType( GNode n ) {
-				if( n.hasProperty("type") ) return (String)n.getProperty("type");
-				else return "Object";
-			}
-		};
 	}
     
     // Adds class in proper hierarchal location to classTree
@@ -131,6 +175,8 @@ public class ClassLayoutParser extends Visitor {
 	// @param n MethodDeclaration node from a Java AST
 	public void visitMethodDeclaration(GNode n) {
 		String methodName = n.get(3).toString();
+		//this.dispatch(n.getNode(7)); //hack
+
 		if ("main".equals(methodName)) return; // Don't want main method
 		
 		//Time to mangle up some method names
@@ -164,7 +210,7 @@ public class ClassLayoutParser extends Visitor {
 		thisFormParam.add(null); //2-null
 		thisFormParam.add("__this"); //name of the __this parameter
 		thisFormParam.add(null); //4-null
-		n.set(4, GNode.ensureVariable((GNode)n.getNode(4)).add(thisFormParam) );//add the __this parameter, need to ensure variable
+		n.set(4, GNode.ensureVariable((GNode)n.getNode(4)).add(0,thisFormParam) );//add the __this parameter, need to ensure variable
 	    //***
 		//**
 	    int overrideIndex = overridesMethod(n, (GNode)currentHeaderNode.getNode(0) );
@@ -220,7 +266,7 @@ public class ClassLayoutParser extends Visitor {
 			hdr.add( formalParameters ); //params
 			dataLayoutMethList.add( hdr );
 	    }
-	    //FIXME: FINAL: name mangling
+	    
 	}
     
 	// [INTERNAL]
@@ -403,21 +449,21 @@ public class ClassLayoutParser extends Visitor {
 	// once dudum un classini bul, ardindan vtable i al, ardindan o table dan soz konusu metodun datasini al
 	// sonra dagiren cikanla karsilastir datasini alirken bir kac kali bir arraye almak isteyebilirsin
 	// ondan sonra da methodName absolute superiority gosteriyorsa onu sec
-
-	public String kirimbaba(String objectType, String methodName, String varTypes[]) {
+	
+	// a method that ranks the possible choices of methods and finally picks the best one that fits and returns a string
+	
+	public String methodRank(String objectType, String methodName, String varTypes[]) {
 		String result = methodName;
 		
 		int mCount = 0;
-		int a = 6;
-		Node node = getVTable(objectType).getNode(a);
-
-		while(getVTable(objectType).getNode(a).getString(1) != null) {
-			System.out.println("candy " );
-
+		int a = 6;  //[*] hardcoded node index?
+		Node node; //[*]  = getVTable(objectType).getNode(a);
+		
+		while( getVTable(objectType).getNode(a).getString(1) != null ) {
 			node = getVTable(objectType).getNode(a);
 			StringTokenizer st = new StringTokenizer(node.getString(1), "$");
 			String candy = st.nextToken();
-			if((node.getNode(2).size()-1) == varTypes.length && methodName.equals(candy)) {
+			if((node.getNode(2).size() - 1) == varTypes.length && methodName.equals(candy)) {
 				mCount++;
 			}
 			a++;
@@ -429,47 +475,48 @@ public class ClassLayoutParser extends Visitor {
 		a = 6;
 		
 		while(getVTable(objectType).getNode(a).getString(1) != null) {
-
+			
 			node = getVTable(objectType).getNode(a);
 			StringTokenizer st = new StringTokenizer(node.getString(1), "$");
 			String bust = st.nextToken();
-
+			
 			if((node.getNode(2).size() - 1) == varTypes.length && methodName.equals(bust)) {
-				System.out.println("candy or bust");
 				for(int k = 0; k < (node.getNode(2).size() - 1); k++) {
 					varArray[count][k] = st.nextToken();
-					System.out.println("bust " + varArray[count][k]);
-
+					
 				}
 				count++;
 			}
 			a++;
 		}
-		
-		System.out.println(" varArray.length " + varArray.length);
-
-		
-		// varTypes ve nuhtelif dmarlri karsilastir ondan sonra en methodNameyak olani sec
-		// kod ise yarar bir pust oldugu icin mutlaka birini secmek meccburiyetinndesin
-		
-		// butun degerlerde herife ulasana dek getSuperClass yap sonra degerleri tut ve en bestMethodi al
+		//this is where it is done getting the stuff to arrays and actually starts to pick
 		int atLast = 0;
 		boolean tie = false;
 		for(int j = 0; j < varTypes.length; j++) {
 			int result2 = 100;
 			tie = false;
 			boolean seen = false;
-
-			for(int p = 0; p < mCount; p++) {
+			
+			for(int p = 0; p < mCount; p++) { // put a stop on things coming from lower classes a continue or something
 				int g = 0;
 				String dummy = "" + varTypes[j] ;
-				System.out.println(varArray[p][j] + " hasSuperclass, " +varTypes[j] + " varTypes"); 
+				//System.out.println(varArray[p][j] + " hasSuperclass, " +varTypes[j] + " varTypes"); 
 				while (!dummy.equals( varArray[p][j]) && hasSuperclass(dummy)) {
 					dummy = getSuperclassName(dummy);
 					g++;
-					System.out.println(dummy + " dummy " + varArray[p][j] + " varArray[p][j] ");
 				}
-				if(g <= result2) {
+				//System.out.println(varTypes[j] + " varTypes[j] " + varArray[p][j] + " varArray[p][j] ");
+				//System.out.println(" acep " + isSubClass(varArray[p][j], varTypes[j]));
+				boolean sub = false;
+				for(int h = 0; h < varTypes.length; h++) {
+					if (isSubClass(varArray[p][h], varTypes[h])) {
+						sub = true;
+						System.out.println(varTypes[h] + " varTypes[j] " + varArray[p][h] + " varArray[p][j] ");
+						
+					}
+				}
+				
+				if(g <= result2 && !sub) {
 					result2 = g;
 					atLast  = p;
 					if(seen)
@@ -482,50 +529,28 @@ public class ClassLayoutParser extends Visitor {
 				break;
 		}
 		
+		
 		for(int j = 0; j < varTypes.length; j++) {
 			result +=  '$' + varArray[atLast][j] ;
 		}
 		
-		System.out.println(result);
-
-		return result;
-			
-		}
+		System.out.println(result + " auuv " + isSubClass("B","B"));
 		
-		
-	
-	
-	//[DEBUG - INTERNAL]
-	public void sequenceGenome() {
-		new Visitor () {
-			public void visit(GNode n) {
-				for( Object o : n) {
-					if (o instanceof Node) dispatch((GNode)o);
-				}
-			}
-			
-			public void visitClass(GNode n) {
-				final String parentName = n.getStringProperty("name");
-				new Visitor () {
-					public void visit(GNode n) {
-						for( Object o : n) {
-							if (o instanceof Node) dispatch((GNode)o);
-						}
-					}
-					
-					public void visitClass(GNode n) {
-						String childName = n.getStringProperty("name");
-						
-						System.out.println( "Testing " + parentName + " and " + childName + " : " + paternityTest(parentName, childName) );
-						
-						visit(n);
-					}
-				}.dispatch(classTree);
-				visit(n);
-			}
-		}.dispatch(classTree);
+		return result;		
 	}
 	
+	//return true if sc is a a subclass of pr 
+	public boolean isSubClass(String sc, String pr) {
+		GNode parentN = getClass(sc);
+		if (parentN.getProperty("name").equals("Object")) return false;
+		else {			
+			parentN =  (GNode)parentN.getProperty("parentClassNode");
+			if (parentN.getProperty("name").equals(pr)) {
+				return true;
+			}
+			return isSubClass(parentN.getProperty("name").toString(),pr);
+		}		
+	}	
 	// 
 	// @param methodNode
 	// @return 

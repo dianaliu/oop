@@ -16,36 +16,7 @@ import java.util.Iterator;
  */
 
 
-interface CPPUtil {
-    // Custom GNode types:
-    public static final String kHeadDec = "HeaderDeclaration";
-    public static final String kImplDec = "ImplementationDeclaration";
-    public static final String kStrmOut = "StreamOutputList";
-	
-    // xtc GNode types:
-    public static final String kCmpStmt = "CompoundStatement";
-    public static final String kDecl = "Declaration";
-    public static final String kDeclSpef = "DeclarationSpecifiers";
-    public static final String kFuncDecltor = "FunctionDeclarator";
-    public static final String kFuncDef = "FunctionDefinition";
-    public static final String kInitDecl = "InitializedDeclarator";
-    public static final String kInitDeclList = "InitializedDeclaratorList";
-    public static final String kInt = "Int";
-    public static final String kPrimID = "PrimaryIdentifier";
-    public static final String kPtr = "Pointer";
-    public static final String kRoot = "TranslationUnit";
-    public static final String kSimpDecl = "SimpleDeclarator";
-    public static final String kStrLtrl = "StringLiteral";
-    public static final String kStruct = "StructureTypeDefinition";
-    public static final String kStructDecl = "StructureDeclaration";
-    public static final String kStructDeclList = "StructureDeclarationList";
-    public static final String kTypedef = "TypedefSpecifier";
-	
-	
-}
-
 public class LeafTransplant extends Visitor implements CPPUtil {
-    
 	
     public static boolean DEBUG = false;
 	
@@ -435,9 +406,11 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 			// Also, translate System methods
 			public void visitCallExpression(GNode n) {
 				//n always has 4 children
+				//System.out.println( "callExpression " + n.toString() );
 				
 				// 1. Identify the PrimaryIdentifier - calling Class
 				String primaryIdentifier = null;
+				boolean iNeedToBeMangled = true;
 				
 				
 				if(n.getNode(0) == null || 
@@ -457,8 +430,9 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 					// Are only System.outs wrapped in SelectionExpression 
 					// nodes? Is this if needed?
 					if("System".equals(primaryIdentifier)) {
-						
-						// Change any + to >>
+						System.out.println( "system" );
+						iNeedToBeMangled = false;
+						// Change any + to <<
 						new Visitor () {
 							
 							public void visitAdditiveExpression(GNode n) {
@@ -477,8 +451,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 						}.dispatch(n); // end Visitor
 						
 						if( "println".equals(n.getString(2)) ) {
-							GNode strOut = GNode.create(kStrmOut);
-							strOut.add(0, GNode.create( kPrimID ).add(0, "std::cout") );
+							GNode strOut = GNode.create("StreamOutputList");
+							strOut.add(0, GNode.create( "PrimaryIdentifier" ).add(0, "std::cout") );
 							// Add all arguments to System.out.println
 							for(int i = 0; i < n.getNode(3).size(); i++) {
 								// removed addindex 1
@@ -486,14 +460,14 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 							}
 							
 							// removed add index 2
-							strOut.add(GNode.create( kPrimID ).add(0, "std::endl") );
+							strOut.add(GNode.create( "PrimaryIdentifier" ).add(0, "std::endl") );
 							
 							expressionStatement.set(0, strOut);
 						}
 						
 						else if("print".equals(n.getString(2))) {
-							GNode strOut = GNode.create(kStrmOut);
-							strOut.add(0, GNode.create( kPrimID ).add(0, "std::cout") );
+							GNode strOut = GNode.create("StreamOutputList");
+							strOut.add(0, GNode.create( "PrimaryIdentifier" ).add(0, "std::cout") );
 							// Add all arguments to System.out.print
 							for(int i = 0; i < n.getNode(3).size(); i++) {
 								strOut.add(1, n.getNode(3).get(i) ); 
@@ -508,8 +482,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 					// Do nothing
 					primaryIdentifier = n.getNode(0).getString(0);
 					if(DEBUG) System.out.println("\t--- primaryIdentifier = " 
-												 + primaryIdentifier);
-				}
+												 + primaryIdentifier);				}
 				else if(n.getNode(0).hasName("SuperExpression")) {
 					
 					// Replace Java keyword super with actual class
@@ -526,6 +499,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 					//				       n.getNode(0).toString());
 				}
 				
+				if( iNeedToBeMangled ) { if( n.get(2) != null ) System.out.println( "VCE **)_@_) " + n.get(2).toString() ); }
+
 				visit(n);
 			}// End visitCall Expression
 			
@@ -569,7 +544,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     // which is really just a string name of a variable.
     GNode createPrimaryIdentifier( String contents ) {
 		
-		return (GNode)GNode.create( kPrimID ).add(contents);
+		return (GNode)GNode.create( "PrimaryIdentifier" ).add(contents);
     }
 	
 	
