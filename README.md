@@ -15,11 +15,10 @@ or
 
 ##What does it do?##
 - Resolve and translate all dependencies in the same package
-  - We hope to selectively import and translate only those used.
 - Inheritance using vtables and data layouts
 - Translate new classes and methods
 - (Method overloading)
-- (Method overriding)
+- Method overriding
 - Memory management using smart pointers
 
 ##What does it not do?##

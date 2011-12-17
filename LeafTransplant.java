@@ -180,11 +180,13 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
 	// If there are any custom array types, declare them
 	GNode arrayTemplates = findArrays(n);
+	// Adds declarations for custom classes
 	hNode.addNode(arrayTemplates);
+
 
 	GNode constructors = findConstructors(n);
 	hNode.addNode(constructors);
-      
+
 	return hNode;
     }
 
@@ -297,100 +299,75 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     //
     // @param n Java ClassDeclaration Node
 
-    // Global node to allow access from Visitor 
+    // LOL - Global shit to allow access from Visitor 
     GNode customClasses = GNode.create("CustomClasses");
     GNode templateNodes = GNode.create("ArrayTemplates");
+    boolean isArray = false;
+    int dim;
+    String qID;
     public GNode findArrays(GNode n) {
 	
-	// To generate the template specialization, we need to create a new 
-	// Class object.  The class constructor is below.  He only passes the 
-	// first 3 parameters
-	/*
-	  __Class(String name,
-              Class parent,
-              Class component = (Class)__rt::null(),
-              bool primitive = false);
-	*/
-
-	// Hack: To be accessible from Visitor
 	final GNode classDeclaration = n;
 
 	new Visitor() {
 	    
 	    public void visitFieldDeclaration(GNode n) {
-       
-		String qID = "";
-		int dim = 1;
 
-		// 1. Determine if we're declaring an Array
-		if(n.size() >= 2 && n.getNode(1).size() >= 2) {
+
+		// Immediately visit down to see if it's an array.
+		visit(n);
+
+		if(isArray) {
+
+		    GNode newArrayExpression = 
+			(GNode) n.getNode(2).getNode(0).getNode(2);
+
+		    // get Dimensions
+		    String dims = 
+			newArrayExpression.getNode(1).getNode(0).getString(0);
+		    dim = Integer.parseInt(dims);
+
+		    // get Type/qID
+		    qID = newArrayExpression.getNode(0).getString(0);
 		    
-		    if( n.getNode(1).getNode(1) != null &&
-			n.getNode(1).getNode(1).hasName("Dimensions") ) {
 
-		
+		    if(dim > 1 || isCustomType(classDeclaration, qID)) {
 
-			// Found an array declaration
-			GNode dims = (GNode) n.getNode(1).getNode(1);
-			// qID holds the component Type of the array
-			qID = n.getNode(1).getNode(0).getString(0);
+			// Create Type information
+			GNode parent = GNode.create("ParentType");
+			String pID = clp.getSuperclassName(qID);
+			parent.add(clp.createTypeNode(pID));
 
-			if(DEBUG) System.out.println("-- Found ArrayDeclaration of Type  "
-					   + qID);
-
-			if( dims.size() > 1 || 
-			    isCustomType(classDeclaration, qID)) {
-
-			    System.out.println("\t Array customization needed");
-
-			    // Customization is needed if it's a 
-			    // multi-dimensional array or it has custom 
-			    // component types
-
-			    // First, let's find the parent class
-			    GNode parent = GNode.create("ParentType");
-			    String pID = clp.getSuperclassName(qID);
-			    parent.add(clp.createTypeNode(pID));
-
-			    // Give component class the proper dimensions
-			    for(int i = 0; i < dims.size(); i++) {
-				qID = "[" + qID; 
-			    }
-
-			    // Then, add the component class
-			    GNode component = GNode.create("ComponentType");
-			    component.add(clp.createTypeNode(qID));
-
-			    /**
-			     * Now, add this info to two places in the tree
-			     * The same information is needed, but in different
-			     * namespaces
-			     */
-
-
-			    // Custom __class() is in java_lang namespace	
-			    GNode customClass = GNode.create("CustomClass");
-			    customClass.add(parent);
-			    customClass.add(component);
-			    customClasses.add(customClass);
-			    
-			    // Template specialization is in the __rt namespace
-			    GNode templateNode = GNode.create("ArrayTemplate");
-			    templateNode.add(parent);
-			    templateNode.add(component);
-			    templateNodes.add(templateNode);
-
-			    System.out.println("--- Done adding array " + qID);
-			}
-			else {
-			    // Nothing to do. Standard array
-			}
+			GNode component = GNode.create("ComponentType");
+			component.add(clp.createTypeNode(qID));
 			
-		    }
+			// FIXME: Add ['s to denote dimensions
 
-		}
-		
+
+			// Customize __class()
+			GNode customClass = GNode.create("CustomClass");
+			customClass.add(parent);
+			customClass.add(component);
+			customClasses.add(customClass);
+			
+			// Specialize Template
+			// Note: templateNodes is already in tree
+			GNode templateNode = GNode.create("ArrayTemplate");
+			templateNode.add(parent);
+			templateNode.add(component);
+			templateNodes.add(templateNode);
+		    } 
+
+		    // reset boolean when done.
+		    isArray = false;
+		    
+		} // end isArray
+       		
 	    } // end visitFieldDeclaration
+
+	    public void visitNewArrayExpression(GNode n) {
+		isArray = true;
+	    }
 
 	    public void visit(GNode n) {
 		// Need to override visit to work for GNodes
@@ -404,7 +381,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	if(customClasses.size() <= 0) customClasses = null;
 	GNode customs = GNode.create("Declaration", customClasses);
 	return customs;
-    }
+
+    } // end findArrays
 
 
     // Moves the ClassDeclaration node(s) into the header.
@@ -861,13 +839,14 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     // @param s String name of the PrimaryIdentifier
     boolean isCustomType(GNode n, String s) {
 	// FIXME: Source of lots of bugs due to variable nature of Declarator 
-	// node.  Make more robust.
+	// node.  Make more robust.  Just writing else if's for now.
 	
 	final String p = s;
 
 	GNode isCT = (GNode) (new Visitor() {
 
 		public GNode visitDeclarator(GNode n) {
+		    if(DEBUG) System.out.println("At Declarator: " + n);
 		    
 		    if( p.equals(n.getString(0)) ) {
 			// We found where it is declared to get Type
@@ -877,6 +856,9 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 			}
 			else if(n.getNode(2).hasName("NewClassExpression")) {
 			    type = n.getNode(2).getNode(2).getString(0);
+			}
+			else if(n.getNode(2).hasName("NewArrayExpression")) {
+			    type = n.getNode(2).getNode(0).getString(0);
 			}
 			else {
 			    // Going down one more level should be Type node

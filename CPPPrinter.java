@@ -740,12 +740,13 @@ public class CPPPrinter extends Visitor {
     }
     
     public void visitArrayTemplate(GNode n) {
+	// FIXME: if primitive type, need memset()
 
 	// 0 = Parent, wrapped in Type node
 	// 1 = Component, wrapped in Type node
 
 
-	printer.indent().p("// Template specialization for array of").p(n.getNode(1)).pln();
+	printer.indent().p("// Template specialization for array of ").p(n.getNode(1)).pln();
 	printer.indent().pln("template<>");
 
 	printer.indent().p("java::lang::Class Array <java::lang::");
@@ -757,9 +758,18 @@ public class CPPPrinter extends Visitor {
 	printer.indent().p("new java::lang::__Class(literal(\"[Ljava.lang.");
 	printer.p(n.getNode(1)).p(";\"),").pln();
 	
+	// This follow JVM specs.  parent is parent.
+	printer.incr();
+	printer.indent().p("java::lang::__").p(n.getNode(0));
+	printer.p("::__class(),").pln();
+
+	/**
+	 * Grimm told us the wrong thing.  
+	 * parent is array of parents
 	printer.incr();
 	printer.indent().p("Array<java::lang::").p(n.getNode(0));
 	printer.p(">::__class(),").pln();
+	**/
 
 	printer.indent().p("java::lang::__").p(n.getNode(1)).p("::__class());");
 	printer.pln().decr();
