@@ -1715,7 +1715,7 @@ public class CPPPrinter extends Visitor {
 		if (o instanceof Node) {
 		    new Visitor() {
 			public void visitPrimaryIdentifier(GNode n) {
-			    if(!n.getString(0).startsWith("std")
+			    if( (null != n.get(0)) && !n.getString(0).startsWith("std")
 			       && !isConstructor) {
 				printer.indent().p("// __rt::checkNotNull(");
 				printer.p(n).p(");").pln();
@@ -2032,6 +2032,7 @@ public class CPPPrinter extends Visitor {
 	/** Visit the specified additive expression node. */
 	public void visitAdditiveExpression(GNode n) {
 		int prec1 = startExpression(120);
+        
 		printer.p(n.getNode(0)).p(' ').p(n.getString(1)).p(' ');
 		
 		int prec2 = enterContext();
@@ -2260,26 +2261,28 @@ public class CPPPrinter extends Visitor {
 	/** Visit the specified primary identifier node. */
 	public void visitPrimaryIdentifier(GNode n) {
 
-	    // TODO: If primaryIdentifier was declared in data layout,
-	    // preceded it with __this.  use clp to lookup
+	    // HACK: Paranoid checks because PrimaryIdentiier(null) 's are 
+	    // getting added to tree and I don't have time to figure out where
+	    if( null != n && null != n.get(0) ) {
 
-	    // FIXME: What if it's not from this class? 
-	    //	    System.out.println("Getting DataLayout for " + className);
-	    GNode dl = clp.getDataLayout(className); 
-	    
-	    boolean isField = clp.findPrimID(dl,n.getString(0));
-	    if(isField && !isConstructor) printer.p("__this->");
-	    
-	    // For all variables, check not null?
-	    // NO - std::cout and std::end lis a primary identifier....
-	    // Also, in TypedefDeclaration, but I think we overrode?
+		// FIXME: What if it's not from this class? 
+		GNode dl = clp.getDataLayout(className); 
+		
+		boolean isField = clp.findPrimID(dl,n.getString(0));
+		if(isField && !isConstructor) printer.p("__this->");
+		
+		// For all variables, check not null?
+		// NO - std::cout and std::end lis a primary identifier....
+		// Also, in TypedefDeclaration, but I think we overrode?
+		
+		
+		// do normal stuff
+		int prec = startExpression(160);
+		printer.p(n.getString(0));
+		endExpression(prec);
+		
+	    }
 
-
-	    // do normal stuff
-	    int prec = startExpression(160);
-	    printer.p(n.getString(0));
-	    endExpression(prec);
-	    
 	}
 	
 	/** Visit the specified statement as exprression node. */
@@ -2414,10 +2417,7 @@ public class CPPPrinter extends Visitor {
 		    GNode nxt = (GNode)iter.next();
 		    
 		    printer.p(nxt);
-		    // FIXME: Hardcoding ->data for String, 
-		    // not needed in later versions
-		    //		    is_output = true;
-		
+
 		    printer.incr();
 		    if(iter.hasNext()) printer.pln().indent().p( " << " );
 		    printer.decr();
@@ -2767,9 +2767,8 @@ public class CPPPrinter extends Visitor {
     /** Visit the specified throw statement. */
     public void visitThrowStatement(GNode n) {
 	final boolean nested = startStatement(STMT_ANY, n);
-		//n.getNode(0).getNode(2).set(0, "ibneFener");
-		//System.out.println(	" siktir git " + n.getNode(0).getNode(2).get(0));
-	printer.indent().p("throw").p(' ').p(n.getNode(0));
+
+	printer.indent().p("throw").p(' ').p(n.getNode(0)).p("()");
 	printer.pln(';');
 	endStatement(nested);
     isOpenLine = false;

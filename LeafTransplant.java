@@ -368,7 +368,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 			     */
 
 
-			    // Custom __class() is in java_lang namespace
+			    // Custom __class() is in java_lang namespace	
 			    GNode customClass = GNode.create("CustomClass");
 			    customClass.add(parent);
 			    customClass.add(component);
@@ -472,6 +472,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     String thisClass = "";
     public GNode buildImplementation(GNode n) {
 
+	addTargets(n);
+
 	// FIXME: n is fixed, can'tn.addNode(importDeclarations);
 	// I wanted to put all import declarations under ClassDeclaration node.
 	// but no biggie
@@ -559,8 +561,20 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 			    strOut.add(0, GNode.create( kPrimID ).add(0, "std::cout") );
 			    // Add all arguments to System.out.println
 			    for(int i = 0; i < n.getNode(3).size(); i++) {
-				// removed addindex 1
-				strOut.add(n.getNode(3).get(i) ); 
+				// HACK : check if primaryidentifer.get(0) == null
+				if(GNode.test(n.getNode(3).get(i)) &&
+				   null == n.getNode(3).getNode(i).get(0)) {
+
+				} else {
+				    // standard behavior
+				    // removed addindex 1
+				    strOut.add(n.getNode(3).get(i) ); 
+
+				    //				    System.out.println("added print arguments "
+				    //						       + n.getNode(3).get(i));
+				}
+
+
 			    }
 			    
 			    // removed add index 2
@@ -601,6 +615,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    // ClassDeclaration node, String PrimaryIdentifier
 		    boolean yes = isCustomType(classD, primaryIdentifier);
 		    
+		    /**
 		    if(yes) {
 			// Add primaryIdentifier to Arguments
 			if(DEBUG) System.out.println("--- Must pass Argument " +
@@ -620,6 +635,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
 			n.set(3, arguments);
 		    }
+		    **/ 
 
 		}
 		else if(n.getNode(0).hasName("SuperExpression")) {
@@ -630,8 +646,10 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    GNode vtList = clp.getVTable(thisClass);
 		    GNode superNode = clp.getSuperclass(className);
 		    String superName = clp.getName(superNode);
-		    pI.add(0, superName);
-		    n.set(0, pI);
+		  
+			pI.add(0, superName);
+			n.set(0, pI);
+		 
 		}
 		else if(n.getNode(0).hasName("CallExpression")) {
 		    // keep on going!
@@ -645,10 +663,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
 
 
-		// IDK if this is the right place to do it, but if it has 
-		// arguments, check to see if we need to append this target as
-		// an argument.  Same thing we did in MethodDeclaration.
-		// FIXME: Abstract to another method to avoid repeating code
+		// Works, but not with method chaining?
 		if(n.size() >= 4 && n.getNode(3).hasName("Arguments")) {
 		    // Time to append arguments
 		    GNode vt = clp.getVTable(thisClass);
@@ -676,6 +691,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 			}
 
 		    }
+		    // Keep on visiting arguments?
 
 		} // end check for Arguments
 		
@@ -698,6 +714,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		// duplicate?
 		visit(n);
 	    }
+
+
 
 	    public void visitMethodDeclaration(GNode n) {
 		// If Parameters.size() of MethodDeclaration and clp's lookup
@@ -729,6 +747,33 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		
 	    }
 
+	    // Translate exceptions to the few Grimm Defined ones
+	    public void visitThrowStatement(GNode n) {
+
+		if(n.getNode(0).hasName("NewClassExpression")) {
+		    
+		    String throwType = n.getNode(0).getNode(2).getString(0);
+		    
+		    if(!isGrimmException(throwType)) {
+			// If it doesn't match, just throw a general exception
+			throwType = "Exception";
+		    }
+		    
+		    // Collapse node structure.  
+		    // NOTE: This also removes any arguments to the Exception
+		    // This is ok bc Grimm doesn't support arguments.
+		    // Remeber to change Printer.
+		    GNode tmp = GNode.create("QualifiedIdentifier");
+		    tmp.add(throwType);
+		    
+		    n.set(0, tmp);
+		}
+		
+
+		visit(n);
+		
+	    }
+
 	    public void visit(GNode n) {
 		// Need to override visit to work for GNodes
 		for( Object o : n) {
@@ -741,6 +786,47 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	
 	return n;
     }
+
+    // Exhaustively add targets to all cal expressions
+    // Should work for method chaining and nested expressions inside
+    // cout statements
+    // @param n ClassDeclaration node
+    String target = null;
+    public void addTargets(GNode n) {
+
+	new Visitor() {
+
+	    public void visitCallExpression(GNode n) {
+		
+
+		// No problem here!
+		if( n.get(0) != null && GNode.test(n.get(0)) ) {
+		    //		    System.out.println("--- Yes, a GNode");
+
+		    if(n.getNode(0).hasName("PrimaryIdentifier")) {
+			target = n.getNode(0).getString(0);
+			//			System.out.println("target = " + target);
+		    }
+		}
+		
+        
+		// Using the wrong n?
+		GNode tmp = clp.deepCopy(GNode.cast(n.getNode(3)));
+		tmp.addNode(createPrimaryIdentifier(target));
+		n.set(3, tmp);
+						
+	    }
+	    
+	    public void visit(GNode n) {
+		// Need to override visit to work for GNodes
+		for( Object o : n) {
+		    if (o instanceof Node) dispatch((GNode)o);
+		}
+	    }
+	    	    
+	}.dispatch(n);//end Visitor
+
+    } // end addTargets
 
  
     // ------------------------------------------
@@ -848,6 +934,26 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	}
 
 	return true;
+    }
+
+
+    // Checks to see if Exception is defined in java_lang.h
+    // @param s String Exception name
+    public boolean isGrimmException(String s) {
+
+	if( "Exception".equals(s) ||
+	    "RuntimeException".equals(s) ||
+	    "NullPointerException".equals(s) ||
+	    "NegativeArraySizeException".equals(s) ||
+	    "ArrayStoreException".equals(s) ||
+	    "ClassCastException".equals(s) ||
+	    "IndexOutOfBoundsException".equals(s) ||
+	    "ArrayIndexOutOfBoundsException".equals(s) ) {
+	    return true;
+	}
+	
+
+	return false;
     }
 
    // ------------------------------------------
