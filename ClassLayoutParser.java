@@ -13,6 +13,10 @@ import java.io.Reader;
 
 import java.util.ArrayList;
 import java.util.StringTokenizer;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+
+
 
 /* 
  * Creates a helper class hierarchy tree of vtables and data layouts
@@ -46,11 +50,12 @@ public class ClassLayoutParser extends Visitor {
 		if(DEBUG) printClassTree();
 		if(DEBUG) System.out.println("--- End Class Layout Parser\n");
 		//
-		String varArray[] = new String[2];
-		varArray[0] = "B";
-		varArray[1] = "B";
+		String varArray[] = new String[3];
+		varArray[0] = "long";
+		varArray[1] = "short";
+		varArray[2] = "B";
 		//degisken adi, metod adi, giren cesitleri
-				kirimbaba("Testere", "orhan", varArray);
+		methodRank("Testere", "orhan", varArray);
     }
     
 	// ----------------------------------
@@ -369,24 +374,18 @@ public class ClassLayoutParser extends Visitor {
 	}
 	
 	
-	// degisken adi, metod adi, giren cesitleri
-	// thing1.getNumber(int bok)
-	// targetObject = object, ki = getNumber, unutmussun = bok
 	
-	// once dudum un classini bul, ardindan vtable i al, ardindan o table dan soz konusu metodun datasini al
-	// sonra dagiren cikanla karsilastir datasini alirken bir kac kali bir arraye almak isteyebilirsin
-	// ondan sonra da methodName absolute superiority gosteriyorsa onu sec
-
-	public String kirimbaba(String objectType, String methodName, String varTypes[]) {
+	// a method that ranks the possible choices of methods and finally picks the best one that fits and returns a string
+	
+	public String methodRank(String objectType, String methodName, String varTypes[]) {
 		String result = methodName;
 		
 		int mCount = 0;
 		int a = 6;
 		Node node = getVTable(objectType).getNode(a);
-
+		
 		while(getVTable(objectType).getNode(a).getString(1) != null) {
-			System.out.println("candy " );
-
+			
 			node = getVTable(objectType).getNode(a);
 			StringTokenizer st = new StringTokenizer(node.getString(1), "$");
 			String candy = st.nextToken();
@@ -402,70 +401,285 @@ public class ClassLayoutParser extends Visitor {
 		a = 6;
 		
 		while(getVTable(objectType).getNode(a).getString(1) != null) {
-
+			
 			node = getVTable(objectType).getNode(a);
 			StringTokenizer st = new StringTokenizer(node.getString(1), "$");
 			String bust = st.nextToken();
-
+			
 			if((node.getNode(2).size() - 1) == varTypes.length && methodName.equals(bust)) {
-				System.out.println("candy or bust");
 				for(int k = 0; k < (node.getNode(2).size() - 1); k++) {
 					varArray[count][k] = st.nextToken();
-					System.out.println("bust " + varArray[count][k]);
-
+					
 				}
 				count++;
 			}
 			a++;
 		}
+		//this is where it is done getting the stuff to arrays and actually starts to pick
 		
-		System.out.println(" varArray.length " + varArray.length);
-
 		
-		// varTypes ve nuhtelif dmarlri karsilastir ondan sonra en methodNameyak olani sec
-		// kod ise yarar bir pust oldugu icin mutlaka birini secmek meccburiyetinndesin
 		
-		// butun degerlerde herife ulasana dek getSuperClass yap sonra degerleri tut ve en bestMethodi al
+		
 		int atLast = 0;
 		boolean tie = false;
-		for(int j = 0; j < varTypes.length; j++) {
-			int result2 = 100;
-			tie = false;
-			boolean seen = false;
-
-			for(int p = 0; p < mCount; p++) {
-				int g = 0;
-				String dummy = "" + varTypes[j] ;
-				System.out.println(varArray[p][j] + " hasSuperclass, " +varTypes[j] + " varTypes"); 
-				while (!dummy.equals( varArray[p][j]) && hasSuperclass(dummy)) {
-					dummy = getSuperclassName(dummy);
-					g++;
-					System.out.println(dummy + " dummy " + varArray[p][j] + " varArray[p][j] ");
-				}
-				if(g <= result2) {
-					result2 = g;
-					atLast  = p;
-					if(seen)
-						tie = true;
-					seen = true;
-				}
-				
+		// uc ihtimal var, prim ve numdur, primdir ama num degildir butunuyle baska bir seydir
+		String qString = "";
+		Queue<String> queue = new Queue<String>();
+		
+		for(int p = 0; p < mCount; p++) {
+			qString = "";
+			
+			for(int j = 0; j < varTypes.length; j++) {
+				qString +=  '$' + varArray[p][j] ;
 			}
-			if(!tie) 
-				break;
-		}
-		
-		for(int j = 0; j < varTypes.length; j++) {
-			result +=  '$' + varArray[atLast][j] ;
-		}
-		
-		System.out.println(result);
-
-		return result;
+			queue.enqueue(qString);
 			
 		}
+
+		System.out.println(" bas " + queue.size());
+
+		
+		for(int j = 0; j < varTypes.length; j++) {
+			int g = 0;
+			boolean notSame = true;
+			if(isPrimitive(varTypes[j]) && !isPrimAndNum(varTypes[j])) { //prim but not num, everything except itself is bad
+				for(int p = 0; p < queue.size(); p++) {
+					String tok = "";
+
+					StringTokenizer st = new StringTokenizer(queue.getNode(p).item, "$");
+					tok = st.nextToken();
+
+					for(int z = 0; z < j-1; z++) {
+						
+						tok = st.nextToken();
+					}
+					
+					if (!varTypes[j].equals( tok)) {
+						queue.aradanCik(p);					
+					}
+				}
+			}
+			
+			
+			else if(isPrimAndNum(varTypes[j])) {// prim and num, something from the hierarchy that is equal or above, the closest possible		
+				for(int p = 0; p < queue.size(); p++) {
+					String tok = "";
+
+					StringTokenizer st = new StringTokenizer(queue.getNode(p).item, "$");
+					tok = st.nextToken();
+
+					for(int z = 0; z < j; z++) {
+						
+						tok = st.nextToken();
+					}
+//					System.out.println(tok + " tok " + varTypes[j] +"varTypes[j]" );
+					if (!isHigherType(tok, varTypes[j])) {
+						queue.aradanCik(p);					
+					}
+				}
+			}
+			
+			
+			else {	//an object, something from the hierarchy that is equal or above, the closest possible 	
+				for(int p = 0; p < queue.size(); p++) {
+					
+					StringTokenizer st = new StringTokenizer(queue.getNode(p).item, "$");
+					String tok = "";
+					tok = st.nextToken();
+
+					for(int z = 0; z < j; z++) {
+//						System.out.println(tok + " voiiiila " + varTypes[j] +"varTypes[j]" );
+						
+						tok = st.nextToken();
+					}
+//					System.out.println(tok + " voiiiila " + varTypes[j] +"varTypes[j]" );
+
+					if (isSubClass(tok, varTypes[j])) {
+//						System.out.println(tok + " girdi voiiiila " + varTypes[j] +"varTypes[j]" );
+
+						queue.aradanCik(p);					
+					}
+				}
+			}
+		}
+		System.out.println(" auuv " + queue.size());
+
+		
+		for(int j = 0; j < varTypes.length; j++) {
+			int g = 0;
+			boolean notSame = true;
+			
+			if(isPrimitive(varTypes[j]) && !isPrimAndNum(varTypes[j])) { //prim but not num, everything except itself is bad
+			}
+			else if(isPrimAndNum(varTypes[j])) {// smallest i alip basa koy gerisini siktir et		
+
+				for(int i = 0; i < queue.size(); i++){
+					for(int d = 1; d < (queue.size()-i); d++){
+						StringTokenizer st = new StringTokenizer(queue.getNode(d - 1).item, "$");
+						String one = "";
+						one = st.nextToken();
+
+						for(int z = 0; z < j ; z++) {
+							
+							one = st.nextToken();
+						}
+						StringTokenizer st2 = new StringTokenizer(queue.getNode(d).item, "$");
+						String two = "";
+						two = st2.nextToken();
+
+						for(int z = 0; z < j; z++) {
+							
+							two = st2.nextToken();
+						}
+						System.out.println(varTypes[j] + " varTypes[j] sulo");
+
+//						System.out.println(one + " one1 " + two +" two" );
+
+						if((getRank(one) > getRank(two)) ){   // && (getRank(one) != getRank(two))
+//							System.out.println(" girdi 2 ");
+
+							queue.switchN(queue.getNode(d - 1), queue.getNode(d));
+						}
+					}
+				}
+				
+			
+			}
+			else {	//an object, something from the hierarchy that is equal or above, the closest possible 	
+			
+				for(int i = 0; i < queue.size(); i++){
+					for(int d = 1; d < (queue.size()-i); d++){
+						StringTokenizer st = new StringTokenizer(queue.getNode(d - 1).item, "$");
+						String one = "";
+						one = st.nextToken();
+						
+						for(int z = 0; z < j ; z++) {
+							
+							one = st.nextToken();
+						}
+						StringTokenizer st2 = new StringTokenizer(queue.getNode(d).item, "$");
+						String two = "";
+						two = st2.nextToken();
+						
+						for(int z = 0; z < j; z++) {
+							
+							two = st2.nextToken();
+						}
+						
+						System.out.println(one + " one2 " + two +" two" );
+						
+						if(isSubClass(one, two)){
+							System.out.println(" girdi 2 ");
+							queue.switchN(queue.getNode(d - 1), queue.getNode(d));
+						}
+					}
+				}
+			
+			}
+		}
 		
 		
+		
+	//	
+//		for(int j = 0; j < varTypes.length; j++) {
+//			result +=  '$' + varArray[atLast][j] ;
+//		}
+		result = queue.getNode(0).item;
+		System.out.println(result + " auuv " + queue.size());
+//		result = queue.getNode(1).item;
+//		System.out.println(result + " auuv " + queue.size());
+		
+		return result;		
+	}
+	
+	//return true if sc is a a subclass of pr 
+	public boolean isSubClass(String sc, String pr) {
+		if(isPrimitive(sc) && isPrimitive(pr))
+			return false;
+		GNode parentN = getClass(sc);
+		if (parentN.getProperty("name").equals("Object")) return false;
+		else {			
+			parentN =  (GNode)parentN.getProperty("parentClassNode");
+			if (parentN.getProperty("name").equals(pr)) {
+				return true;
+			}
+			return isSubClass(parentN.getProperty("name").toString(),pr);
+		}		
+	}
+
+	
+	public boolean isLowerType(String sc, String pr) {		
+		if(getRank(sc) < getRank(pr))
+			return true;
+		else
+			return false;
+	}
+	public boolean isHigherType(String sc, String pr) {	
+		if(!(isPrimAndNum(sc) && isPrimAndNum(pr)))
+			return false;
+		else if(getRank(sc) >= getRank(pr))
+			return true;
+		else
+			return false;
+	}
+	
+	//what to do if there is a tie?
+	public String getHigherType(String sc) {
+		int referenceNo = 0;
+		
+		referenceNo = getRank(sc);
+		
+		return getHierarchy(referenceNo);
+	}
+	
+	
+	public boolean hasHigherType(String sc) {
+		int referenceNo = getRank(sc);
+		if (referenceNo < 6) {
+			return true;
+		}
+		else {
+			return false;
+		}
+
+
+	}
+	
+	
+	
+	public String getHierarchy(int rank) {
+		String[] hierarchy = new String[7];
+		hierarchy[1] = "byte";
+		hierarchy[2] = "short";
+		hierarchy[3] = "int";
+		hierarchy[4] = "long";
+		hierarchy[5] = "float";
+		hierarchy[6] = "double";
+		return hierarchy[rank];
+	}
+	
+	public int getRank(String type) {
+		int rank = 1;
+			
+		while (!getHierarchy(rank).equals(type)&& rank < 7) {
+			rank++;
+		}
+		return rank;
+	}
+	public boolean isPrimitive(String sc) {
+		if (sc.equals("int") || sc.equals("boolean") || sc.equals("byte") || sc.equals("short") || sc.equals("long") || sc.equals("float") || sc.equals("double") || sc.equals("char") || sc.equals("String") ) {
+			return true;
+		}
+		else 
+			return false;
+	}
+	public boolean isPrimAndNum(String sc) {
+		if (sc.equals("int") || sc.equals("byte") || sc.equals("short") || sc.equals("long") || sc.equals("float") || sc.equals("double") ) {
+			return true;
+		}
+		else 
+			return false;
+	}
 	
 	
 	//[DEBUG - INTERNAL]
@@ -498,6 +712,8 @@ public class ClassLayoutParser extends Visitor {
 			}
 		}.dispatch(classTree);
 	}
+	
+	
 	
 	// 
 	// @param methodNode
