@@ -7,10 +7,11 @@ public class ShortArray {
 	short[] f = new short[2];
 	
 	f[0] = (short)32768;
+	System.out.println("f[0]=" + f[0]);
 	
-	System.out.println("class = " + f.getClass().toString());
-	System.out.println("super = " + f.getClass().getSuperclass().toString());
-	System.out.println("length =  " + f.length);
+	//	System.out.println("class = " + f.getClass().toString());
+	//	System.out.println("super = " + f.getClass().getSuperclass().toString());
+	//	System.out.println("length =  " + f.length);
 
 
 	/**

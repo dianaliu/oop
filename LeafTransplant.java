@@ -124,6 +124,9 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	// hNode contains all information for the .h file to be printed
 	GNode hNode = buildHeader(n);
 	cppTree.add(hNode);
+
+	// Node created in findArrays
+	cppTree.addNode(primTypes);
 		
 	// Note: templateNodes has the same information as CustomClass nodes.
 	// It is built at the same time as the header, but must reside in a 
@@ -151,9 +154,15 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		
 	// If there are any custom array types, declare them
 	GNode arrayTemplates = findArrays(n);
+
+	// Add struct declaration for Primitive Types.  
+	// Node created in findArrays
+	hNode.addNode(primStructs);
+
 	// Adds declarations for custom classes
 	hNode.addNode(arrayTemplates);
-		
+
+
 
 	GNode constructors = findConstructors(n);
 	hNode.addNode(constructors);
@@ -273,6 +282,9 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     // LOL - Global shit to allow access from Visitor 
     GNode customClasses = GNode.create("CustomClasses");
     GNode templateNodes = GNode.create("ArrayTemplates");
+    // Need to add these in proper namespaces
+    GNode primStructs = GNode.create("Declaration");
+    GNode primTypes = GNode.create("PrimitiveTYPES");
     boolean isArray = false;
     int dim;
     String qID;
@@ -289,7 +301,6 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		visit(n);
 					
 		if(isArray) {
-						
 		    GNode newArrayExpression = 
 			(GNode) n.getNode(2).getNode(0).getNode(2);
 
@@ -300,6 +311,27 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
 		    // get Type/qID
 		    qID = newArrayExpression.getNode(0).getString(0);
+
+
+		    if(clp.isPrimitive(qID) && !"int".equals(qID)) {
+		
+			// Add nodes for TYPE and struct declarations
+			GNode primStruct = GNode.create("PrimitiveStruct");
+			String type =  qID.substring(0,1).toUpperCase() 
+			    + qID.substring(1).toLowerCase();
+			
+			primStruct.add(clp.createTypeNode(type));
+			primStructs.add(primStruct);
+
+
+			GNode primType = GNode.create("PrimitiveTYPE");
+			primType.add(clp.createTypeNode(type));
+			String lc = type.toLowerCase();
+			primType.add(clp.createTypeNode(lc));
+			primTypes.add(primType);
+
+
+		    }
 						
 				
 		    if(dim > 1 || isCustomType(classDeclaration, qID)) {
