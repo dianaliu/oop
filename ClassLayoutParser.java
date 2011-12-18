@@ -600,15 +600,15 @@ public class ClassLayoutParser extends Visitor {
 			two = st2.nextToken();
 
 			////
+							
 
-			
-			for(int z = 0; z < j; z++) {
-
-			    two = st2.nextToken();
+			for(int z = 0; z < j ; z++) {
+							
+			two = st2.nextToken();
 			}
-
+						
 			System.out.println(one + " one2 " + two +" two" );
-
+						
 			if(!isSubClass(one, two) && !one.equals(two)){
 			    System.out.println("switch " + one + ": one, " + two +": two" );
 
@@ -618,13 +618,13 @@ public class ClassLayoutParser extends Visitor {
 		}
 	    }
 	}
-
+		
 	if(!(result.equals("equals") || result.equals("getClass") || result.equals("hashCode") || result.equals("toString") ))
 	    result += queue.getNode(0).item;
 	System.out.println(result);
-	return result;
+	return result;		
     }
-
+	
 	
     //return true if sc is a a subclass of pr 
     public boolean isSubClass(String sc, String pr) {

@@ -22,7 +22,9 @@ SOURCE = \
 	CPPPrinter.java \
 	DependencyResolver.java \
 	Queue.java \
-	TypeParser.java
+	TypeParser.java \
+	Test.java \
+	Rest.java
 
 
 JNI_SOURCE =
