@@ -751,10 +751,28 @@ public class CPPPrinter extends Visitor {
 	// 0 = Parent, wrapped in Type node
 	// 1 = Component, wrapped in Type node
 		
-		
-	printer.indent().p("// Template specialization for array of").p(n.getNode(1)).pln();
-	printer.indent().pln("template<>");
-		
+	
+	if(n.size() == 1) {
+	    	    // It's a primitive type, different specialization!
+	    GNode type = (GNode) n.getNode(0);
+
+	    printer.indent().p("// Template specialization for array of");
+	    printer.p(type).pln();
+	    printer.indent().pln("template<>");
+
+	    printer.indent().p("Array <").p(type).p(">::Array(const ").p(type);
+	    printer.p(" length)").pln();
+	    printer.indent().p(": __vptr(&__vtable), length(length), ");
+	    printer.p("__data(new ").p(type).p("[length]) {").pln();
+	    printer.indent().p("std::memset(__data, 0, length * sizeof(");
+	    printer.p(type).p("));").pln();
+	    printer.decr().pln("}");
+	}
+	else {
+
+	    printer.indent().p("// Template specialization for array of").p(n.getNode(1)).pln();
+	    printer.indent().pln("template<>");
+	    		
 	printer.indent().p("java::lang::Class Array <java::lang::");
 	printer.p(n.getNode(1)).p(">::__class() {").pln();
 	printer.incr();
@@ -787,6 +805,10 @@ public class CPPPrinter extends Visitor {
 	printer.decr();
 	printer.indent().pln("}");
 		
+
+	}
+
+
 		
     }
 	

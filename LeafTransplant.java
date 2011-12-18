@@ -318,19 +318,26 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 			
 			// FIXME: Add ['s to denote dimensions
 			
-
-			// Customize __class()
-			GNode customClass = GNode.create("CustomClass");
-			customClass.add(parent);
-			customClass.add(component);
-			customClasses.add(customClass);
-					
-			// Specialize Template
-			// Note: templateNodes is already in tree
 			GNode templateNode = GNode.create("ArrayTemplate");
-			templateNode.add(parent);
-			templateNode.add(component);
+			if(clp.isPrimitive(qID)) {
+			    // that's all you need to memset
+			    templateNode.add(component);
+			}
+			else {
+			    // Customize __class()
+			    GNode customClass = GNode.create("CustomClass");
+			    customClass.add(parent);
+			    customClass.add(component);
+			    customClasses.add(customClass);
+			    
+			    // Specialize Template
+			    // Note: templateNodes is already in tree
+			    templateNode.add(parent);
+			    templateNode.add(component);
+
+			}
 			templateNodes.add(templateNode);
+	
 		    } 
 
 		    // reset boolean when done.
