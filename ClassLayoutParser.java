@@ -599,71 +599,32 @@ public class ClassLayoutParser extends Visitor {
 			String two = "";
 			two = st2.nextToken();
 
+			////
+
+			
 			for(int z = 0; z < j; z++) {
-							
+
 			    two = st2.nextToken();
 			}
-			//System.out.println(varTypes[j] + " varTypes[j] sulo");
 
-			//						System.out.println(one + " one1 " + two +" two" );
+			System.out.println(one + " one2 " + two +" two" );
 
-			if((getRank(one) > getRank(two)) ){   // && (getRank(one) != getRank(two))
-			    //							System.out.println(" girdi 2 ");
+			if(!isSubClass(one, two) && !one.equals(two)){
+			    System.out.println("switch " + one + ": one, " + two +": two" );
 
 			    queue.switchN(queue.getNode(d - 1), queue.getNode(d));
 			}
 		    }
 		}
-				
-			
-	    }
-	    else {	//an object, something from the hierarchy that is equal or above, the closest possible 	
-			
-		for(int i = 0; i < queue.size(); i++){
-		    for(int d = 1; d < (queue.size()-i); d++){
-			StringTokenizer st = new StringTokenizer(queue.getNode(d - 1).item, "$");
-			String one = "";
-			one = st.nextToken();
-						
-			for(int z = 0; z < j ; z++) {
-							
-			    one = st.nextToken();
-			}
-			StringTokenizer st2 = new StringTokenizer(queue.getNode(d).item, "$");
-			String two = "";
-			two = st2.nextToken();
-						
-			for(int z = 0; z < j; z++) {
-							
-			    two = st2.nextToken();
-			}
-						
-			//System.out.println(one + " one2 " + two +" two" );
-						
-			if(isSubClass(one, two)){
-			    //System.out.println(" girdi 2 ");
-			    queue.switchN(queue.getNode(d - 1), queue.getNode(d));
-			}
-		    }
-		}
-			
 	    }
 	}
-		
-		
-		
-	//	
-	//		for(int j = 0; j < varTypes.length; j++) {
-	//			result +=  '$' + varArray[atLast][j] ;
-	//		}
-	if( queue.size() > 0 ) result += queue.getNode(0).item;
-		
-	//	System.out.println(result + " auuv " + queue.size());
-	//		result = queue.getNode(1).item;
-	//		System.out.println(result + " auuv " + queue.size());
-		
-	return result;		
+
+	if(!(result.equals("equals") || result.equals("getClass") || result.equals("hashCode") || result.equals("toString") ))
+	    result += queue.getNode(0).item;
+	System.out.println(result);
+	return result;
     }
+
 	
     //return true if sc is a a subclass of pr 
     public boolean isSubClass(String sc, String pr) {
