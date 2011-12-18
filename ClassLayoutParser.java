@@ -12,6 +12,11 @@ import java.io.IOException;
 import java.io.Reader;
 
 import java.util.ArrayList;
+import java.util.StringTokenizer;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+
+
 
 /* 
  * Creates a helper class hierarchy tree of vtables and data layouts
@@ -28,7 +33,7 @@ public class ClassLayoutParser extends Visitor {
     public ClassLayoutParser(GNode[] ast, boolean db) {
 		DEBUG = db;
 		if(DEBUG) System.out.println("--- Begin Class Layout Parser\n");
-				
+		
 		//preinitialize the hardcoded Grimm types
 		initGrimmTypes();
 		
@@ -39,14 +44,92 @@ public class ClassLayoutParser extends Visitor {
 			}
 		}
 		
+		dispatchCallExpressionVisitor(ast);
+		
 		if(DEBUG) printClassTree();
 		if(DEBUG) System.out.println("--- End Class Layout Parser\n");
-		//
-		//		String damar[] = new String[2];
-		//		damar[0] = "muslum";
-		//degisken adi, metod adi, giren cesitleri
-		//		kirimbaba("arabesk", "orhan", damar);
     }
+	
+	void dispatchCallExpressionVisitor(GNode[] ast) {
+		Visitor cev = new Visitor() {
+			
+			String className;
+			public void visitClassDeclaration(GNode n) {
+				className = n.get(1).toString();
+				visit(n);
+			}
+			
+			public void visitCallExpression(GNode n) {
+				String targetClassName;
+				GNode caller; //for explicit this parameter
+				String targetMethodName;
+				String[] params;
+				if(n.getNode(0) == null || n.getNode(0).hasName("ThisExpression")) {
+					//__this method
+					targetClassName = className;
+					caller = GNode.create("PrimaryIdentifier");//.add("__this");
+					caller.add("__this");
+					targetMethodName = n.getString(2);
+					params = stringifyParams((GNode)n.getNode(3));
+				} else if(n.getNode(0).hasName("PrimaryIdentifier")) {
+					// standard expression
+					caller = (GNode)n.getNode(0);
+					targetClassName = getType(caller);
+					targetMethodName = n.getString(2);
+					params = stringifyParams((GNode)n.getNode(3));
+//				} else if(n.getNode(0).hasName("SuperExpression")) {
+					// SOOPER expression
+				} else {
+					System.out.println( "did not visit call expression" );
+					visit(n);
+					return;
+				}
+				
+				String newMethName = methodRank( targetClassName, targetMethodName, params );
+				n.set(2, newMethName);
+				n.set(3, GNode.ensureVariable((GNode)n.getNode(3)).add(0, caller));
+				
+				System.out.print( targetClassName + "." + targetMethodName + "(" );
+				for( String s : params ) System.out.print( s + " " );
+				System.out.println( ") " + newMethName );
+				visit(n);
+			}
+			
+			public void visit(Node n) {
+				for( Object o : n ) {
+					if (o instanceof Node) dispatch((Node)o);
+				}
+			}
+		};
+		System.out.println( "call expression visitor" );
+		for(int i = 0; i < ast.length; i++) {
+			if(ast[i] != null) {
+				cev.dispatch(ast[i]);
+			}
+		}
+	}
+	
+	//Gets a string list of object types out of an arguments node
+	String[] stringifyParams( GNode n ) {
+		String[] retVal = new String[n.size()];
+		int index = 0;
+		for( Object o : n ) {
+			retVal[index++] = getType((GNode)o);
+		}
+		return retVal;
+	}	
+	
+	String getType( GNode n ) {
+		if( n.hasName( "PrimaryIdentifier" ) && n.hasProperty("type") ) return (String)n.getProperty("type");
+		else if( n.hasName( "CallExpression" )) return "WELLSHIT";
+		else if( n.hasName( "BooleanLiteral" )) return "boolean";
+		else if( n.hasName( "CharacterLiteral" )) return "char";
+		else if( n.hasName( "FloatingPointLiteral" )) return "float";
+		else if( n.hasName( "IntegerLiteral" )) return "int";
+		else if( n.hasName( "NullLiteral" )) return "null";
+		else if( n.hasName( "StringLiteral" )) return "String";
+		else return "$#$%&#$&#";
+	}
     
 	// ----------------------------------
 	//         Tree Processing
@@ -98,29 +181,45 @@ public class ClassLayoutParser extends Visitor {
 	// Visits the method declarations in a class, adding them as virtual methods to the vtable
 	// @param n MethodDeclaration node from a Java AST
 	public void visitMethodDeclaration(GNode n) {
+		String methodName = n.get(3).toString();
+		//this.dispatch(n.getNode(7)); //hack
+
+		if ("main".equals(methodName)) return; // Don't want main method
 		
-	    // new VirtualMethodDeclaration: (0) return type, (1) method name, (2) parameters
-	    
+		//Time to mangle up some method names
+		String mangledName = mangleMethod(n);
+		
+		//**MODIFICATIONS TO ORIGINAL METHOD DECLARATION NODE
+		n.set(3, mangledName); //change the name
+		//***ADDING --THIS PARAMETER TO METHOD NODE
+		GNode thisFormParam = GNode.create("FormalParameter");
+		thisFormParam.add(null); //modifiers null
+		thisFormParam.add(createTypeNode(className)); //type is the current class
+		thisFormParam.add(null); //2-null
+		thisFormParam.add("__this"); //name of the __this parameter
+		thisFormParam.add(null); //4-null
+		n.set(4, GNode.ensureVariable((GNode)n.getNode(4)).add(0,thisFormParam) );//add the __this parameter, need to ensure variable
+	    //***
+		//**
+		
+		// new VirtualMethodDeclaration: (0) return type, (1) method name, (2) parameters
 	    GNode methodSignature = GNode.create("VirtualMethodDeclaration");
 	    methodSignature.add(n.get(2)); //return type
-	    methodSignature.add(n.get(3)); //method name
+	    methodSignature.add(mangledName); //method name
+		
 	    GNode formalParameters = deepCopy((GNode)n.getNode(4));
 	    for( int i = 0; i < formalParameters.size(); i++ ) {
 			formalParameters.set(i, formalParameters.getNode(i).getNode(1) ); // this kills the parameter name
 	    }
-		
+		/*
 	    int over = overridesMethod(n, (GNode)currentHeaderNode.getNode(0) );
 	    // Don't want to pass thisClass if a method is overridden
-	    if(over > 0)
+	    if(over == -1)
 			formalParameters.add(0, createTypeNode( className ) );
-		
+		*/
 	    methodSignature.add(formalParameters); //parameter types
-	    
-	    //Override check here -- if overrides, use vtdecl.set(overrideIndex, methodSig) else just add it
-	    String methodName = n.get(3).toString();
-	    
-	    if ("main".equals(methodName)) return; // Don't want main method
-	    
+		
+		
 	    int overrideIndex = overridesMethod(n, (GNode)currentHeaderNode.getNode(0) );
 	    if( overrideIndex >= 0 ) {
 			if(DEBUG) System.out.println( "overriding method: " + methodName );
@@ -130,51 +229,51 @@ public class ClassLayoutParser extends Visitor {
 			int index = currentHeaderNode.getNode(0).size()-1;
 			GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index).getNode(4);
 			GNode newPtr = GNode.create( "vtMethodPointer" );
-			newPtr.add( n.get(3) ); //method name
+			newPtr.add( mangledName ); //method name
 			newPtr.add( createTypeNode( "__"+className ) ); //target
 			newPtr.add( GNode.create( "FormalParameters" ) );
 			// FIXME: Add PointerCast to this Class, see below for ex.
 			vtConstructorPtrList.set( overrideIndex, newPtr );
 	    }
 	    else {
-		// FIXME: If  new method, don't pass self Class
-		// as parameter, use for calling class
-		if(DEBUG) System.out.println( "adding method: " + methodName );
-		int index = currentHeaderNode.getNode(0).size()-1; //add it before the constructor, which is last(index+1)
-		currentHeaderNode.getNode(0).add(index, methodSignature); //extended, add the method signature to the vtable declaration
-		
-		//adding it to the constructor too
-		GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index+1).getNode(4);
-		// FIXME: Need to Flesh out for overriden as well?
-		GNode newPtr = GNode.create( "vtMethodPointer" );
-		newPtr.add( n.get(3) ); //method name
-		newPtr.add( createTypeNode( "__"+className ) ); //Calling Class
-		newPtr.add( formalParameters );
-
-		// Add explicit __this using classname
-		// FIXME: Technically, this should be added under a 
-		// "FormalParameter" node but no biggie, it works.
-		GNode params = (GNode) newPtr.getNode(2);
-		//		params.add(GNode.create("FormalParameter").add( createTypeNode(className)) );
-			params.add(createTypeNode(className));
-		
-		// add Pointer cast node
-		GNode pCast = GNode.create("PointerCast");
-		// ? No need for PointerCast when adding new methods?
-		//	pCast.add(n.getNode(2)); // return Type
-        
-		newPtr.add(pCast);
-		vtConstructorPtrList.add( newPtr );
-		
-		//adding it to the data layout
-		GNode dataLayoutMethList = (GNode)currentHeaderNode.getNode(1).getNode(3);
-		GNode hdr = GNode.create( "StaticMethodHeader" );
-		hdr.add( n.get(2) ); //return type
-		hdr.add( n.get(3) ); //method name
-		hdr.add( formalParameters ); //params
-		dataLayoutMethList.add( hdr );
+			// FIXME: If  new method, don't pass self Class
+			// as parameter, use for calling class
+			if(DEBUG) System.out.println( "adding method: " + methodName );
+			int index = currentHeaderNode.getNode(0).size()-1; //add it before the constructor, which is last(index+1)
+			currentHeaderNode.getNode(0).add(index, methodSignature); //extended, add the method signature to the vtable declaration
+			
+			//adding it to the constructor too
+			GNode vtConstructorPtrList = (GNode)currentHeaderNode.getNode(0).getNode(index+1).getNode(4);
+			// FIXME: Need to Flesh out for overriden as well?
+			GNode newPtr = GNode.create( "vtMethodPointer" );
+			newPtr.add( mangledName ); //method name
+			newPtr.add( createTypeNode( "__"+className ) ); //Calling Class
+			newPtr.add( formalParameters );
+			
+			// Add explicit __this using classname
+			// FIXME: Technically, this should be added under a 
+			// "FormalParameter" node but no biggie, it works.
+			GNode params = (GNode) newPtr.getNode(2);
+			//		params.add(GNode.create("FormalParameter").add( createTypeNode(className)) );
+			//params.add(createTypeNode(className));
+			
+			// add Pointer cast node
+			GNode pCast = GNode.create("PointerCast");
+			// ? No need for PointerCast when adding new methods?
+			//	pCast.add(n.getNode(2)); // return Type
+			
+			newPtr.add(pCast);
+			vtConstructorPtrList.add( newPtr );
+			
+			//adding it to the data layout
+			GNode dataLayoutMethList = (GNode)currentHeaderNode.getNode(1).getNode(3);
+			GNode hdr = GNode.create( "StaticMethodHeader" );
+			hdr.add( n.get(2) ); //return type
+			hdr.add( mangledName  ); //method name
+			hdr.add( formalParameters ); //params
+			dataLayoutMethList.add( hdr );
 	    }
-	    //FIXME: FINAL: name mangling
+	    
 	}
     
 	// [INTERNAL]
@@ -189,8 +288,8 @@ public class ClassLayoutParser extends Visitor {
 		// Search current VTable to see if overriden and at what index
 		for(int i = 1; i < currentVTable.size()-1; i++) { //start at one to ignore __isa, end at size-1 to ignore constructor
 			if(methodName.equals(currentVTable.getNode(i).get(1).toString())) {
-				if (n.getNode(4) == currentVTable.getNode(i).getNode(2)) // Compare Formal Parameters - equals()?
-					return i; //string comparison, return indexof
+				//if (n.getNode(4) == currentVTable.getNode(i).getNode(2)) // Compare Formal Parameters - equals()?
+				return i; //string comparison, return indexof
 			}
 		}
 		
@@ -239,11 +338,11 @@ public class ClassLayoutParser extends Visitor {
 	// -----------------------------------
 	
 	public void visitConstructorDeclaration(GNode n) {
-
+		
 	    // Need to move any Constructors from the ClassBody to HeaderDeclaration.  Need it in there twice, once to declare the signature and the second time to implement it. 
-
-
-
+		
+		
+		
 	    if(DEBUG) System.out.println( "--- Processing constructor");
 	    GNode constructorSignature = GNode.create("ConstructorHeader");
 	    //	    constructorSignature.add(className);
@@ -350,79 +449,310 @@ public class ClassLayoutParser extends Visitor {
 	}
 	
 	
-	// degisken adi, metod adi, giren cesitleri
-	// thing1.getNumber(int bok)
-	// duydum = object, ki = getNumber, unutmussun = bok
 	
-	// once dudum un classini bul, ardindan vtable i al, ardindan o table dan soz konusu metodun datasini al
-	// sonra dagiren cikanla karsilastir datasini alirken bir kac kali bir arraye almak isteyebilirsin
-	// ondan sonra da ki absolute superiority gosteriyorsa onu sec
-
-	public String kirimbaba(String duydum, String ki, String unutmussun[]) {
-		duydum = "Testere";
-		String result = "";
+	// a method that ranks the possible choices of methods and finally picks the best one that fits and returns a string
+	
+	public String methodRank(String objectType, String methodName, String varTypes[]) {
+		String result = methodName;
 		
 		int mCount = 0;
 		int a = 6;
-		Node ana = getVTable(duydum).getNode(a);
-
-		while(getVTable(duydum).getNode(a).getString(1) != null) {
-			ana = getVTable(duydum).getNode(a);
-			if(ana.getNode(2).size() == unutmussun.length && ki.equals(ana.getString(1))) {
+		Node node = getVTable(objectType).getNode(a);
+		
+		while(getVTable(objectType).getNode(a).getString(1) != null) {
+			
+			node = getVTable(objectType).getNode(a);
+			StringTokenizer st = new StringTokenizer(node.getString(1), "$");
+			String candy = st.nextToken();
+			if((node.getNode(2).size() - 1) == varTypes.length && methodName.equals(candy)) {
 				mCount++;
 			}
 			a++;
 		}
 		
-		System.out.println(" Number of methods with same name " + mCount);
-		String damar[][] = new String[mCount][unutmussun.length];
+		//System.out.println(" Number of methods with same name " + mCount);
+		String varArray[][] = new String[mCount][varTypes.length];
 		int count = 0;
 		a = 6;
 		
-		while(getVTable(duydum).getNode(a).getString(1) != null) {
-			ana = getVTable(duydum).getNode(a);
-			if(ana.getNode(2).size() == unutmussun.length && ki.equals(ana.getString(1))) {
-				for(int k = 0; k < ana.getNode(2).size(); k++) {
-					damar[count][k] = ana.getNode(2).getNode(k).getNode(0).getString(0);
+		while(getVTable(objectType).getNode(a).getString(1) != null) {
+			
+			node = getVTable(objectType).getNode(a);
+			StringTokenizer st = new StringTokenizer(node.getString(1), "$");
+			String bust = st.nextToken();
+			
+			if((node.getNode(2).size() - 1) == varTypes.length && methodName.equals(bust)) {
+				for(int k = 0; k < (node.getNode(2).size() - 1); k++) {
+					varArray[count][k] = st.nextToken();
+					
 				}
 				count++;
 			}
 			a++;
 		}
+		//this is where it is done getting the stuff to arrays and actually starts to pick
+		int atLast = 0;
+		boolean tie = false;
+		// uc ihtimal var, prim ve numdur, primdir ama num degildir butunuyle baska bir seydir
+		String qString = "";
+		Queue<String> queue = new Queue<String>();
 		
-		
-		
-		// unutmussun ve nuhtelif dmarlri karsilastir ondan sonra en kiyak olani sec
-		// kod ise yarar bir pust oldugu icin mutlaka birini secmek meccburiyetinndesin
-		
-		// butun degerlerde herife ulasana dek getSuperClass yap sonra degerleri tut ve en krali al
-		String kral[] = new String[mCount];
-		int netice = 100;
-		for(int j = 0; j < unutmussun.length; j++) {
-			int g = 0;
-			for(int p = 0; p < mCount; p++) {
-				
-				String dene = "";/*
-				while (dene != unutmussun[j]) {
-					dene = getSuperclassName(damar[p][j]);
-					g++;
-				}*/
-				if(g < netice) {
-					netice = g;
-					kral[j] = "" + p;
-				}
-				
+		for(int p = 0; p < mCount; p++) {
+			qString = "";
+			
+			for(int j = 0; j < varTypes.length; j++) {
+				qString +=  '$' + varArray[p][j] ;
 			}
-		}
-		for(int j = 0; j < kral.length; j++) {
-			System.out.println(kral[j]);
-		}
-		
-		return result;
+			queue.enqueue(qString);
 			
 		}
+
+		//System.out.println(" bas " + queue.size());
+
+		
+		for(int j = 0; j < varTypes.length; j++) {
+			int g = 0;
+			boolean notSame = true;
+			if(isPrimitive(varTypes[j]) && !isPrimAndNum(varTypes[j])) { //prim but not num, everything except itself is bad
+				for(int p = 0; p < queue.size(); p++) {
+					String tok = "";
+
+					StringTokenizer st = new StringTokenizer(queue.getNode(p).item, "$");
+					tok = st.nextToken();
+
+					for(int z = 0; z < j-1; z++) {
+						
+						tok = st.nextToken();
+					}
+					
+					if (!varTypes[j].equals( tok)) {
+						queue.aradanCik(p);					
+					}
+				}
+			}
+			
+			
+			else if(isPrimAndNum(varTypes[j])) {// prim and num, something from the hierarchy that is equal or above, the closest possible		
+				for(int p = 0; p < queue.size(); p++) {
+					String tok = "";
+
+					StringTokenizer st = new StringTokenizer(queue.getNode(p).item, "$");
+					tok = st.nextToken();
+
+					for(int z = 0; z < j; z++) {
+						
+						tok = st.nextToken();
+					}
+//					System.out.println(tok + " tok " + varTypes[j] +"varTypes[j]" );
+					if (!isHigherType(tok, varTypes[j])) {
+						queue.aradanCik(p);					
+					}
+				}
+			}
+			
+			
+			else {	//an object, something from the hierarchy that is equal or above, the closest possible 	
+				for(int p = 0; p < queue.size(); p++) {
+					
+					StringTokenizer st = new StringTokenizer(queue.getNode(p).item, "$");
+					String tok = "";
+					tok = st.nextToken();
+
+					for(int z = 0; z < j; z++) {
+//						System.out.println(tok + " voiiiila " + varTypes[j] +"varTypes[j]" );
+						
+						tok = st.nextToken();
+					}
+//					System.out.println(tok + " voiiiila " + varTypes[j] +"varTypes[j]" );
+
+					if (isSubClass(tok, varTypes[j])) {
+//						System.out.println(tok + " girdi voiiiila " + varTypes[j] +"varTypes[j]" );
+
+						queue.aradanCik(p);					
+					}
+				}
+			}
+		}
+		//System.out.println(" auuv " + queue.size());
+
 		
 		
+		for(int j = 0; j < varTypes.length; j++) {
+			int g = 0;
+			boolean notSame = true;
+			
+			if(isPrimitive(varTypes[j]) && !isPrimAndNum(varTypes[j])) { //prim but not num, everything except itself is bad
+			}
+			else if(isPrimAndNum(varTypes[j])) {// smallest i alip basa koy gerisini siktir et		
+
+				for(int i = 0; i < queue.size(); i++){
+					for(int d = 1; d < (queue.size()-i); d++){
+						StringTokenizer st = new StringTokenizer(queue.getNode(d - 1).item, "$");
+						String one = "";
+						one = st.nextToken();
+
+						for(int z = 0; z < j ; z++) {
+							
+							one = st.nextToken();
+						}
+						StringTokenizer st2 = new StringTokenizer(queue.getNode(d).item, "$");
+						String two = "";
+						two = st2.nextToken();
+
+						for(int z = 0; z < j; z++) {
+							
+							two = st2.nextToken();
+						}
+						//System.out.println(varTypes[j] + " varTypes[j] sulo");
+
+//						System.out.println(one + " one1 " + two +" two" );
+
+						if((getRank(one) > getRank(two)) ){   // && (getRank(one) != getRank(two))
+//							System.out.println(" girdi 2 ");
+
+							queue.switchN(queue.getNode(d - 1), queue.getNode(d));
+						}
+					}
+				}
+				
+			
+			}
+			else {	//an object, something from the hierarchy that is equal or above, the closest possible 	
+			
+				for(int i = 0; i < queue.size(); i++){
+					for(int d = 1; d < (queue.size()-i); d++){
+						StringTokenizer st = new StringTokenizer(queue.getNode(d - 1).item, "$");
+						String one = "";
+						one = st.nextToken();
+						
+						for(int z = 0; z < j ; z++) {
+							
+							one = st.nextToken();
+						}
+						StringTokenizer st2 = new StringTokenizer(queue.getNode(d).item, "$");
+						String two = "";
+						two = st2.nextToken();
+						
+						for(int z = 0; z < j; z++) {
+							
+							two = st2.nextToken();
+						}
+						
+						//System.out.println(one + " one2 " + two +" two" );
+						
+						if(isSubClass(one, two)){
+							//System.out.println(" girdi 2 ");
+							queue.switchN(queue.getNode(d - 1), queue.getNode(d));
+						}
+					}
+				}
+			
+			}
+		}
+		
+		
+		
+	//	
+//		for(int j = 0; j < varTypes.length; j++) {
+//			result +=  '$' + varArray[atLast][j] ;
+//		}
+		if( queue.size() > 0 ) result += queue.getNode(0).item;
+		
+	//	System.out.println(result + " auuv " + queue.size());
+//		result = queue.getNode(1).item;
+//		System.out.println(result + " auuv " + queue.size());
+		
+		return result;		
+	}
+	
+	//return true if sc is a a subclass of pr 
+	public boolean isSubClass(String sc, String pr) {
+		if(isPrimitive(sc) && isPrimitive(pr))
+			return false;
+		GNode parentN = getClass(sc);
+		if (parentN.getProperty("name").equals("Object")) return false;
+		else {			
+			parentN =  (GNode)parentN.getProperty("parentClassNode");
+			if (parentN.getProperty("name").equals(pr)) {
+				return true;
+			}
+			return isSubClass(parentN.getProperty("name").toString(),pr);
+		}		
+	}
+
+	
+	public boolean isLowerType(String sc, String pr) {		
+		if(getRank(sc) < getRank(pr))
+			return true;
+		else
+			return false;
+	}
+	public boolean isHigherType(String sc, String pr) {	
+		if(!(isPrimAndNum(sc) && isPrimAndNum(pr)))
+			return false;
+		else if(getRank(sc) >= getRank(pr))
+			return true;
+		else
+			return false;
+	}
+	
+	//what to do if there is a tie?
+	public String getHigherType(String sc) {
+		int referenceNo = 0;
+		
+		referenceNo = getRank(sc);
+		
+		return getHierarchy(referenceNo);
+	}
+	
+	
+	public boolean hasHigherType(String sc) {
+		int referenceNo = getRank(sc);
+		if (referenceNo < 6) {
+			return true;
+		}
+		else {
+			return false;
+		}
+
+
+	}
+	
+	
+	
+	public String getHierarchy(int rank) {
+		String[] hierarchy = new String[7];
+		hierarchy[1] = "byte";
+		hierarchy[2] = "short";
+		hierarchy[3] = "int";
+		hierarchy[4] = "long";
+		hierarchy[5] = "float";
+		hierarchy[6] = "double";
+		return hierarchy[rank];
+	}
+	
+	public int getRank(String type) {
+		int rank = 1;
+			
+		while (!getHierarchy(rank).equals(type)&& rank < 7) {
+			rank++;
+		}
+		return rank;
+	}
+	public boolean isPrimitive(String sc) {
+		if (sc.equals("int") || sc.equals("boolean") || sc.equals("byte") || sc.equals("short") || sc.equals("long") || sc.equals("float") || sc.equals("double") || sc.equals("char") || sc.equals("String") ) {
+			return true;
+		}
+		else 
+			return false;
+	}
+	public boolean isPrimAndNum(String sc) {
+		if (sc.equals("int") || sc.equals("byte") || sc.equals("short") || sc.equals("long") || sc.equals("float") || sc.equals("double") ) {
+			return true;
+		}
+		else 
+			return false;
+	}
 	
 	
 	//[DEBUG - INTERNAL]
@@ -455,12 +785,22 @@ public class ClassLayoutParser extends Visitor {
 			}
 		}.dispatch(classTree);
 	}
-	
 	// 
 	// @param methodNode
 	// @return 
 	public String mangleMethod( GNode methodNode ) {
-		return null;
+		String methodName = methodNode.getString(3);
+		GNode parametersBlock = (GNode)methodNode.getNode(4);
+		int numParams = parametersBlock.size();
+		String paramsNames[] = new String[numParams];
+		for( int i = 0; i < numParams; i++) {
+			GNode thisTypeNode = (GNode)parametersBlock.getNode(i).getNode(1);
+			paramsNames[i] = thisTypeNode.getNode(0).getString(0);
+		}
+		for( String s : paramsNames ) {
+			methodName += "$" + s;
+		}
+		return methodName;
 	}
 	
 	// ---------------------------------------------------- //
@@ -510,7 +850,6 @@ public class ClassLayoutParser extends Visitor {
 	// Creates a hard-coded virtual table for the object class.
 	// @return the complete virtual table for Object
 	GNode objectClassVirtualTable() {
-		
 	    GNode retVal = GNode.create("VTableDeclaration");
 	    retVal.add( createSkeletonDataField( "Class", "__isa" ) ); //Class __isa;
 	    // For delete
@@ -672,22 +1011,22 @@ public class ClassLayoutParser extends Visitor {
 			    
 			    // Found the class
 			    if( getName(n).equals(s) ) {
-				return n;
+					return n;
 			    }
 			    
 			    // Keep Searching
 			    for( Object o : n) {
-				if (o instanceof Node) {
-				    GNode returnValue = (GNode)dispatch((GNode)o);
-				    if( returnValue != null ) return returnValue;
-				}
+					if (o instanceof Node) {
+						GNode returnValue = (GNode)dispatch((GNode)o);
+						if( returnValue != null ) return returnValue;
+					}
 			    }
 			    return null;
 			}
 			
 			public void visit(GNode n) { // override visit for GNodes
 			    for( Object o : n) {
-				if (o instanceof Node) dispatch((GNode)o);
+					if (o instanceof Node) dispatch((GNode)o);
 			    }
 			}
 			
@@ -702,7 +1041,13 @@ public class ClassLayoutParser extends Visitor {
 		if (child.getProperty("name").equals("Object")) return null;
 		return (GNode)child.getProperty("parentClassNode");
 	}
-	
+	public boolean hasSuperclass(String sc) {
+		if (getSuperclass(sc) != null) {
+			return true;
+		}
+		else
+			return false;
+	}
 	//Returns a Class node representing the parent class of the specified class node
 	//@param n class node
 	//@return the node of the superclass
@@ -719,9 +1064,9 @@ public class ClassLayoutParser extends Visitor {
     // @param cN Class Name
 	// @return the classes vtable node
     public GNode getVTable(String cN) {
-	GNode className = getClass(cN);
-	GNode classVT = (GNode)(className.getNode(0).getNode(0));
-	return classVT;
+		GNode className = getClass(cN);
+		GNode classVT = (GNode)(className.getNode(0).getNode(0));
+		return classVT;
     }
 	
     // Returns Data Layout list for a class
@@ -733,119 +1078,119 @@ public class ClassLayoutParser extends Visitor {
 	return classData;
     }
 	
-
+	
     // Sees if a field was declared in the Data Layout
     // @param dln Data Layout node
     // @param s Name of the FieldDeclaration we hope to find
     
     public boolean findPrimID(GNode dln, String s) {
-
-	// eventually return false if not found
-
-	final String p = s;
-
-	GNode isDeclared = (GNode) (new Visitor () {
-
-		public GNode visitDeclarator(GNode n) {
-		    
-		    if( p.equals(n.getString(0)) ) {
-			return n;
-		    }
-		    
-
-		    // Keep Searching
-		    for( Object o : n) {
-			if (o instanceof Node) {
-			    GNode returnValue = (GNode)dispatch((GNode)o);
-			    if( returnValue != null ) return returnValue;
+		
+		// eventually return false if not found
+		
+		final String p = s;
+		
+		GNode isDeclared = (GNode) (new Visitor () {
+			
+			public GNode visitDeclarator(GNode n) {
+				
+				if( p.equals(n.getString(0)) ) {
+					return n;
+				}
+				
+				
+				// Keep Searching
+				for( Object o : n) {
+					if (o instanceof Node) {
+						GNode returnValue = (GNode)dispatch((GNode)o);
+						if( returnValue != null ) return returnValue;
+					}
+				}
+				
+				return null;
 			}
-		    }
-		    
-		    return null;
-		}
-
-		public GNode visit(GNode n) { // override visit for GNodes
-		    
-		    // Keep Searching
-		    for( Object o : n) {
-			if (o instanceof Node) {
-			    GNode returnValue = (GNode)dispatch((GNode)o);
-			    if( returnValue != null ) return returnValue;
+			
+			public GNode visit(GNode n) { // override visit for GNodes
+				
+				// Keep Searching
+				for( Object o : n) {
+					if (o instanceof Node) {
+						GNode returnValue = (GNode)dispatch((GNode)o);
+						if( returnValue != null ) return returnValue;
+					}
+				}
+				
+				return null;
+				
 			}
-		    }
-		    
-		    return null;
-		    
-		}
 	    }.dispatch(dln));
-
-	if(isDeclared != null) return true;
-	
-	return false;
-	
+		
+		if(isDeclared != null) return true;
+		
+		return false;
+		
     } // end findPrimID
-
-
+	
+	
     // Return's a specific node from a Virtual Table
     // @param VirtualTable node
     public GNode getVTMethod(GNode vtn, String m) {
-	//	System.out.println("--- Enter CLP");
-
-	// Declared final to be accessible from inner Visitor
-	final String mName = m;
-	//	System.out.println("--- Searching for method " + mName);
-	
-	GNode returnThis = (GNode)( new Visitor () {
-	    
-		public GNode visitVirtualMethodDeclaration(GNode n) {
-		    
-		    //		    System.out.println("\t--- At VirtualMethodDeclaration node:"
-		    //				       + n.getString(1));
-		    
-		    if( mName.equals(n.getString(1)) ) {
-			// Found the node
-			//			System.out.println("/t--- Returning VirtualMethodDeclaration node " + n.getString(1));
-			//			System.out.println("/t--- that node is" + n.toString());
-
-			return n;
-		    }
-		    
-		    // Keep Searching
-		    for( Object o : n) {
-			if (o instanceof Node) {
-			    GNode returnValue = (GNode)dispatch((GNode)o);
-			    if( returnValue != null ) return returnValue;
-			}
-		    }
-		    
-		    return null;
-		    
-		}
+		//	System.out.println("--- Enter CLP");
 		
-		public GNode visit(GNode n) { // override visit for GNodes
-        
-		    // Keep Searching
-		    for( Object o : n) {
-			if (o instanceof Node) {
-			    GNode returnValue = (GNode)dispatch((GNode)o);
-			    if( returnValue != null ) return returnValue;
-			}
-		    }
-		    
-		    return null;
-
-		}
+		// Declared final to be accessible from inner Visitor
+		final String mName = m;
+		//	System.out.println("--- Searching for method " + mName);
 		
+		GNode returnThis = (GNode)( new Visitor () {
+			
+			public GNode visitVirtualMethodDeclaration(GNode n) {
+				
+				//		    System.out.println("\t--- At VirtualMethodDeclaration node:"
+				//				       + n.getString(1));
+				
+				if( mName.equals(n.getString(1)) ) {
+					// Found the node
+					//			System.out.println("/t--- Returning VirtualMethodDeclaration node " + n.getString(1));
+					//			System.out.println("/t--- that node is" + n.toString());
+					
+					return n;
+				}
+				
+				// Keep Searching
+				for( Object o : n) {
+					if (o instanceof Node) {
+						GNode returnValue = (GNode)dispatch((GNode)o);
+						if( returnValue != null ) return returnValue;
+					}
+				}
+				
+				return null;
+				
+			}
+			
+			public GNode visit(GNode n) { // override visit for GNodes
+				
+				// Keep Searching
+				for( Object o : n) {
+					if (o instanceof Node) {
+						GNode returnValue = (GNode)dispatch((GNode)o);
+						if( returnValue != null ) return returnValue;
+					}
+				}
+				
+				return null;
+				
+			}
+			
 	    }.dispatch(vtn));
-	
-
-	//	if(null == returnThis)
-	//	    System.out.println("/t--- null :-(");
-
-	return returnThis;
-
+		
+		
+		//	if(null == returnThis)
+		//	    System.out.println("/t--- null :-(");
+		
+		return returnThis;
+		
     }
-
+	
 	//Returns the name of the super class of the specified class, or null if class name is Object (the root class)
 	//@param cN the Class name
 	//@return the string name of the superclass
