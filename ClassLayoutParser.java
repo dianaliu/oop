@@ -88,6 +88,7 @@ public class ClassLayoutParser extends Visitor {
 				String newMethName = methodRank( targetClassName, targetMethodName, params );
 				n.set(2, newMethName);
 				n.set(3, GNode.ensureVariable((GNode)n.getNode(3)).add(0, caller));
+				//n.setProperty("type", "");//insert return type here
 				
 				System.out.print( targetClassName + "." + targetMethodName + "(" );
 				for( String s : params ) System.out.print( s + " " );
@@ -129,6 +130,10 @@ public class ClassLayoutParser extends Visitor {
 		else if( n.hasName( "NullLiteral" )) return "null";
 		else if( n.hasName( "StringLiteral" )) return "String";
 		else return "$#$%&#$&#";
+	}
+	
+	String getReturnType( String objectName, String methodName ) {
+		return "";
 	}
     
 	// ----------------------------------
@@ -185,6 +190,10 @@ public class ClassLayoutParser extends Visitor {
 		//this.dispatch(n.getNode(7)); //hack
 
 		if ("main".equals(methodName)) return; // Don't want main method
+		GNode mods = (GNode)n.getNode(0);
+		for( Object o : mods ) {
+			if( ((GNode)o).getString(0).equals("static") || ((GNode)o).getString(0).equals("private") ) return;  //Don't add static or private methods to the vtable
+		}
 		
 		//Time to mangle up some method names
 		String mangledName = mangleMethod(n);
@@ -431,27 +440,7 @@ public class ClassLayoutParser extends Visitor {
     // --------------- Overloading Coding ----------------- //
     // ---------------------------------------------------- //
 	
-	// Tests the inheritance hierarchy for subclass relationships
-	// @param parentClassName The name of the parent class
-	// @param childClassName The name of the child class
-	// @return -1 if no relationship, 0 if parentClass == childClass, levels of inherited distance otherwise
-	public int paternityTest( String parentClassName, String childClassName ) {
-		GNode parentClassNode = getClass(parentClassName);
-		GNode childClassNode = getClass(childClassName);
-		int levels = 0; 
-		while( childClassNode != null ) {
-			System.out.println( "ccn: " + childClassNode.getProperty("name") + " : ");
-			if( parentClassNode.equals(childClassNode) ) return levels;
-			childClassNode = getSuperclass( childClassNode.getStringProperty("name") );
-			levels++;
-		}
-		return -1; // you are NOT the father.
-	}
-	
-	
-	
 	// a method that ranks the possible choices of methods and finally picks the best one that fits and returns a string
-	
 	public String methodRank(String objectType, String methodName, String varTypes[]) {
 		String result = methodName;
 		
@@ -734,7 +723,7 @@ public class ClassLayoutParser extends Visitor {
 	public int getRank(String type) {
 		int rank = 1;
 			
-		while (!getHierarchy(rank).equals(type)&& rank < 7) {
+		while (!getHierarchy(rank).equals(type) && rank < 6) {
 			rank++;
 		}
 		return rank;
@@ -754,37 +743,6 @@ public class ClassLayoutParser extends Visitor {
 			return false;
 	}
 	
-	
-	//[DEBUG - INTERNAL]
-	public void sequenceGenome() {
-		new Visitor () {
-			public void visit(GNode n) {
-				for( Object o : n) {
-					if (o instanceof Node) dispatch((GNode)o);
-				}
-			}
-			
-			public void visitClass(GNode n) {
-				final String parentName = n.getStringProperty("name");
-				new Visitor () {
-					public void visit(GNode n) {
-						for( Object o : n) {
-							if (o instanceof Node) dispatch((GNode)o);
-						}
-					}
-					
-					public void visitClass(GNode n) {
-						String childName = n.getStringProperty("name");
-						
-						System.out.println( "Testing " + parentName + " and " + childName + " : " + paternityTest(parentName, childName) );
-						
-						visit(n);
-					}
-				}.dispatch(classTree);
-				visit(n);
-			}
-		}.dispatch(classTree);
-	}
 	// 
 	// @param methodNode
 	// @return 
