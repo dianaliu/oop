@@ -146,6 +146,7 @@ public class CPPPrinter extends Visitor {
     public CPPPrinter(Printer printer) {
 	this(printer, false, false);
     }
+
 	
     /**
      * Create a new CPP printer.
@@ -156,6 +157,12 @@ public class CPPPrinter extends Visitor {
      * @param gnuify The flag for whether to use GNU code formatting
      *   conventions.
      */
+
+
+    public CPPPrinter(ClassLayoutParser clp, Printer printer) {
+	this(clp, printer, false, false);
+   }
+
     public CPPPrinter(ClassLayoutParser clp, Printer printer, boolean lineUp, boolean gnuify) 
     {
 	this.clp = clp;
@@ -2269,18 +2276,13 @@ public class CPPPrinter extends Visitor {
     /** Visit the specified primary identifier node. */
     public void visitPrimaryIdentifier(GNode n) {
 
-	System.out.println("VISITING PRIMARY IDENTIFIER " + n);
-
 	// HACK: Paranoid checks because PrimaryIdentiier(null) 's are 
 	// getting added to tree and I don't have time to figure out where
 	if( null != n && null != n.get(0) ) {
 	    
-	    System.out.println("---INSIDE IF and classname = " + className);
 
 	    GNode dl = clp.getDataLayout(className);
 
-	    System.out.println("---DL is " + dl );
- 
 		
 	    boolean isField = clp.findPrimID(dl,n.getString(0));
 	    if(isField && !isConstructor) printer.p("__this->");

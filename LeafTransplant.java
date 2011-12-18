@@ -29,7 +29,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     String className;
     GNode classImplementation;
     GNode expressionStatement;
-	GNode newClassExpression;
+    GNode newClassExpression;
 	
 	
     GNode thisClassDataLayoutStructDeclList; 
@@ -43,13 +43,13 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     // @param clp To gain access to vtables and data layouts
     // @param javaAST
     public LeafTransplant(ClassLayoutParser clp, GNode javaAST, boolean db) { 
-		this.cppTree = GNode.create("TranslationUnit");
-		this.javaTree = javaAST;
-		this.clp = clp;
-		DEBUG = db;
+	this.cppTree = GNode.create("TranslationUnit");
+	this.javaTree = javaAST;
+	this.clp = clp;
+	DEBUG = db;
 		
-		// Create a CPP tree as we visit the Java AST
-		createCPPTree();
+	// Create a CPP tree as we visit the Java AST
+	createCPPTree();
     } 
     
     // ------------------------------------------
@@ -58,38 +58,38 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	
 	
     public void createCPPTree() {
-		// We add nodes to the CPP AST in 3 stages:
-		// ImportDeclaration(s), ClassDeclaration - for header, 
-		// and ClassDeclaration - for body nodes.
+	// We add nodes to the CPP AST in 3 stages:
+	// ImportDeclaration(s), ClassDeclaration - for header, 
+	// and ClassDeclaration - for body nodes.
 		
-		// TODO: Vtable lookups at method invocation
+	// TODO: Vtable lookups at method invocation
 		
-		new Visitor() {
+	new Visitor() {
 			
-			public void visitImportDeclaration(GNode n) {
-				// Add import node to cpp tree
-				addImportNode(n);
-			}
+	    public void visitImportDeclaration(GNode n) {
+		// Add import node to cpp tree
+		addImportNode(n);
+	    }
 			
-			public void visitClassDeclaration(GNode n) {
-				// Build and add header node
-				translateClassDeclaration(n);
-				// Build and add implementation node
-				translateClassBody(n);
+	    public void visitClassDeclaration(GNode n) {
+		// Build and add header node
+		translateClassDeclaration(n);
+		// Build and add implementation node
+		translateClassBody(n);
 				
-			}
+	    }
 			
 			
-			public void visit(GNode n) {
-				// Need to override visit to work for GNodes
-				for( Object o : n) {
-					if (o instanceof Node) dispatch((GNode)o);
-				}
-			}
+	    public void visit(GNode n) {
+		// Need to override visit to work for GNodes
+		for( Object o : n) {
+		    if (o instanceof Node) dispatch((GNode)o);
+		}
+	    }
 			
-		}.dispatch(javaTree);
+	}.dispatch(javaTree);
 		
-		cppTree.add(className);
+	cppTree.add(className);
     }
 	
     // ------------------------------------------
@@ -105,8 +105,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     // @param n ImportDeclaration node from Java AST
     public void addImportNode (GNode n) {
 		
-		GNode importNode  = n;
-		importDeclarations.add(importNode);
+	GNode importNode  = n;
+	importDeclarations.add(importNode);
 
     }
 	
@@ -119,147 +119,147 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     public void translateClassDeclaration (GNode n) {
 		
 	// TODO: Use className to name output files and other hacks
-		className = n.get(1).toString();
+	className = n.get(1).toString();
 		
-		// hNode contains all information for the .h file to be printed
-		GNode hNode = buildHeader(n);
-		cppTree.add(hNode);
+	// hNode contains all information for the .h file to be printed
+	GNode hNode = buildHeader(n);
+	cppTree.add(hNode);
 		
-		// Note: templateNodes has the same information as CustomClass nodes.
-		// It is built at the same time as the header, but must reside in a 
-		// a different branch as it is in a different namespace.
-		GNode tNode = templateNodes;
-		cppTree.add(tNode);
+	// Note: templateNodes has the same information as CustomClass nodes.
+	// It is built at the same time as the header, but must reside in a 
+	// a different branch as it is in a different namespace.
+	GNode tNode = templateNodes;
+	cppTree.add(tNode);
 		
     }
 	
     // Creates the header node for a Class
     // @param n ClassDeclaration node from Java AST
     GNode buildHeader(GNode n) {
-		// Nodes are created "inside out" from the leaves up
+	// Nodes are created "inside out" from the leaves up
 		
-		GNode hNode = GNode.create("HeaderDeclaration"); 
+	GNode hNode = GNode.create("HeaderDeclaration"); 
 		
-		GNode typedef = buildTypedef(n);
-		hNode.addNode(typedef);
+	GNode typedef = buildTypedef(n);
+	hNode.addNode(typedef);
 		
-		GNode dataLayout = buildDataLayout(n);
-		hNode.addNode(dataLayout);
+	GNode dataLayout = buildDataLayout(n);
+	hNode.addNode(dataLayout);
 		
-		GNode vtable = buildVTable(n);
-		hNode.addNode(vtable);
+	GNode vtable = buildVTable(n);
+	hNode.addNode(vtable);
 		
-		// If there are any custom array types, declare them
-		GNode arrayTemplates = findArrays(n);
+	// If there are any custom array types, declare them
+	GNode arrayTemplates = findArrays(n);
 	// Adds declarations for custom classes
-		hNode.addNode(arrayTemplates);
+	hNode.addNode(arrayTemplates);
 		
 
 	GNode constructors = findConstructors(n);
 	hNode.addNode(constructors);
 
-		return hNode;
+	return hNode;
     }
 	
     // Build CPP Data Layout nodes to create struct __Class { }
     // @param n ClassDeclaration node from Java AST
     public GNode buildDataLayout(GNode n) {
-		// Nodes are created "inside out" from the leaves up
+	// Nodes are created "inside out" from the leaves up
 		
-		// Populate our Data Layout with information
+	// Populate our Data Layout with information
     	GNode dataDeclarationList = GNode.create("StructureDeclarationList");
-		GNode dl = clp.getDataLayout(className);
+	GNode dl = clp.getDataLayout(className);
 		
-		// Copy data layout members to StructureDeclarationList
-		for (Iterator<?> iter = dl.iterator(); iter.hasNext(); ) {
-			dataDeclarationList.add(iter.next());  
-		}
+	// Copy data layout members to StructureDeclarationList
+	for (Iterator<?> iter = dl.iterator(); iter.hasNext(); ) {
+	    dataDeclarationList.add(iter.next());  
+	}
 		
-		// -------------------------------------------------------------------
+	// -------------------------------------------------------------------
 		
-		// Build the skeleton of the Data Layout struct
-		GNode structTypeDef = 
+	// Build the skeleton of the Data Layout struct
+	GNode structTypeDef = 
 	    GNode.create("StructureTypeDefinition", "DataLayout", className, 
-					 dataDeclarationList, null);
+			 dataDeclarationList, null);
        	
-		//	GNode declarationSpecifiers = GNode.create("DeclarationSpecifiers", 
-		//						   structTypeDef);
+	//	GNode declarationSpecifiers = GNode.create("DeclarationSpecifiers", 
+	//						   structTypeDef);
 		
 		
-		GNode dataLayout = GNode.create("Declaration", structTypeDef);
+	GNode dataLayout = GNode.create("Declaration", structTypeDef);
 		
 		
-		return dataLayout;
+	return dataLayout;
     }
     
     // Build CPP VTable nodes to create struct __Class_VT { }
     // @param n ClassDeclaration node from Java AST
     public GNode buildVTable(GNode n) {
-		// Nodes are created "inside out" from the leaves up
+	// Nodes are created "inside out" from the leaves up
 		
-		GNode vtableDeclarationList = GNode.create("StructureDeclarationList");
-		GNode vt = clp.getVTable(className);
+	GNode vtableDeclarationList = GNode.create("StructureDeclarationList");
+	GNode vt = clp.getVTable(className);
 		
-		// Copy vtable members to StructureDeclarationList
-		for (Iterator<?> iter = vt.iterator(); iter.hasNext(); ) {
-			vtableDeclarationList.add(iter.next());  
-		}
+	// Copy vtable members to StructureDeclarationList
+	for (Iterator<?> iter = vt.iterator(); iter.hasNext(); ) {
+	    vtableDeclarationList.add(iter.next());  
+	}
 		
-		// --------------------------------------------------------------------
+	// --------------------------------------------------------------------
 		
-		// Build skeleton of VTable struct
-		GNode vtableStructDefinition = 
+	// Build skeleton of VTable struct
+	GNode vtableStructDefinition = 
 	    GNode.create("StructureTypeDefinition", "VTable", className, 
-					 vtableDeclarationList, null);
+			 vtableDeclarationList, null);
 		
-		//	GNode vtableDeclarationSpecifiers = 
-		//	    GNode.create("DeclarationSpecifiers", vtableStructDefinition);
+	//	GNode vtableDeclarationSpecifiers = 
+	//	    GNode.create("DeclarationSpecifiers", vtableStructDefinition);
 		
-		GNode vtable = 
+	GNode vtable = 
 	    GNode.create("Declaration", vtableStructDefinition);
 		
-		return vtable;
+	return vtable;
     }
 	
     // Build CPP typedef node to create typedef __Class* Class;
     // Typedefs are declarations for Objects 
     // @param n ClassDeclaration node from Java AST
     public GNode buildTypedef(GNode n) {
-		// Nodes are created "inside out" from the leaves up
+	// Nodes are created "inside out" from the leaves up
 		
-		GNode simpleDeclarator = GNode.create("SimpleDeclarator", className);
+	GNode simpleDeclarator = GNode.create("SimpleDeclarator", className);
 		
-		GNode initializedDeclarator =
+	GNode initializedDeclarator =
 	    GNode.create("InitializedDeclarator", null, simpleDeclarator, 
-					 null,null, null);
+			 null,null, null);
 	    
-		GNode initializedDeclaratorList = 
+	GNode initializedDeclaratorList = 
 	    GNode.create("InitializedDeclaratorList", initializedDeclarator);
 	    
-		// ----------------------------------------------------------------
+	// ----------------------------------------------------------------
 	    
-		GNode typedefSpecifier = GNode.create("TypedefSpecifier");
+	GNode typedefSpecifier = GNode.create("TypedefSpecifier");
 		
-		GNode classIdentifier = 
+	GNode classIdentifier = 
 	    createPrimaryIdentifier(className);
 		
-		GNode td = GNode.create("TypedefDeclaration", 
-								typedefSpecifier, classIdentifier);
+	GNode td = GNode.create("TypedefDeclaration", 
+				typedefSpecifier, classIdentifier);
 		
-		// ----------------------------------------------------------------
+	// ----------------------------------------------------------------
 		
-		GNode forwardDeclaration = GNode.create("ForwardDeclaration", 
-												initializedDeclaratorList, td);
+	GNode forwardDeclaration = GNode.create("ForwardDeclaration", 
+						initializedDeclaratorList, td);
 		
-		GNode typedef = GNode.create("Declaration", forwardDeclaration);
+	GNode typedef = GNode.create("Declaration", forwardDeclaration);
 		
-		/**
-		 GNode typedef = 
-		 GNode.create("Declaration", null, typedefDeclarationSpecifiers, 
-		 initializedDeclaratorList);
-		 **/
+	/**
+	   GNode typedef = 
+	   GNode.create("Declaration", null, typedefDeclarationSpecifiers, 
+	   initializedDeclaratorList);
+	**/
 		
-		return typedef;
+	return typedef;
     }
 	
     // Find all arrays of "custom" type declared.  If so, generate
@@ -280,9 +280,9 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		
 	final GNode classDeclaration = n;
 
-		new Visitor() {
+	new Visitor() {
 			
-			public void visitFieldDeclaration(GNode n) {
+	    public void visitFieldDeclaration(GNode n) {
 				
 				
 		// Immediately visit down to see if it's an array.
@@ -305,28 +305,32 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    if(dim > 1 || isCustomType(classDeclaration, qID)) {
 				
 			// Create Type information
-					GNode parent = GNode.create("ParentType");
-			String pID = clp.getSuperclassName(qID);
-			parent.add(clp.createTypeNode(pID));
+			GNode parent = GNode.create("ParentType");
 
-					GNode component = GNode.create("ComponentType");
-					component.add(clp.createTypeNode(qID));
-					
+			// ! Primitive types have no super classes
+			if(!clp.isPrimitive(qID)) {
+			    String pID = clp.getSuperclassName(qID);
+			    parent.add(clp.createTypeNode(pID));
+			}
+		
+			GNode component = GNode.create("ComponentType");
+			component.add(clp.createTypeNode(qID));
+			
 			// FIXME: Add ['s to denote dimensions
-
+			
 
 			// Customize __class()
-					GNode customClass = GNode.create("CustomClass");
-					customClass.add(parent);
-					customClass.add(component);
-					customClasses.add(customClass);
+			GNode customClass = GNode.create("CustomClass");
+			customClass.add(parent);
+			customClass.add(component);
+			customClasses.add(customClass);
 					
 			// Specialize Template
 			// Note: templateNodes is already in tree
-					GNode templateNode = GNode.create("ArrayTemplate");
-					templateNode.add(parent);
-					templateNode.add(component);
-					templateNodes.add(templateNode);
+			GNode templateNode = GNode.create("ArrayTemplate");
+			templateNode.add(parent);
+			templateNode.add(component);
+			templateNodes.add(templateNode);
 		    } 
 
 		    // reset boolean when done.
@@ -334,24 +338,24 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    
 		} // end isArray
        		
-			} // end visitFieldDeclaration
+	    } // end visitFieldDeclaration
 			
 	    public void visitNewArrayExpression(GNode n) {
 		isArray = true;
 	    }
 
-			public void visit(GNode n) {
-				// Need to override visit to work for GNodes
-				for( Object o : n) {
-					if (o instanceof Node) dispatch((GNode)o);
-				}
-			}
+	    public void visit(GNode n) {
+		// Need to override visit to work for GNodes
+		for( Object o : n) {
+		    if (o instanceof Node) dispatch((GNode)o);
+		}
+	    }
 			
-		}.dispatch(n);
+	}.dispatch(n);
 		
 	if(customClasses.size() <= 0) customClasses = null;
-		GNode customs = GNode.create("Declaration", customClasses);
-		return customs;
+	GNode customs = GNode.create("Declaration", customClasses);
+	return customs;
 	
     } // end findArrays
 	
@@ -391,9 +395,9 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	    
 	}.dispatch(n);
     
-	    // Does this still allow for a blank default constructor?
-	    // in CPPPrinter, if size()==0, print default constructor else,
-	    // do the custom stuff
+	// Does this still allow for a blank default constructor?
+	// in CPPPrinter, if size()==0, print default constructor else,
+	// do the custom stuff
 	return constructorDeclarations;
     }
     
@@ -406,11 +410,11 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     // @param n ClassBody node from Java AST
     public void translateClassBody(GNode n) {
 		
-		// NOTE: ccNode is now nameed "ClassBody" and must use it's visitor
-		GNode ccNode = n;
-		buildImplementation(ccNode);
-		cppTree.add(importDeclarations);
-		cppTree.add(ccNode);
+	// NOTE: ccNode is now nameed "ClassBody" and must use it's visitor
+	GNode ccNode = n;
+	buildImplementation(ccNode);
+	cppTree.add(importDeclarations);
+	cppTree.add(ccNode);
 		
     }
 	
@@ -421,25 +425,25 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     String thisClass = "";
     public GNode buildImplementation(GNode n) {
 		
-	addTargets(n);
+	//	addTargets(n);
 
-		// FIXME: n is fixed, can'tn.addNode(importDeclarations);
-		// I wanted to put all import declarations under ClassDeclaration node.
-		// but no biggie
-		//	if(DEBUG) System.out.println("--- node " + n.getName() + " hasVariable() " + n.hasVariable());
+	// FIXME: n is fixed, can'tn.addNode(importDeclarations);
+	// I wanted to put all import declarations under ClassDeclaration node.
+	// but no biggie
+	//	if(DEBUG) System.out.println("--- node " + n.getName() + " hasVariable() " + n.hasVariable());
 		
-		// TODO: translate method invocations using vtable
+	// TODO: translate method invocations using vtable
 		
-		// What can we copy directly?
-		// What needs to be 'translated' in the printer?
-		// What needs to be translated here?
-		// This needs to be done with visit methods?
-		// Does order matter? yes
+	// What can we copy directly?
+	// What needs to be 'translated' in the printer?
+	// What needs to be translated here?
+	// This needs to be done with visit methods?
+	// Does order matter? yes
 		
 	// to be accessible
 	final GNode classD = n;
 
-		new Visitor () {
+	new Visitor () {
 			
 	    public void visitClassDeclaration(GNode n) {
 		thisClass = n.getString(1);
@@ -447,132 +451,132 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	    }
 
 
-			// QUERY: At FieldDeclaration, can we copy Type to subsequent 
-			// PrimaryIdentifiers?
-			public void visitConstructorDeclaration(GNode n) {
-				// Get .this' Class for explicit method invocation
+	    // QUERY: At FieldDeclaration, can we copy Type to subsequent 
+	    // PrimaryIdentifiers?
+	    public void visitConstructorDeclaration(GNode n) {
+		// Get .this' Class for explicit method invocation
 		//		thisClass = n.getString(2);
-				//		System.out.println("\t--- Entered class " + thisClass);
-				visit(n);
-			}
+		//		System.out.println("\t--- Entered class " + thisClass);
+		visit(n);
+	    }
 			
-			public void visitExpressionStatement(GNode n) {
-				// Set a global variable for tree traversal: 
-				expressionStatement = n;
-				visit(n);
-			}
+	    public void visitExpressionStatement(GNode n) {
+		// Set a global variable for tree traversal: 
+		expressionStatement = n;
+		visit(n);
+	    }
 			
-			// Make the Class calling a method explicit
-			// Also, translate System methods
-			public void visitCallExpression(GNode n) {
+	    // Make the Class calling a method explicit
+	    // Also, translate System methods
+	    public void visitCallExpression(GNode n) {
 				
-				// 1. Identify the PrimaryIdentifier - calling Class
-				String primaryIdentifier = null;
-				boolean iNeedToBeMangled = true;
+		// 1. Identify the PrimaryIdentifier - calling Class
+		String primaryIdentifier = null;
+		boolean iNeedToBeMangled = true;
 				
 				
-				if(n.getNode(0) == null || 
-				   n.getNode(0).hasName("ThisExpression")) {
+		if(n.getNode(0) == null || 
+		   n.getNode(0).hasName("ThisExpression")) {
 					
-					primaryIdentifier = thisClass;
-					if(DEBUG) System.out.println("\t--- primaryIdentifier = " + 
-												 primaryIdentifier);
+		    primaryIdentifier = thisClass;
+		    if(DEBUG) System.out.println("\t--- primaryIdentifier = " + 
+						 primaryIdentifier);
+		}
+		else if(n.getNode(0).hasName("SelectionExpression")) {
+					
+		    primaryIdentifier = n.getNode(0).getNode(0).getString(0);
+		    if(DEBUG) System.out.println("\t--- primaryIdentifier = " 
+						 + primaryIdentifier);
+					
+					
+		    // Are only System.outs wrapped in SelectionExpression 
+		    // nodes? Is this if needed?
+		    if("System".equals(primaryIdentifier)) {
+			System.out.println( "system" );
+			iNeedToBeMangled = false;
+			// Change any + to <<
+			new Visitor () {
+							
+			    public void visitAdditiveExpression(GNode n) {
+				if("+".equals(n.getString(1))) {
+				    n.set(1, "<<");
 				}
-				else if(n.getNode(0).hasName("SelectionExpression")) {
-					
-					primaryIdentifier = n.getNode(0).getNode(0).getString(0);
-					if(DEBUG) System.out.println("\t--- primaryIdentifier = " 
-												 + primaryIdentifier);
-					
-					
-					// Are only System.outs wrapped in SelectionExpression 
-					// nodes? Is this if needed?
-					if("System".equals(primaryIdentifier)) {
-						System.out.println( "system" );
-						iNeedToBeMangled = false;
-						// Change any + to <<
-						new Visitor () {
+			    }
 							
-							public void visitAdditiveExpression(GNode n) {
-								if("+".equals(n.getString(1))) {
-									n.set(1, "<<");
-								}
-							}
+			    public void visit(GNode n) {
+				// Need to override visit to work for GNodes
+				for( Object o : n) {
+				    if (o instanceof Node) dispatch((GNode)o);
+				}
+			    }
 							
-							public void visit(GNode n) {
-								// Need to override visit to work for GNodes
-								for( Object o : n) {
-									if (o instanceof Node) dispatch((GNode)o);
-								}
-							}
-							
-						}.dispatch(n); // end Visitor
+			}.dispatch(n); // end Visitor
 						
-						if( "println".equals(n.getString(2)) ) {
-							GNode strOut = GNode.create("StreamOutputList");
-							strOut.add(0, GNode.create( "PrimaryIdentifier" ).add(0, "std::cout") );
-							// Add all arguments to System.out.println
-							for(int i = 0; i < n.getNode(3).size(); i++) {
+			if( "println".equals(n.getString(2)) ) {
+			    GNode strOut = GNode.create("StreamOutputList");
+			    strOut.add(0, GNode.create( "PrimaryIdentifier" ).add(0, "std::cout") );
+			    // Add all arguments to System.out.println
+			    for(int i = 0; i < n.getNode(3).size(); i++) {
 				// HACK : check if primaryidentifer.get(0) == null
 				if(GNode.test(n.getNode(3).get(i)) &&
 				   null == n.getNode(3).getNode(i).get(0)) {
 
 				} else {
 				    // standard behavior
-								// removed addindex 1
-								strOut.add(n.getNode(3).get(i) ); 
+				    // removed addindex 1
+				    strOut.add(n.getNode(3).get(i) ); 
 
 				    //				    System.out.println("added print arguments "
 				    //						       + n.getNode(3).get(i));
-							}
+				}
 							
 
 			    }
 			    
-							// removed add index 2
-							strOut.add(GNode.create( "PrimaryIdentifier" ).add(0, "std::endl") );
+			    // removed add index 2
+			    strOut.add(GNode.create( "PrimaryIdentifier" ).add(0, "std::endl") );
 							
-							expressionStatement.set(0, strOut);
-						}
+			    expressionStatement.set(0, strOut);
+			}
 						
-						else if("print".equals(n.getString(2))) {
-							GNode strOut = GNode.create("StreamOutputList");
-							strOut.add(0, GNode.create( "PrimaryIdentifier" ).add(0, "std::cout") );
-							// Add all arguments to System.out.print
-							for(int i = 0; i < n.getNode(3).size(); i++) {
-								strOut.add(1, n.getNode(3).get(i) ); 
-							}
-							expressionStatement.set(0, strOut);
-						} 
+			else if("print".equals(n.getString(2))) {
+			    GNode strOut = GNode.create("StreamOutputList");
+			    strOut.add(0, GNode.create( "PrimaryIdentifier" ).add(0, "std::cout") );
+			    // Add all arguments to System.out.print
+			    for(int i = 0; i < n.getNode(3).size(); i++) {
+				strOut.add(1, n.getNode(3).get(i) ); 
+			    }
+			    expressionStatement.set(0, strOut);
+			} 
 						
-					}// end if "System"
-				} // end SelectionExpression
+		    }// end if "System"
+		} // end SelectionExpression
 				
-				else if(n.getNode(0).hasName("PrimaryIdentifier")){
-					// Do nothing
-					primaryIdentifier = n.getNode(0).getString(0);
-					if(DEBUG) System.out.println("\t--- primaryIdentifier = " 
-												 + primaryIdentifier);				}
-				else if(n.getNode(0).hasName("SuperExpression")) {
+		else if(n.getNode(0).hasName("PrimaryIdentifier")){
+		    // Do nothing
+		    primaryIdentifier = n.getNode(0).getString(0);
+		    if(DEBUG) System.out.println("\t--- primaryIdentifier = " 
+						 + primaryIdentifier);				}
+		else if(n.getNode(0).hasName("SuperExpression")) {
 					
-					// Replace Java keyword super with actual class
-					GNode pI = GNode.create("PrimaryIdentifier");
+		    // Replace Java keyword super with actual class
+		    GNode pI = GNode.create("PrimaryIdentifier");
 					
-					GNode vtList = clp.getVTable(thisClass);
-					GNode superNode = clp.getSuperclass(className);
-					String superName = clp.getName(superNode);
+		    GNode vtList = clp.getVTable(thisClass);
+		    GNode superNode = clp.getSuperclass(className);
+		    String superName = clp.getName(superNode);
 		  
-					pI.add(0, superName);
-					n.set(0, pI);
+		    pI.add(0, superName);
+		    n.set(0, pI);
 		 
-				}
-				else { // catch all
+		}
+		else { // catch all
 		    visit(n);
-					//		    System.out.println("\t--- Didn't translate node " + 
-					//				       n.getNode(0).toString());
-				}
+		    //		    System.out.println("\t--- Didn't translate node " + 
+		    //				       n.getNode(0).toString());
+		}
 				
-				if( iNeedToBeMangled ) { if( n.get(2) != null ) System.out.println( "VCE **)_@_) " + n.get(2).toString() ); }
+		if( iNeedToBeMangled ) { if( n.get(2) != null ) System.out.println( "VCE **)_@_) " + n.get(2).toString() ); }
 
 
 		// Works, but not with method chaining?
@@ -611,25 +615,25 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	   
 		// Uncommenting this gives an error.
 		//		visit(n);
-			}// End visitCall Expression
+	    }// End visitCall Expression
 			
 			
-			public void visitFieldDeclaration(GNode n) {
-				// Translate Arrays - ned to get Type
-				if(null != n.getNode(2).getNode(0).getNode(2) && 
-				   n.getNode(2).getNode(0).getNode(2).hasName("ArrayInitializer")) 
-				{
+	    public void visitFieldDeclaration(GNode n) {
+		// Translate Arrays - ned to get Type
+		if(null != n.getNode(2).getNode(0).getNode(2) && 
+		   n.getNode(2).getNode(0).getNode(2).hasName("ArrayInitializer")) 
+		    {
 					
-					// Can't add Type to Declarators, Declarator, 
-					// or ArrayInitializer as fixed num children
-					// FUCK YOU, 
+			// Can't add Type to Declarators, Declarator, 
+			// or ArrayInitializer as fixed num children
+			// FUCK YOU, 
 					
-					// Does this remove Type node from FieldDeclaration?
+			// Does this remove Type node from FieldDeclaration?
 					
-					//			n.getNode(2).getNode(0).getNode(2).add(n.getNode(1));
-				}
+			//			n.getNode(2).getNode(0).getNode(2).add(n.getNode(1));
+		    }
 				
-			}
+	    }
 			
 	    // Translate exceptions to the few Grimm Defined ones
 	    public void visitThrowStatement(GNode n) {
@@ -658,23 +662,21 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		
 	    }
 
-			public void visit(GNode n) {
-				// Need to override visit to work for GNodes
-				for( Object o : n) {
-					if (o instanceof Node) dispatch((GNode)o);
-				}
-			}
+	    public void visit(GNode n) {
+		// Need to override visit to work for GNodes
+		for( Object o : n) {
+		    if (o instanceof Node) dispatch((GNode)o);
+		}
+	    }
 			
 			
-		}.dispatch(n);//end Visitor
+	}.dispatch(n);//end Visitor
 		
-		return n;
+	return n;
     }
-	
-    // Exhaustively add targets to all cal expressions
-    // Should work for method chaining and nested expressions inside
-    // cout statements
-    // @param n ClassDeclaration node
+
+
+    // DEPRECATED - Rob adds all targest to beginning as they should be 
     String target = null;
     public void addTargets(GNode n) {
 	
@@ -721,7 +723,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     // which is really just a string name of a variable.
     GNode createPrimaryIdentifier( String contents ) {
 		
-		return (GNode)GNode.create( "PrimaryIdentifier" ).add(contents);
+	return (GNode)GNode.create( "PrimaryIdentifier" ).add(contents);
     }
 	
 	
@@ -844,7 +846,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	return false;
     }
 
-	// ------------------------------------------
+    // ------------------------------------------
     // ------------- Getter Methods  ------------
     // ------------------------------------------
     

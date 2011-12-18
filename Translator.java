@@ -224,7 +224,7 @@ public class Translator extends xtc.util.Tool {
 			    PrintWriter fstream = new PrintWriter(fileName);
 			    Printer cppCode = new Printer(fstream);
 						
-			    new CPPPrinter( cppCode ).dispatch(returned[i]); 
+			    new CPPPrinter( clp, cppCode ).dispatch(returned[i]); 
 			    cppCode.flush();
 			    if(DEBUG) runtime.console().pln("--- Wrote " 
 							    + fileName);
