@@ -80,7 +80,7 @@ public class ClassLayoutParser extends Visitor {
 			//				} else if(n.getNode(0).hasName("SuperExpression")) {
 			// SOOPER expression
 		    } else {
-			System.out.println( "did not visit call expression" );
+			if(DEBUG) System.out.println( "did not visit call expression" );
 			visit(n);
 			return;
 		    }
@@ -101,7 +101,7 @@ public class ClassLayoutParser extends Visitor {
 		    }
 		}
 	    };
-	System.out.println( "call expression visitor" );
+	if(DEBUG) System.out.println( "call expression visitor" );
 	for(int i = 0; i < ast.length; i++) {
 	    if(ast[i] != null) {
 		cev.dispatch(ast[i]);
