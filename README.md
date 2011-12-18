@@ -17,7 +17,7 @@ or
 - Resolve and translate all dependencies in the same package
 - Inheritance using vtables and data layouts
 - Translate new classes and methods
-- (Method overloading)
+- Method overloading
 - Method overriding
 - Memory management using smart pointers
 
