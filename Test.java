@@ -139,7 +139,7 @@ public class Test {
     test++;
 
     // -----------------------------------------------------------------------
-
+/*
     r = new Rest();
     o = r.m1();
 
@@ -1005,6 +1005,7 @@ public class Test {
 
     System.out.println();
     System.out.println(success + " out of " + test + " tests have passed.");
+    */
   }
 
 }
