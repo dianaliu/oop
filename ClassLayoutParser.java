@@ -50,10 +50,10 @@ public class ClassLayoutParser extends Visitor {
 		if(DEBUG) printClassTree();
 		if(DEBUG) System.out.println("--- End Class Layout Parser\n");
 		//
-		String varArray[] = new String[3];
-		varArray[0] = "long";
-		varArray[1] = "short";
-		varArray[2] = "B";
+		String varArray[] = new String[2];
+		varArray[0] = "C";
+		varArray[1] = "C";
+//		varArray[2] = "B";
 		//degisken adi, metod adi, giren cesitleri
 		methodRank("Testere", "orhan", varArray);
     }
@@ -436,7 +436,7 @@ public class ClassLayoutParser extends Visitor {
 			
 		}
 
-		System.out.println(" bas " + queue.size());
+//		System.out.println(" bas " + queue.size());
 
 		
 		for(int j = 0; j < varTypes.length; j++) {
@@ -502,13 +502,13 @@ public class ClassLayoutParser extends Visitor {
 				}
 			}
 		}
-		System.out.println(" auuv " + queue.size());
+//		System.out.println(" auuv 3 " + queue.size());
 
 		
 		for(int j = 0; j < varTypes.length; j++) {
 			int g = 0;
 			boolean notSame = true;
-			
+			System.out.println("yeni karakater " );
 			if(isPrimitive(varTypes[j]) && !isPrimAndNum(varTypes[j])) { //prim but not num, everything except itself is bad
 			}
 			else if(isPrimAndNum(varTypes[j])) {// smallest i alip basa koy gerisini siktir et		
@@ -531,7 +531,7 @@ public class ClassLayoutParser extends Visitor {
 							
 							two = st2.nextToken();
 						}
-						System.out.println(varTypes[j] + " varTypes[j] sulo");
+//						System.out.println(varTypes[j] + " varTypes[j] sulo");
 
 //						System.out.println(one + " one1 " + two +" two" );
 
@@ -568,27 +568,19 @@ public class ClassLayoutParser extends Visitor {
 						
 						System.out.println(one + " one2 " + two +" two" );
 						
-						if(isSubClass(one, two)){
-							System.out.println(" girdi 2 ");
+						if(!isSubClass(one, two) && !one.equals(two)){
+							System.out.println("switch " + one + ": one, " + two +": two" );
+
 							queue.switchN(queue.getNode(d - 1), queue.getNode(d));
 						}
 					}
 				}
-			
 			}
 		}
 		
-		
-		
-	//	
-//		for(int j = 0; j < varTypes.length; j++) {
-//			result +=  '$' + varArray[atLast][j] ;
-//		}
-		result = queue.getNode(0).item;
-		System.out.println(result + " auuv " + queue.size());
-//		result = queue.getNode(1).item;
-//		System.out.println(result + " auuv " + queue.size());
-		
+		if(!(result.equals("equals") || result.equals("getClass") || result.equals("hashCode") || result.equals("toString") ))
+			result += queue.getNode(0).item;
+		System.out.println(result);
 		return result;		
 	}
 	
