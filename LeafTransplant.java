@@ -499,7 +499,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    // Are only System.outs wrapped in SelectionExpression 
 		    // nodes? Is this if needed?
 		    if("System".equals(primaryIdentifier)) {
-			System.out.println( "system" );
+			if(DEBUG) System.out.println( "system" );
 			iNeedToBeMangled = false;
 			// Change any + to <<
 			new Visitor () {
@@ -583,7 +583,12 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    //				       n.getNode(0).toString());
 		}
 				
-		if( iNeedToBeMangled ) { if( n.get(2) != null ) System.out.println( "VCE **)_@_) " + n.get(2).toString() ); }
+		if( iNeedToBeMangled ) { 
+		    // UHHHHH, can we get rid of this VCE?
+		    if( n.get(2) != null && DEBUG) 
+			System.out.println( "VCE **)_@_) " 
+					    + n.get(2).toString() ); 
+		}
 
 
 		// Works, but not with method chaining?

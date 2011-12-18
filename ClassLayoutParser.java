@@ -1033,8 +1033,21 @@ public class ClassLayoutParser extends Visitor {
     // @param cN Class Name
     // @return the classes vtable node
     public GNode getVTable(String cN) {
-	GNode className = getClass(cN);
-	GNode classVT = (GNode)(className.getNode(0).getNode(0));
+	if(DEBUG) System.out.println("Want vtable for " + cN);
+
+	GNode className;
+	GNode classVT;
+
+	if(isPrimitive(cN)) {
+	    // return Object's VTable
+	    className = getClass("Object");
+	    classVT = (GNode)className.getNode(0).getNode(0);
+	    return classVT;
+
+	}
+
+	className = getClass(cN);
+        classVT = (GNode)(className.getNode(0).getNode(0));
 	return classVT;
     }
 	

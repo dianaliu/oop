@@ -144,7 +144,7 @@ public class TypeParser {
 		    type = n.getNode(1).getNode(0).getString(0);
 		}
 		else {
-		    System.out.println("Node structure is " +
+		    if(DEBUG) System.out.println("Node structure is " +
 				       n.toString());
 		}
 				
