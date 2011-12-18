@@ -1,6 +1,6 @@
-public class Testere {
+public class MethodOverloading {
   public static void main(String[] args) {
-    Testere gokcek = new Testere();
+    MethodOverloading gokcek = new MethodOverloading();
 //    
 //    C a = new C();
     B b2 = new B();
@@ -41,7 +41,7 @@ public class Testere {
   
   
 /*
- class pust extends Testere{
+ class pust extends MethodOverloading{
  int yildirim(long a)        { 
  int duydum = 7;
  return duydum;
