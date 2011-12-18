@@ -1,13 +1,11 @@
 *.class
 *.DS_STORE
-.#DataLayout.java
 *~
 *#
 *.zip
 
 # Files created by merge/diff-ing  #
-*.33131
-*.orig
+ignore/
 
 # OS generated files #
 ######################

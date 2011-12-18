@@ -1,6 +1,6 @@
 //This file tests: field setting and getting 
 
-public class EasyTest {
+public class CustomObject {
 	
 	int field;
 	
@@ -15,11 +15,11 @@ public class EasyTest {
 	
 	
     public static void main( String[] args ) {
-		EasyTest thing1 = new EasyTest();
+		CustomObject thing1 = new CustomObject();
 		thing1.setNumber(3);
-		EasyTest thing2 = new EasyTest();
+		CustomObject thing2 = new CustomObject();
 		thing2.setNumber(1);
-		EasyTest thing3 = new EasyTest();
+		CustomObject thing3 = new CustomObject();
 		thing3.setNumber(3339);
 		System.out.println( "It works!" );
 		System.out.println( thing1.number() );
