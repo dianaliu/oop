@@ -2,13 +2,21 @@
 
 clear
 
+<<<<<<< HEAD
  echo  "Test Script: Translate all test files."
+=======
+ echo  "Translates and compiles/runs all java files in src/xtc/oop/examples/"
+>>>>>>> 0734aa6638c974d54ae41dd23ea01dadf41d6587
 
  # 0. Make/clean output directory
 if [ ! -d "output" ]
        then
            mkdir "output"
+<<<<<<< HEAD
 	   echo "Created directory output/"
+=======
+	   echo "--- Created directory output/"
+>>>>>>> 0734aa6638c974d54ae41dd23ea01dadf41d6587
       else
 	   echo "Found existing directory output/"
            read -p "rm all files in output/ (y/n)?" choice
@@ -23,6 +31,7 @@ if [ ! -d "output" ]
            echo "Files will write to output/"
 fi
 
+<<<<<<< HEAD
  source setup.sh
  make
  
@@ -92,5 +101,49 @@ done
  return 0;
 
 # read -p "End of program - Press Enter to quit."
+=======
+
+ cd src/xtc/oop/examples
+
+   for file in *.java ; do
+	JavaFiles=("${JavaFiles[@]}" "$file")
+	echo "$file: "
+
+	# Compile and run Java file
+	javac "$file" || {echo "ERR: Java compile time"}
+	java "$file" > ../../../../../output/j.txt || {echo "ERR: Java run time"}
+
+	# Translate the file
+	cd ../../../..
+	source setup.sh
+	make > /dev/null || {echo "ERR: Translator compile time"}
+	java xtc.oop.Translator -translate $file > /dev/null || {echo "ERR: Translator run time"}
+	
+	# Compile and run CC file, check output
+	# May need to force overwriting
+	cd output/
+
+	cp ../src/xtc/oop/include/* .
+	for file in *.cc ; do
+		g++ "$file" java_lang.cc || {echo "ERR: CPP compile time"}
+		./a.out > "c.txt" || {echo "ERR: CPP run time"}
+ 	done
+	cd ..
+
+	 if diff j.txt c.txt  > /dev/null ; then
+	
+	  echo "Pass"
+	  # cat c.txt
+
+   	 else 
+ 	  echo "ERR: Outputs were different."
+	  # echo "--- See diff --side-by-side below:"
+	  # diff j.txt c.txt --side-by-side
+
+	# ? Do I need to cd back to the original directory?
+   done
+
+read -p "End of program - Press Enter to quit."
+>>>>>>> 0734aa6638c974d54ae41dd23ea01dadf41d6587
 
 
