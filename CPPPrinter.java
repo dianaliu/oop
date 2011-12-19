@@ -29,6 +29,9 @@ import xtc.tree.SourceIdentity;
 import xtc.tree.Token;
 import xtc.tree.Visitor;
 
+// lol, finally!
+import java.util.ArrayList;
+
 
 
 /**
@@ -43,6 +46,9 @@ import xtc.tree.Visitor;
  * @version $Revision: 1.75 $
  */
 public class CPPPrinter extends Visitor {
+
+
+
 	
 	
     /**
@@ -763,6 +769,16 @@ public class CPPPrinter extends Visitor {
     }
 
     public void visitPrimitiveTYPE(GNode n) {
+
+	
+	// CHeck if we've made it already
+	String type = n.getNode(0).getNode(0).getString(0);
+	for(int i = 0; i < done.size(); i++) {
+	    if(done.get(i).equals(type.toUpperCase())) {
+		return;
+	    }
+	}
+	
 	printer.indent().p("Class __").p(n.getNode(0));
 	printer.p("::TYPE() {").pln();
 	printer.incr();
@@ -774,7 +790,17 @@ public class CPPPrinter extends Visitor {
 	printer.decr();
 	printer.p("}");
 
+	// Mark that we've already created specialization stuff for this type
+
+	done.add(type.toUpperCase());
+	    
+
     }
+
+    // LOL HACK - Only need to print specialization etc. once
+    // so keep an array of all types we've specialized. 
+    ArrayList done = new ArrayList();
+    ArrayList done2 = new ArrayList();
 	
     // Used to print template specialization of __class() for arrays
     public void visitArrayTemplates(GNode n) {
@@ -790,6 +816,20 @@ public class CPPPrinter extends Visitor {
     }
     
     public void visitArrayTemplate(GNode n) {
+
+
+	// CHeck if we've made it already
+	if(n.size() == 1) {
+	    String type = n.getNode(0).getNode(0).getNode(0).getString(0);
+	    for(int i = 0; i < done2.size(); i++) {
+		if(done2.get(i).equals(type.toUpperCase())) {
+		    return;
+		}
+	    }
+	}
+
+
+
 	if(n.size() == 1) {
 	    // It's a primitive type, need to memset!
 	    GNode type = (GNode) n.getNode(0);
@@ -884,6 +924,19 @@ public class CPPPrinter extends Visitor {
 		
 	printer.decr();
 	printer.indent().pln("}");
+
+
+	// Mark that we've already created specialization stuff for this type
+	if(n.size() == 1) {
+	    type = n.getNode(0).getNode(0).getNode(0).getString(0);
+	    done2.add(type.toUpperCase());
+	}
+	else {
+	    // right index?
+	    String tmp = n.getNode(0).getNode(0).getString(0);
+	    done2.add(tmp.toUpperCase());
+	}
+
 		
     }
 	
