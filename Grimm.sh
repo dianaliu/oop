@@ -73,8 +73,10 @@ done
 
  # 6. Compile CPP files.
  cd src/xtc/oop/output
-# g++ Test.cc Rest.cc java_lang.cc || { echo "--- ERR: CPP compile time error";  return 1; }
- g++ Test.cc java_lang.cc || { echo "--- ERR: CPP compile time error";  return 1; }
+# g++ Test.cc Rest.cc java_lang.cc || { echo "--- ERR: CPP compile time error";
+#     cd ../../../..; return 1; }
+ g++ Test.cc java_lang.cc || { echo "--- ERR: CPP compile time error"; 
+     cd ../../../..; return 1; }
   echo "--- Compiled CC files"
 
  # 7. Run and save output from CPP files
@@ -82,6 +84,8 @@ done
   ./a.out > "c.txt" || { echo "--- ERR: CPP runtime error"; 
       cd ../../../..; return 1; }
     echo "--- Ran CC files and saved output to c.txt"
+    echo "--- All files are stored in src/xtc/oop/output/"
+     #  Return to xtc/  
     cd ../../../..
 
  # 8. Compare Java and CPP output
@@ -91,7 +95,7 @@ done
 
     echo "--------------------------------------------------------------------"
 
- #  Return to xtc/  
+
 
  return 0;
 
