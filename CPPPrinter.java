@@ -2773,7 +2773,7 @@ public class CPPPrinter extends Visitor {
     }
 	
 	public void visitStaticVarsList(GNode n ) {
-		for( Object o : n ) printer.p((GNode)o).p(";");
+	    for( Object o : n ) printer.indent().p((GNode)o).p(";").pln();
 	}
 	
     public void visitPointerCast(GNode n) {
