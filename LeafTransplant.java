@@ -301,6 +301,9 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		visit(n);
 					
 		if(isArray) {
+		    // FU Grimm! short a2[] = new short[2];
+		    normalizeArray(n);
+
 		    GNode newArrayExpression = 
 			(GNode) n.getNode(2).getNode(0).getNode(2);
 
@@ -396,6 +399,26 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	return customs;
 	
     } // end findArrays
+
+    // Need to move Dimensions node around since there' two ways to 
+    // declare arrays!
+    // @param n FieldDeclaration node for an array
+    public void normalizeArray(GNode n) {
+
+	if(null == n.getNode(1).get(1)) {
+	    // Must move Dimensions node here
+	    GNode dims = (GNode) n.getNode(2).getNode(0).getNode(1);
+	    n.getNode(1).set(1, dims);
+
+	    // now clear it out
+	    n.getNode(2).getNode(0).set(1, null);
+
+	}
+
+
+
+    }
+
 	
 
     // Moves the ClassDeclaration node(s) into the header.
