@@ -147,6 +147,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	hNode.addNode(typedef);
 		
 	GNode dataLayout = buildDataLayout(n);
+	// hacky, change final to const
+	changeFinal(dataLayout);
 	hNode.addNode(dataLayout);
 		
 	GNode vtable = buildVTable(n);
@@ -167,9 +169,39 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	GNode constructors = findConstructors(n);
 	hNode.addNode(constructors);
 
+	// Add FieldInitializations, created in buildDataLayout
+	hNode.addNode(initFields);
+	
+
 	return hNode;
     }
 	
+    // @param n DataLayout node
+    public void changeFinal(GNode n) {
+
+	new Visitor() {
+
+	    public void visitModifier(GNode n) {
+		if("final".equals(n.getString(0))) {
+		    n.set(0, "const");
+		}
+	    }
+	    
+	    public void visit(GNode n) {
+		// Need to override visit to work for GNodes
+		for( Object o : n) {
+		    if (o instanceof Node) dispatch((GNode)o);
+		}
+	    }
+	    
+
+	}.dispatch(n);
+	
+    }
+
+    // haaaaacky
+    GNode initFields = GNode.create("InitializeFields");
+
     // Build CPP Data Layout nodes to create struct __Class { }
     // @param n ClassDeclaration node from Java AST
     public GNode buildDataLayout(GNode n) {
@@ -181,7 +213,11 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		
 	// Copy data layout members to StructureDeclarationList
 	for (Iterator<?> iter = dl.iterator(); iter.hasNext(); ) {
-	    dataDeclarationList.add(iter.next());  
+	    Object tmp = iter.next();
+	    dataDeclarationList.add(tmp);  
+	    //	    dataDeclarationList.add(iter.next());  
+	    // also add it to initialize field declarations
+	    initFields.add(tmp);
 	}
 		
 	// -------------------------------------------------------------------

@@ -997,17 +997,17 @@ public class CPPPrinter extends Visitor {
 		printer.p(n.getString(1));
     }
 	
+
     /** Visit the specified structure declaration list node. */
     public void visitStructureDeclarationList(GNode n) {
-		boolean wasLong = false;
-		
-		printer.incr();
-		
-		for( Object o : n ) {
-			printer.p((GNode)o);
-		}
-		printer.decr();
-		
+
+	boolean wasLong = false;
+	printer.incr();
+	
+	for( Object o : n ) {
+	    printer.p((GNode)o);
+	}
+	printer.decr();
 		
     }
 	
@@ -2563,6 +2563,11 @@ public class CPPPrinter extends Visitor {
 		
 		printer.pln();
 		
+
+		// Need to print field initializations here
+		// copy data layout field declaration nodes here.
+
+
 		printer.indent().p("__").p(cn).p("_VT __").p(cn);
 		printer.p("::__vtable;").pln();
 		
@@ -2738,9 +2743,21 @@ public class CPPPrinter extends Visitor {
 		printer.p('(').p(n.getNode(1)).p(");").pln();	
     }
 	
+    // lol, hack!
+    boolean isDataField = false;
     public void visitDataFieldList( GNode n ) {
-		if(n.size() > 0) printer.pln();
-		for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
+	isDataField = true;
+	if(n.size() > 0) printer.pln();
+	for(Object o : n ) if( o instanceof GNode ) printer.p((GNode)o);
+	isDataField = false;
+    }
+
+    // lol, hack!
+    boolean isInitialize = false;
+    public void visitInitializeFields(GNode n) {
+	isInitialize = true;
+	printer.p(n.getNode(1));
+	isInitialize = false;
     }
 	
 	
@@ -2773,7 +2790,9 @@ public class CPPPrinter extends Visitor {
     }
 	
 	public void visitStaticVarsList(GNode n ) {
-	    for( Object o : n ) printer.indent().p((GNode)o).p(";").pln();
+
+	    // Is this something we put in? 
+	    //	    for( Object o : n ) printer.indent().p((GNode)o).p(";").pln();
 	}
 	
     public void visitPointerCast(GNode n) {
@@ -3095,6 +3114,43 @@ public class CPPPrinter extends Visitor {
     }
 	
     public void visitFieldDeclaration(GNode n) {
+
+
+	// lol, hack!
+
+	if(isInitialize && n.getNode(0).size() > 1) {
+
+	    printer.indent();
+	    printer.p(n.getNode(0).getNode(2)).p(" "); // const
+	    printer.p(n.getNode(1)).p(" __").p(className).p("::"); // type
+	    printer.p(n.getNode(2)); // var name
+	    printer.p("(new __").p(n.getNode(1)).p("());").pln();
+	    return;
+
+	}
+	else if(isDataField && n.getNode(0).size() > 1) {
+	    printer.indent();
+
+	    // Selectively print modifiers
+	    for( Object o : n.getNode(0)) {
+		if (o instanceof Node) {
+		    GNode tmp = GNode.cast(o);
+		    if(! "public".equals(tmp.getString(0))) {
+			printer.p(tmp).p(" ");
+		    }
+	     
+		}
+	    }
+	    /// print Type
+	    printer.p(n.getNode(1)).p(" ");
+
+	    // print var name
+	    printer.p(n.getNode(2)).p(";").pln();
+	    
+	    return;
+	}
+
+
 		
 		// Look for NewClassExpression to implement memroy mgmt
 		
