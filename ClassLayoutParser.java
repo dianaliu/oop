@@ -444,7 +444,12 @@ public class ClassLayoutParser extends Visitor {
 		
 		int mCount = 0;
 		int a = 6;
-		Node node = getVTable(objectType).getNode(a);
+		Node node = getVTable(objectType);
+		if( node == null) {
+			System.out.println( "methodRank: vtable not found for " + objectType );
+			return methodName;
+		}
+		node = node.getNode(a);
 		
 		while(getVTable(objectType).getNode(a).getString(1) != null) {
 			
@@ -588,8 +593,39 @@ public class ClassLayoutParser extends Visitor {
 						
 						////
 						
+						for(int z = 0; z < j ; z++) {
+							
+							two = st2.nextToken();
+						}
+						
+						
+						if((getRank(one) > getRank(two)) ){   // && (getRank(one) != getRank(two))
+							//							System.out.println(" girdi 2 ");
+							
+							queue.switchN(queue.getNode(d - 1), queue.getNode(d));
+						}
+					}
+				}
+				
+				
+			}
+			else {	//an object, something from the hierarchy that is equal or above, the closest possible 	
+				
+				for(int i = 0; i < queue.size(); i++){
+					for(int d = 1; d < (queue.size()-i); d++){
+						StringTokenizer st = new StringTokenizer(queue.getNode(d - 1).item, "$");
+						String one = "";
+						one = st.nextToken();
 						
 						for(int z = 0; z < j ; z++) {
+							
+							one = st.nextToken();
+						}
+						StringTokenizer st2 = new StringTokenizer(queue.getNode(d).item, "$");
+						String two = "";
+						two = st2.nextToken();
+						
+						for(int z = 0; z < j; z++) {
 							
 							two = st2.nextToken();
 						}
@@ -989,6 +1025,11 @@ public class ClassLayoutParser extends Visitor {
     // @return the classes vtable node
     public GNode getVTable(String cN) {
 		GNode className = getClass(cN);
+		System.out.println( "getVTable: " + cN );
+		if( className == null ) {
+			System.out.println( "getVTable: vtable not found for class " + cN );
+			return null;
+		}
 		GNode classVT = (GNode)(className.getNode(0).getNode(0));
 		return classVT;
     }

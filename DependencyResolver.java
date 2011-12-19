@@ -108,20 +108,15 @@ public class DependencyResolver extends xtc.util.Tool {
 				public void visitPackageDeclaration(GNode n) {	
 					String currentAddress = (System.getProperty("user.dir")) + "/src";
 					System.out.println("Package declared.");
-					System.out.println("Package declared.");
-					System.out.println("Package declared.");
 					System.out.println("Running directory: " + currentAddress);
 					for (int i = 0; i < n.getNode(1).size(); i++){
 						currentAddress += "/";
 						currentAddress += ((String)(n.getNode(1).get(i)));
-						System.out.println("Current package directory: " + currentAddress);
+						//System.out.println("Current package directory: " + currentAddress);
 					}
-					//Let's be Grimm about this
-					addressArray[addressIndex] = currentAddress + "/Rest.java";
+					//addressArray[addressIndex] = currentAddress + "/Rest.java";
+					addressArray[addressIndex] = "/Rest.java";
 					addressIndex++;
-					System.out.println("Package declared.");
-					System.out.println("Package declared.");
-					System.out.println("Package declared.");
 					//process all java files in the current directory
 				}
 				
@@ -147,7 +142,6 @@ public class DependencyResolver extends xtc.util.Tool {
 		File folder = new File((String)(System.getProperty("user.dir")).concat("/src/xtc/oop" + currentAddress));
 		File listOfFiles[] = folder.listFiles(javaOnly);
 		
-//---
 	 	File startingDirectory = new File((System.getProperty("user.dir")).concat("/src/xtc/oop" + currentAddress));
 		List<File> files = getFileListing(startingDirectory);
 
