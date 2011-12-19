@@ -6,6 +6,28 @@ clear
 
  echo  "Test Script: Runs Grimm's test files."
 
+
+ # 0. Make/clean output directory
+if [ ! -d "src/xtc/oop/output" ]
+       then
+           mkdir "src/xtc/oop/output"
+	   echo "Created directory src/xtc/oop/output/"
+      else
+	   echo "Found existing directory src/xtc/oop/output/"
+           read -p "rm all files in output/ (y/n)?" choice
+           case "$choice" in 
+             y|Y ) echo "rm-ing all files in  src/xtc/oop/output/"
+		   rm src/xtc/oop/output/*;;
+             n|N ) echo "please rename existing  src/xtc/oop/output/ and try again"
+		   return 1;;
+             * ) echo "invalid";;
+           esac
+
+           echo "Files will write to  src/xtc/oop/output/"
+fi
+
+
+
   # 1. Get Java file(s) from command line and add to array javaInput
  javaInput=()
 
@@ -50,11 +72,13 @@ done
  cp src/xtc/oop/include/* src/xtc/oop/output/
 
  # 6. Compile CPP files.
- g++ src/xtc/oop/output/Test.cc src/xtc/oop/output/Rest.cc src/xtc/oop/output/java_lang.cc || { echo "--- ERR: CPP compile time error";  return 1; }
+ cd src/xtc/oop/output
+# g++ Test.cc Rest.cc java_lang.cc || { echo "--- ERR: CPP compile time error";  return 1; }
+ g++ Test.cc java_lang.cc || { echo "--- ERR: CPP compile time error";  return 1; }
   echo "--- Compiled CC files"
 
  # 7. Run and save output from CPP files
-  cd src/xtc/oop/output
+
   ./a.out > "c.txt" || { echo "--- ERR: CPP runtime error"; 
       cd ../../../..; return 1; }
     echo "--- Ran CC files and saved output to c.txt"
@@ -63,7 +87,6 @@ done
  # 8. Compare Java and CPP output
     echo "--------------------------------------------------------------------"
 
-	echo "--- Output"
 	cat src/xtc/oop/output/c.txt
 
     echo "--------------------------------------------------------------------"
