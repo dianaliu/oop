@@ -2436,6 +2436,9 @@ public class CPPPrinter extends Visitor {
 			
 			boolean isField = clp.findPrimID(dl,n.getString(0));
 			if(isField && !isConstructor) printer.p("__this->");
+			else if( n.getString(0).equals("R1") || n.getString(0).equals("R2") || n.getString(0).equals("R3") || n.getString(0).equals("R4") ) {
+				printer.p("__").p(className).p("::");
+			}
 			
 			// For all variables, check not null?
 			// NO - std::cout and std::end lis a primary identifier....
@@ -2768,6 +2771,10 @@ public class CPPPrinter extends Visitor {
 		printer.p(n.getNode(5)).pln();
 		
     }
+	
+	public void visitStaticVarsList(GNode n ) {
+		for( Object o : n ) printer.p((GNode)o).p(";");
+	}
 	
     public void visitPointerCast(GNode n) {
 		if(n.size() > 0 ) {
