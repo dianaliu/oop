@@ -193,7 +193,7 @@ public class ClassLayoutParser extends Visitor {
 		if ("main".equals(methodName)) return; // Don't want main method
 		GNode mods = (GNode)n.getNode(0);
 		for( Object o : mods ) {
-			if( ((GNode)o).getString(0).equals("static") || ((GNode)o).getString(0).equals("private") ) return;  //Don't add static or private methods to the vtable
+			//if( ((GNode)o).getString(0).equals("static") || ((GNode)o).getString(0).equals("private") ) return;  //Don't add static or private methods to the vtable
 		}
 		
 		//Time to mangle up some method names
@@ -315,7 +315,7 @@ public class ClassLayoutParser extends Visitor {
     //@param n FieldDeclaration node from a Java AST.
     public void visitFieldDeclaration(GNode n) {
 		if( hasStaticModifier( (GNode)n.getNode(0) ) ) { //static vars don't get initalized in the data layout, they get initalized elsewhere
-			thisClassStaticVars.add(deepCopy(n));
+			thisClassStaticVars.add(deepCopy((GNode)n.getNode(2)));
 			n.getNode(2).getNode(0).set(2,null);
 			//return;
 		}
@@ -1072,6 +1072,8 @@ public class ClassLayoutParser extends Visitor {
     // @param s Name of the FieldDeclaration we hope to find
     
     public boolean findPrimID(GNode dln, String s) {
+		
+		if( s.equals("R1") || s.equals("R2") || s.equals("R3") || s.equals("R4") ) return false;
 		
 		// eventually return false if not found
 		

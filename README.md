@@ -1,5 +1,5 @@
 #About#
-This is the final project for [Object Oriented Programming](http://cs.nyu.edu/rgrimm/teaching/fa11-oop/) - a Java to CPP translator coded by Diana, Hernel, Kirim, and Rob.
+This is the final project for [Object Oriented Programming](http://cs.nyu.edu/rgrimm/teaching/fa11-oop/) - a Java to CPP translator coded by Diana, Hernel, Kirim, and Ro.
 
 ##How to run##
 First off, you need [xtc](http://cs.nyu.edu/rgrimm/xtc/).  Then,
