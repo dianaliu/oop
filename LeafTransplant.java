@@ -540,6 +540,10 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 				if("+".equals(n.getString(1))) {
 				    n.set(1, "<<");
 				}
+				// Of course, this doesn't add niumbers etc. 
+				// in the print statemetn, but neither does 
+				// grimm's test cases!
+				visit(n);
 			    }
 							
 			    public void visit(GNode n) {
