@@ -367,7 +367,7 @@ namespace __rt {
 
   // ========================================================================
 
-  // Function for converting a C string lieral to a translated
+  // Function for converting a C string literal to a translated
   // Java string.
   inline java::lang::String literal(const char * s) {
     // C++ implicitly converts the C string to a std::string.

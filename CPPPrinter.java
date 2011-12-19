@@ -731,6 +731,48 @@ public class CPPPrinter extends Visitor {
 		printer.indent().p("}").pln();
 		printer.pln();
     }
+
+
+
+    // Used to print out the struct for primitive types that aren't int
+    public void visitPrimitiveStruct(GNode n) {
+	
+	printer.indent().pln();
+	printer.p("// The completely incomplete data layout for java.lang.");
+	printer.p(n.getNode(0)).pln();
+	printer.p("struct __").p(n.getNode(0)).p(" {").pln();
+	printer.p("// The class instance representing the primitive type");
+	printer.p(n.getNode(0)).pln();
+	printer.p("static Class TYPE();").pln();
+	printer.indent().p("};").pln().pln();
+	printer.decr();
+
+    }
+
+    public void visitPrimitiveTYPES(GNode n) {
+	printer.indent().p("namespace java {").pln();
+	printer.incr();
+	printer.indent().p("namespace lang {").pln();
+	for (Object o : n) printer.p((Node)o);
+	printer.pln("}");
+	printer.decr();
+	printer.pln("}");
+	printer.decr();
+    }
+
+    public void visitPrimitiveTYPE(GNode n) {
+	printer.indent().p("Class __").p(n.getNode(0));
+	printer.p("::TYPE() {").pln();
+	printer.incr();
+	printer.indent().p("static Class k = ").pln();
+	printer.incr().indent();
+	printer.p("new __Class(__rt::literal(\"").p(n.getNode(1));
+	printer.p("\"), __rt::null(), __rt::null(), true);").pln();
+	printer.pln("return k;");
+	printer.decr();
+	printer.p("}");
+
+    }
 	
     // Used to print template specialization of __class() for arrays
     public void visitArrayTemplates(GNode n) {
@@ -746,69 +788,101 @@ public class CPPPrinter extends Visitor {
     }
     
     public void visitArrayTemplate(GNode n) {
-		// FIXME: if primitive type, need memset()
 		
-		// 0 = Parent, wrapped in Type node
-		// 1 = Component, wrapped in Type node
+	if(n.size() == 1) {
+	    // It's a primitive type, need to memset!
+	    GNode type = (GNode) n.getNode(0);
+
+	    printer.indent().p("// Template specialization for array of ");
+	    printer.p(type).pln();
+	    printer.indent().pln("template<>");
+
+	    printer.indent().p("Array <").p(type).p(">::Array(const ");
+	    printer.p("int length)").pln();
+	    printer.indent().p(": __vptr(&__vtable), length(length), ");
+	    printer.p("__data(new ").p(type).p("[length]) {").pln();
+	    printer.indent().p("std::memset(__data, 0, length * sizeof(");
+	    printer.p(type).p("));").pln();
+	    printer.decr().pln("}");
+	}
+
+	// Now do actual template specialzation for everyone
+	// Just, for primitives, set both to Object and get first letter to capitals
+
+	printer.indent().p("// Template specialization for array of").p(n.getNode(0)).pln();
+	printer.indent().pln("template<>");
+	
+	if(n.size() == 1) {
+	    printer.indent().p("java::lang::Class Array <");
+	}
+	else {
+	    printer.indent().p("java::lang::Class Array <java::lang::");
+	}
+
+	if(n.size() == 1) {
+	    printer.p(n.getNode(0)).p(">::__class() {").pln();
+	}
+	else {
+	    printer.p(n.getNode(1)).p(">::__class() {").pln();
+	}
+
+	printer.incr();
+	
+	printer.indent().p("static java::lang::Class k = ").pln();
+	printer.incr();
+	// FIXME: Need first letter of the type if its primitive
+	String letter = "L";
+	String type;
+	if(n.size() == 1) {
+	    type = n.getNode(0).getNode(0).getNode(0).getString(0);
+	    letter = Character.toString(type.charAt(0));
+	    letter = letter.toUpperCase();
+	    System.out.println("Primitive type = " + letter);
+	}
+
+	printer.indent().p("new java::lang::__Class(literal(\"[");
+	if(n.size() == 1 ) {
+	    printer.p(letter);
+	    printer.p("\"),").pln();
+	}
+	else {
+	    printer.p(letter).p("java.lang.");
+	    printer.p(n.getNode(1)).p(";\"),").pln();
+	}
+
 		
+	// This follow JVM specs.  parent is parent.
+	printer.incr();
+	if(n.size() == 1) {
+	    printer.indent().p("java::lang::__Object");
+	}
+	else {
+	    printer.indent().p("java::lang::__").p(n.getNode(0));
+	}
+
+	printer.p("::__class(),").pln();
 		
-		if(n.size() == 1) {
-			// It's a primitive type, different specialization!
-			GNode type = (GNode) n.getNode(0);
-			
-			printer.indent().p("// Template specialization for array of");
-			printer.p(type).pln();
-			printer.indent().pln("template<>");
-			
-			printer.indent().p("Array <").p(type).p(">::Array(const ").p(type);
-			printer.p(" length)").pln();
-			printer.indent().p(": __vptr(&__vtable), length(length), ");
-			printer.p("__data(new ").p(type).p("[length]) {").pln();
-			printer.indent().p("std::memset(__data, 0, length * sizeof(");
-			printer.p(type).p("));").pln();
-			printer.decr().pln("}");
-		}
-		else {
-			
-			printer.indent().p("// Template specialization for array of").p(n.getNode(1)).pln();
-			printer.indent().pln("template<>");
-			
-			printer.indent().p("java::lang::Class Array <java::lang::");
-			printer.p(n.getNode(1)).p(">::__class() {").pln();
-			printer.incr();
-			
-			printer.indent().p("static java::lang::Class k = ").pln();
-			printer.incr();
-			printer.indent().p("new java::lang::__Class(literal(\"[Ljava.lang.");
-			printer.p(n.getNode(1)).p(";\"),").pln();
-			
-			// This follow JVM specs.  parent is parent.
-			printer.incr();
-			printer.indent().p("java::lang::__").p(n.getNode(0));
-			printer.p("::__class(),").pln();
-			
-			/**
-			 * Grimm told us the wrong thing.  
-			 * parent is array of parents
-			 printer.incr();
-			 printer.indent().p("Array<java::lang::").p(n.getNode(0));
-			 printer.p(">::__class(),").pln();
-			 **/
-			
-			printer.indent().p("java::lang::__").p(n.getNode(1)).p("::__class());");
-			printer.pln().decr();
-			
-			printer.decr();
-			
-			printer.indent().pln("return k;");
-			
-			printer.decr();
-			printer.indent().pln("}");
-			
-			
-		}
+	// if is primtive, need to do __TYPE::TYPE()
+	printer.indent().p("java::lang::__");
+	if(n.size() == 1) {
+	    // need to make it proper case
+	    type = n.getNode(0).getNode(0).getNode(0).getString(0);
+	    type = type.substring(0,1).toUpperCase() + 
+		type.substring(1).toLowerCase();
+	    printer.p(type).p("::TYPE());");
+	}
+	else {
+	    printer.p(n.getNode(1)).p("::__class());");
+	}
+	
+	printer.pln().decr();
 		
+	printer.decr();
 		
+	printer.indent().pln("return k;");
+		
+	printer.decr();
+	printer.indent().pln("}");
 		
     }
 	
