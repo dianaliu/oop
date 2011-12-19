@@ -301,6 +301,9 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		visit(n);
 					
 		if(isArray) {
+		    // FU Grimm! short a2[] = new short[2];
+		    normalizeArray(n);
+
 		    GNode newArrayExpression = 
 			(GNode) n.getNode(2).getNode(0).getNode(2);
 
@@ -332,45 +335,44 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
 
 		    }
-						
+		    GNode parent = GNode.create("ParentType");
 				
 		    if(dim > 1 || isCustomType(classDeclaration, qID)) {
 				
 			// Create Type information
-			GNode parent = GNode.create("ParentType");
+	
 
 			// ! Primitive types have no super classes
 			if(!clp.isPrimitive(qID)) {
 			    String pID = clp.getSuperclassName(qID);
 			    parent.add(clp.createTypeNode(pID));
 			}
-		
-			GNode component = GNode.create("ComponentType");
-			component.add(clp.createTypeNode(qID));
-			
-			// FIXME: Add ['s to denote dimensions
-			
-			GNode templateNode = GNode.create("ArrayTemplate");
-			if(clp.isPrimitive(qID)) {
-			    // that's all you need to memset
-			    templateNode.add(component);
-			}
-			else {
-			    // Customize __class()
-			    GNode customClass = GNode.create("CustomClass");
-			    customClass.add(parent);
-			    customClass.add(component);
-			    customClasses.add(customClass);
-			    
-			    // Specialize Template
-			    // Note: templateNodes is already in tree
-			    templateNode.add(parent);
-			    templateNode.add(component);
-
-			}
-			templateNodes.add(templateNode);
-	
 		    } 
+
+		    GNode component = GNode.create("ComponentType");
+		    component.add(clp.createTypeNode(qID));
+			
+		    // FIXME: Add ['s to denote dimensions
+			
+		    GNode templateNode = GNode.create("ArrayTemplate");
+		    if(clp.isPrimitive(qID)) {
+			// that's all you need to memset
+			templateNode.add(component);
+		    }
+		    else {
+			// Customize __class()
+			GNode customClass = GNode.create("CustomClass");
+			customClass.add(parent);
+			customClass.add(component);
+			customClasses.add(customClass);
+			    
+			// Specialize Template
+			// Note: templateNodes is already in tree
+			templateNode.add(parent);
+			templateNode.add(component);
+
+		    }
+		    templateNodes.add(templateNode);
 
 		    // reset boolean when done.
 		    isArray = false;
@@ -397,6 +399,26 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	return customs;
 	
     } // end findArrays
+
+    // Need to move Dimensions node around since there' two ways to 
+    // declare arrays!
+    // @param n FieldDeclaration node for an array
+    public void normalizeArray(GNode n) {
+
+	if(null == n.getNode(1).get(1)) {
+	    // Must move Dimensions node here
+	    GNode dims = (GNode) n.getNode(2).getNode(0).getNode(1);
+	    n.getNode(1).set(1, dims);
+
+	    // now clear it out
+	    n.getNode(2).getNode(0).set(1, null);
+
+	}
+
+
+
+    }
+
 	
 
     // Moves the ClassDeclaration node(s) into the header.
@@ -540,6 +562,10 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 				if("+".equals(n.getString(1))) {
 				    n.set(1, "<<");
 				}
+				// Of course, this doesn't add niumbers etc. 
+				// in the print statemetn, but neither does 
+				// grimm's test cases!
+				visit(n);
 			    }
 							
 			    public void visit(GNode n) {
