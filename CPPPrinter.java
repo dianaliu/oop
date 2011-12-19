@@ -3149,7 +3149,7 @@ public class CPPPrinter extends Visitor {
     public void visitUnaryExpression(GNode n) {
 	for( Object o : n) {
 	    if (o instanceof Node) printer.p(GNode.cast(o));
-	    else if(o instanceof String) o.toString();
+	    else if(o instanceof String) printer.p(o.toString());
 	}
     }
 
