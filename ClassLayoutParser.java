@@ -80,7 +80,7 @@ public class ClassLayoutParser extends Visitor {
 					//				} else if(n.getNode(0).hasName("SuperExpression")) {
 					// SOOPER expression
 				} else {
-					if(DEBUG) System.out.println( "did not visit call expression" );
+					if(DEBUG) if( !"println".equals(n.getString(2)) ) System.out.println( "did not visit call expression: " + n.getString(2) );
 					visit(n);
 					return;
 				}
@@ -130,7 +130,7 @@ public class ClassLayoutParser extends Visitor {
 		else if( n.hasName( "IntegerLiteral" )) return "int";
 		else if( n.hasName( "NullLiteral" )) return "null";
 		else if( n.hasName( "StringLiteral" )) return "String";
-		else return "$#$%&#$&#";
+		else return "$#!$@!$@!@$!@";
     }
 	
     
@@ -151,11 +151,14 @@ public class ClassLayoutParser extends Visitor {
     // @param n ClassDeclaration node from a Java AST 
     GNode currentHeaderNode; //global storage variable to point to the current working header node (vtable and data layout)
     String className; //global current class name
+	GNode thisClassStaticVars;
     public void visitClassDeclaration(GNode n) {
 		//Setting up the new node for the class tree
 		className = n.get(1).toString();
 		GNode newChildNode = GNode.create("Class");
 		newChildNode.setProperty("name", className);
+		
+		thisClassStaticVars = GNode.create("StaticVarsList");
 		
 		//Now we need a super class -- every node but object has one, either explicitly or Object by default
 		GNode parent = null; 
@@ -311,6 +314,11 @@ public class ClassLayoutParser extends Visitor {
     //Visits the field declarations in a class, and adds them to the vtable.
     //@param n FieldDeclaration node from a Java AST.
     public void visitFieldDeclaration(GNode n) {
+		if( hasStaticModifier( (GNode)n.getNode(0) ) ) { //static vars don't get initalized in the data layout, they get initalized elsewhere
+			thisClassStaticVars.add(deepCopy(n));
+			n.getNode(2).getNode(0).set(2,null);
+			//return;
+		}
 		int overrideIndex = overridesField(n, (GNode)currentHeaderNode.getNode(1).getNode(1) );
 		if( overrideIndex >= 0 ) {
 			if(DEBUG) System.out.println( "overriding field: " + n.getNode(2).getNode(0).get(0).toString() );
@@ -321,6 +329,11 @@ public class ClassLayoutParser extends Visitor {
 			currentHeaderNode.getNode(1).getNode(1).add(n); //add the data field to the classes' data layout declaration
 		}
     }
+	
+	boolean hasStaticModifier( GNode modifiersNode ) {
+		for( Object o : modifiersNode ) if ( ((GNode)o).get(0).equals("static")) return true;
+		return false;
+	}
 	
     // [INTERNAL]
     // Determines if a new data field declaration has already been declared (by name)
@@ -347,7 +360,7 @@ public class ClassLayoutParser extends Visitor {
     public void visitConstructorDeclaration(GNode n) {
 		
 		// Need to move any Constructors from the ClassBody to HeaderDeclaration.  Need it in there twice, once to declare the signature and the second time to implement it. 
-		
+		n.set(5, GNode.ensureVariable((GNode)n.getNode(5)).add(thisClassStaticVars) ); //adding static vars
 		
 		
 		if(DEBUG) System.out.println( "--- Processing constructor");
@@ -641,10 +654,9 @@ public class ClassLayoutParser extends Visitor {
 				}
 			}
 		}
-		
+		if( queue.isEmpty() ) return result;
 		if(!(result.equals("equals") || result.equals("getClass") || result.equals("hashCode") || result.equals("toString") ))
 			result += queue.getNode(0).item;
-		System.out.println(result);
 		return result;		
     }
 	
@@ -654,7 +666,7 @@ public class ClassLayoutParser extends Visitor {
 		if(isPrimitive(sc) && isPrimitive(pr))
 			return false;
 		GNode parentN = getClass(sc);
-		if (parentN.getProperty("name").equals("Object")) return false;
+		if ( parentN == null || parentN.getProperty("name").equals("Object")) return false;
 		else {			
 			parentN =  (GNode)parentN.getProperty("parentClassNode");
 			if (parentN.getProperty("name").equals(pr)) {
@@ -780,18 +792,26 @@ public class ClassLayoutParser extends Visitor {
 		GNode stringNode = GNode.create("Class");
 		stringNode.setProperty("name", "String");
 		stringNode.setProperty("parentClassNode", objectNode);
+		className = "String";
+		stringNode.add( inheritHeader( classHeaderDeclaration ) );
 		
 		GNode classNode = GNode.create("Class");
 		classNode.setProperty("name", "Class");
 		classNode.setProperty("parentClassNode", objectNode);
+		className = "Class";
+		classNode.add( inheritHeader( classHeaderDeclaration ) );
 		
 		GNode arrayNode = GNode.create("Class");
 		arrayNode.setProperty("name", "Array");
 		arrayNode.setProperty("parentClassNode", objectNode);
+		className = "Array";
+		arrayNode.add( inheritHeader( classHeaderDeclaration ) );
 		
 		GNode integerNode = GNode.create("Class");
 		integerNode.setProperty("name", "Integer");
 		integerNode.setProperty("parentClassNode", objectNode);
+		className = "Integer";
+		integerNode.add( inheritHeader( classHeaderDeclaration ) );
 		
 		classTree = objectNode;
 		classTree.add(stringNode);

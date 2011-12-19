@@ -493,7 +493,8 @@ public class CPPPrinter extends Visitor {
 	
     /** Visit the specified declaration node. */
     public void visitDeclaration(GNode n) {
-		printer.p(n.getNode(0));
+		if( n.size() == 0 ) printer.p("//EMPTY DECLARATION HERE");
+		else printer.p(n.getNode(0));
 		/*
 		 boolean nested = isNested;
 		 if (! nested) {
@@ -2963,6 +2964,7 @@ public class CPPPrinter extends Visitor {
 	
     /** Visit the specified modifier. */
     public void visitModifier(GNode n) {
+		if( n.getString(0).equals("final") || n.getString(0).equals("public") ) return; //don't print final or public modifiers
 		printer.p(n.getString(0));
     }
 	
