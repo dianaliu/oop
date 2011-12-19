@@ -332,45 +332,44 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
 
 		    }
-						
+		    GNode parent = GNode.create("ParentType");
 				
 		    if(dim > 1 || isCustomType(classDeclaration, qID)) {
 				
 			// Create Type information
-			GNode parent = GNode.create("ParentType");
+	
 
 			// ! Primitive types have no super classes
 			if(!clp.isPrimitive(qID)) {
 			    String pID = clp.getSuperclassName(qID);
 			    parent.add(clp.createTypeNode(pID));
 			}
-		
-			GNode component = GNode.create("ComponentType");
-			component.add(clp.createTypeNode(qID));
-			
-			// FIXME: Add ['s to denote dimensions
-			
-			GNode templateNode = GNode.create("ArrayTemplate");
-			if(clp.isPrimitive(qID)) {
-			    // that's all you need to memset
-			    templateNode.add(component);
-			}
-			else {
-			    // Customize __class()
-			    GNode customClass = GNode.create("CustomClass");
-			    customClass.add(parent);
-			    customClass.add(component);
-			    customClasses.add(customClass);
-			    
-			    // Specialize Template
-			    // Note: templateNodes is already in tree
-			    templateNode.add(parent);
-			    templateNode.add(component);
-
-			}
-			templateNodes.add(templateNode);
-	
 		    } 
+
+		    GNode component = GNode.create("ComponentType");
+		    component.add(clp.createTypeNode(qID));
+			
+		    // FIXME: Add ['s to denote dimensions
+			
+		    GNode templateNode = GNode.create("ArrayTemplate");
+		    if(clp.isPrimitive(qID)) {
+			// that's all you need to memset
+			templateNode.add(component);
+		    }
+		    else {
+			// Customize __class()
+			GNode customClass = GNode.create("CustomClass");
+			customClass.add(parent);
+			customClass.add(component);
+			customClasses.add(customClass);
+			    
+			// Specialize Template
+			// Note: templateNodes is already in tree
+			templateNode.add(parent);
+			templateNode.add(component);
+
+		    }
+		    templateNodes.add(templateNode);
 
 		    // reset boolean when done.
 		    isArray = false;
