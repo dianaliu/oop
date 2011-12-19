@@ -108,7 +108,7 @@ public class DependencyResolver extends xtc.util.Tool {
 				public void visitPackageDeclaration(GNode n) {	
 					String currentAddress = (System.getProperty("user.dir")) + "/src";
 					System.out.println("Package declared.");
-					System.out.println("Running directory: " + currentAddress);
+				        System.out.println("Running directory: " + currentAddress);
 					for (int i = 0; i < n.getNode(1).size(); i++){
 						currentAddress += "/";
 						currentAddress += ((String)(n.getNode(1).get(i)));
@@ -195,7 +195,7 @@ public class DependencyResolver extends xtc.util.Tool {
 			if(addressArray[i] != null) {
 				try {
 					//Locate and open the file
-					System.out.print("Adding dependency node: " + curDir + "/src/xtc/oop" + addressArray[i]);
+				    System.out.print("Adding dependency node: " + curDir + "/src/xtc/oop" + addressArray[i]);
 					File file = locate(curDir + "/src/xtc/oop" + addressArray[i]);
 					Reader in = runtime.getReader(file);
 					depTree[i] = parse(in, file);

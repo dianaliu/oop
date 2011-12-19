@@ -237,7 +237,7 @@ public class TypeParser {
 					if( symTable.lookup(name) != null )
 						type = symTable.lookup(name).toString();
 					else {
-						System.out.println("*** Did not find " + name );
+					    if(DEBUG) System.out.println("*** Did not find " + name );
 					}
 				}
 			    

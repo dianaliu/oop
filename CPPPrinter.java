@@ -878,7 +878,6 @@ public class CPPPrinter extends Visitor {
 	    type = n.getNode(0).getNode(0).getNode(0).getString(0);
 	    letter = Character.toString(type.charAt(0));
 	    letter = letter.toUpperCase();
-	    System.out.println("Primitive type = " + letter);
 	}
 
 	printer.indent().p("new java::lang::__Class(literal(\"[");

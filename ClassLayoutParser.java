@@ -90,9 +90,15 @@ public class ClassLayoutParser extends Visitor {
 				n.set(3, GNode.ensureVariable((GNode)n.getNode(3)).add(0, caller));
 				//n.setProperty("type", "");//insert return type here
 				
-				System.out.print( targetClassName + "." + targetMethodName + "(" );
-				for( String s : params ) System.out.print( s + " " );
-				System.out.println( ") " + newMethName );
+				if(DEBUG) {
+				    System.out.print( targetClassName + 
+						      "." + targetMethodName 
+						      + "(" );
+				    for( String s : params ) System.out.print(s + " " );
+				    System.out.println( ") " + newMethName );
+				}
+
+				
 				visit(n);
 			}
 			
@@ -459,7 +465,7 @@ public class ClassLayoutParser extends Visitor {
 		int a = 6;
 		Node node = getVTable(objectType);
 		if( node == null) {
-			System.out.println( "methodRank: vtable not found for " + objectType );
+		    if(DEBUG) System.out.println( "methodRank: vtable not found for " + objectType );
 			return methodName;
 		}
 		node = node.getNode(a);
@@ -643,10 +649,10 @@ public class ClassLayoutParser extends Visitor {
 							two = st2.nextToken();
 						}
 						
-						System.out.println(one + " one2 " + two +" two" );
+						if(DEBUG) System.out.println(one + " one2 " + two +" two" );
 						
 						if(!isSubClass(one, two) && !one.equals(two)){
-							System.out.println("switch " + one + ": one, " + two +": two" );
+						    if(DEBUG) System.out.println("switch " + one + ": one, " + two +": two" );
 							
 							queue.switchN(queue.getNode(d - 1), queue.getNode(d));
 						}
@@ -1047,10 +1053,10 @@ public class ClassLayoutParser extends Visitor {
 		GNode className = getClass(cN);
 		
 		if( className == null ) {
-			System.out.println( "getVTable: vtable not found for class " + cN );
+		    if(DEBUG) System.out.println( "getVTable: vtable not found for class " + cN );
 			return null;
 		}
-		if( className.size() == 0 || className.getNode(0) == null ) System.out.println( "getVTable: failed retrieve for cN: " + cN );
+		if( className.size() == 0 || className.getNode(0) == null ) if(DEBUG) System.out.println( "getVTable: failed retrieve for cN: " + cN );
 		GNode classVT = (GNode)(className.getNode(0).getNode(0));
 		return classVT;
     }
