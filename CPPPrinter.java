@@ -3145,6 +3145,18 @@ public class CPPPrinter extends Visitor {
 		isOpenLine    = false;
     }
 	
+
+    public void visitUnaryExpression(GNode n) {
+	for( Object o : n) {
+	    if (o instanceof Node) printer.p(GNode.cast(o));
+	    else if(o instanceof String) o.toString();
+	}
+    }
+
+    public void visitStaticVarsList(GNode n) {
+	// er, do nothing! wtf is this anyways? It's in Rest's constructor
+    }
+
     public void visitBlockDeclaration(GNode n) {
 		printer.indent();
 		if (null != n.get(0)) {
