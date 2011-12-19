@@ -1,6 +1,9 @@
 package xtc.oop;
 
  
+ // Queue.java modified from http://algs4.cs.princeton.edu/43mst/Queue.java.html
+ 
+ 
 /*************************************************************************
 *  Compilation:  javac Queue.java
 *  Execution:    java Queue < input.txt
