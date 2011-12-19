@@ -510,6 +510,8 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	// NOTE: ccNode is now nameed "ClassBody" and must use it's visitor
 	GNode ccNode = n;
 	buildImplementation(ccNode);
+	//	methodChain(ccNode);
+	//	passSelf(ccNode);
 	cppTree.add(importDeclarations);
 	cppTree.add(ccNode);
 		
@@ -522,8 +524,6 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     String thisClass = "";
     public GNode buildImplementation(GNode n) {
 		
-	//	addTargets(n);
-
 	// FIXME: n is fixed, can'tn.addNode(importDeclarations);
 	// I wanted to put all import declarations under ClassDeclaration node.
 	// but no biggie
@@ -685,7 +685,11 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		}
 
 
-		// Works, but not with method chaining?
+
+	
+		/**
+		 // Works, but not with method chaining?
+		 // Will  work on a separate method to resolve method chains
 		if(n.size() >= 4 && n.getNode(3).hasName("Arguments")) {
 		    // Time to append arguments
 		    GNode vt = clp.getVTable(thisClass);
@@ -717,6 +721,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 
 		} // end check for Arguments
 		
+		*/
 
 	   
 		// Uncommenting this gives an error.
@@ -782,32 +787,46 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     }
 
 
-    // DEPRECATED - Rob adds all targest to beginning as they should be 
-    String target = null;
-    public void addTargets(GNode n) {
-	
+    // After translating, go back and make call expression arguments work
+    // All must pass the calling object.  especially troublesome for 
+    // method chaining
+    // @param n ClassDeclaration node - already mostly translated
+    GNode out;
+    GNode in;
+    public void methodChain(GNode n) {
+
 	new Visitor() {
 
 	    public void visitCallExpression(GNode n) {
+		// Need to start evaluating from the inner most CallExpression
 		
+		// Need to un-next CallExpressions and move then to the
+		// arguments node
 
-		// No problem here!
-		if( n.get(0) != null && GNode.test(n.get(0)) ) {
-		    //		    System.out.println("--- Yes, a GNode");
+		n = GNode.ensureVariable(n);
+		out = n;
 
-		    if(n.getNode(0).hasName("PrimaryIdentifier")) {
-			target = n.getNode(0).getString(0);
-			//			System.out.println("target = " + target);
-		    }
+		if(! n.getNode(0).hasName("PrimaryExpression")) {
+		    visit(n);
+		    // Actions for each outer CallExpression
+		    // Should the CallExpression be first or last?
+		    // Appending now cause it's ez
+		    n.getNode(3).addNode(in);
+		} 
+		else {
+		    // Actions for the inner most CallExpression
+		    // If there is only one CallExpression, do nothing?
+		    // Separate from method chaining, need to check #
+		    // arguments and if !=, pass self as first arg.
+		    in = n;
 		}
 		
-        
-		// Using the wrong n?
-		GNode tmp = clp.deepCopy(GNode.cast(n.getNode(3)));
-		tmp.addNode(createPrimaryIdentifier(target));
-		n.set(3, tmp);
-						
+
+		System.out.println("Here is the node out ---- " + out);
+		
+
 	    }
+
 	    
 	    public void visit(GNode n) {
 		// Need to override visit to work for GNodes
@@ -815,10 +834,20 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		    if (o instanceof Node) dispatch((GNode)o);
 		}
 	    }
-	    	    
-	}.dispatch(n);//end Visitor
+	    
+	}.dispatch(n);
 
-    } // end addTargets
+
+	
+    }
+
+
+    // Check #Arguments and if != to that in Vtable, add self as
+    // first argument
+    // @param n Translated ccNode that supports methodChainig
+    public void passSelf(GNode n) {
+
+    }
 
  
     // ------------------------------------------
