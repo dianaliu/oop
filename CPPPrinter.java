@@ -3160,9 +3160,6 @@ public class CPPPrinter extends Visitor {
 	}
     }
 
-    public void visitStaticVarsList(GNode n) {
-	// er, do nothing! wtf is this anyways? It's in Rest's constructor
-    }
 
     public void visitBlockDeclaration(GNode n) {
 		printer.indent();
