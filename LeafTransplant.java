@@ -8,6 +8,7 @@ import xtc.util.Runtime;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.StringTokenizer;
 
 /*
  * Builds a CPP AST tree using a Java AST tree
@@ -527,6 +528,26 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		visit(n);
 	    }
 			
+		public void visitAdditiveExpression(GNode n) {
+			System.out.println("Visited additive expression");
+			//System.out.println(n.getNode(0));
+			StringTokenizer toke = new StringTokenizer(n.getNode(0).toString(), "(");
+			String type1 = toke.nextToken();
+			System.out.println("Type1: " + type1);
+			StringTokenizer toke2 = new StringTokenizer(n.getNode(2).toString(), "(");
+			String type2 = toke2.nextToken();
+			System.out.println("Type2: " + type2);
+
+			if(type1.equals("StringLiteral" ) || type2.equals("StringLiteral" )) {
+				System.out.println("FUCK YOU " + n.getString(1));
+				if(n.getString(1).equals("+")) {
+					//n.set(1, "<<");
+					System.out.println("FUCK YOU CHICKENSHIT" + n.getString(1));
+				}
+			}
+		}
+
+
 	    // Make the Class calling a method explicit
 	    // Also, translate System methods
 	    public void visitCallExpression(GNode n) {
