@@ -488,11 +488,13 @@ public class CPPPrinter extends Visitor {
 	
     /** Visit the specified declaration list node. */
     public void visitDeclarationList(GNode n) {
-	for (Object o : n) printer.p((Node)o);
+
+	    for (Object o : n) printer.p((Node)o);
     }
 	
     /** Visit the specified declaration node. */
     public void visitDeclaration(GNode n) {
+	if(!n.isEmpty())
 	printer.p(n.getNode(0));
 	/*
 	  boolean nested = isNested;
@@ -787,8 +789,7 @@ public class CPPPrinter extends Visitor {
 		
     }
     
-    public void visitArrayTemplate(GNode n) {
-		
+    public void visitArrayTemplate(GNode n) {		
 	if(n.size() == 1) {
 	    // It's a primitive type, need to memset!
 	    GNode type = (GNode) n.getNode(0);
