@@ -3,6 +3,7 @@ This is the final project for [Object Oriented Programming](http://cs.nyu.edu/rg
 
 Using our modified Test.java, we output: 
 
+````
 --------------------------------------------------------------------
 PASS Test.main()
 PASS Object.<init>()
@@ -14,7 +15,7 @@ PASS short[0] = (short)32768
 
 7 out of 7 tests have passed.
 --------------------------------------------------------------------
-
+````
 
 ##How to run##
 
