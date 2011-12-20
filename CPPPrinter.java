@@ -31,6 +31,7 @@ import xtc.tree.Visitor;
 
 // lol, finally!
 import java.util.ArrayList;
+import java.util.StringTokenizer;
 
 
 
@@ -2197,13 +2198,60 @@ public class CPPPrinter extends Visitor {
     /** Visit the specified additive expression node. */
     public void visitAdditiveExpression(GNode n) {
 		int prec1 = startExpression(120);
-        
-		printer.p(n.getNode(0)).p(' ').p(n.getString(1)).p(' ');
-		
 		int prec2 = enterContext();
-		printer.p(n.getNode(2));
+        if(n.get(1) == null){
+			System.out.println("Overloaded << ");
+			//todo
+			printer.p(n.getString(0));
+			 // std::ostringstream temp;
+			 // temp << s1 << " and " << s2;
+			 // String s3 = new java::lang::__String(temp.str());
+			//printer.p("std::ostringstream temp;").pln();
+			//printer.p("temp << ").p(n.getNode(0).getString(0)).p(" << ").p(n.getNode(2).getString(0)).p(";").pln();
+			//printer.p("String ".p(s3).p(" = new java::lang::__String(temp.str())");
+			
+		}
+		else {
+				StringTokenizer toke = new StringTokenizer(n.getNode(0).toString(), "(\"\\");
+				String type1 = toke.nextToken();
+
+				StringTokenizer toke2 = new StringTokenizer(n.getNode(2).toString(), "(\"\\");
+				String type2 = toke2.nextToken();
+
+
+				//n.set(1, null);
+				
+				if(type1.equals("StringLiteral" ) || type2.equals("StringLiteral" )) {
+					String result = ""; 
+					if(type2.equals("PrimaryIdentifier"))
+						type2 = n.getNode(2).getProperty("type").toString();
+					if(type1.equals("PrimaryIdentifier"))
+						type1 = n.getNode(0).getProperty("type").toString();
+
+				    if(n.getString(1).equals("+") && (type2.equals("char") || type2.equals("int") )) {
+									System.out.println("dfghjk" + n.getNode(0).getString(0));						
+						printer.p("__rt::literal(").p(n.getNode(0).getString(0)).p("+");
+						printer.p(n.getNode(2).getString(0)).p(")");
+
+					}
+					else if(n.getString(1).equals("+") && (type1.equals("char") || type1.equals("int"))) {
+						/*result = toke.nextToken() + " << " +  n.getNode(2).getString(0); 
+						n.set(1, null);
+						n.set(2, null);
+									System.out.println("dfghjk" + type2);
+						n.getNode(0).set(0, result);*/
+									System.out.println("dfg222222" + n.getNode(2).getString(0));
+						printer.p("__rt::literal(").p(n.getNode(0).getString(0)).p("+");
+						printer.p(n.getNode(2).getString(0)).p(")");
+
+					}
+				}
+			else {
+				printer.p(n.getNode(0)).p(' ').p(n.getString(1)).p(' ');
+				printer.p(n.getNode(2));
+			}
+		}
 		exitContext(prec2);
-		
 		endExpression(prec1);
     }
 	
@@ -3030,7 +3078,7 @@ public class CPPPrinter extends Visitor {
 			
 			if((n.getNode(2).hasName("CastExpression"))) {
 				printer.p(n.getString(0));
-				printer.p(" = __rt::java_cast<");
+				printer.p(" = __rt::java_cast <");
 				printer.p(n.getNode(2).getNode(0).getNode(0).getString(0));
 				printer.p( ">(");
 				printer.p(n.getNode(2).getNode(1).getString(0));

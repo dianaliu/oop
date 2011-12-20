@@ -280,7 +280,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     //
     // @param n Java ClassDeclaration Node
 	
-    // LOL - Global shit to allow access from Visitor 
+    // LOL - Global stuff to allow access from Visitor 
     GNode customClasses = GNode.create("CustomClasses");
     GNode templateNodes = GNode.create("ArrayTemplates");
     // Need to add these in proper namespaces
@@ -302,7 +302,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 		visit(n);
 					
 		if(isArray) {
-		    // FU Grimm! short a2[] = new short[2];
+		    // short a2[] = new short[2];
 		    normalizeArray(n);
 
 		    GNode newArrayExpression = 
@@ -529,20 +529,38 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 	    }
 			
 		public void visitAdditiveExpression(GNode n) {
-			System.out.println("Visited additive expression");
-			//System.out.println(n.getNode(0));
-			StringTokenizer toke = new StringTokenizer(n.getNode(0).toString(), "(");
-			String type1 = toke.nextToken();
-			System.out.println("Type1: " + type1);
-			StringTokenizer toke2 = new StringTokenizer(n.getNode(2).toString(), "(");
-			String type2 = toke2.nextToken();
-			System.out.println("Type2: " + type2);
+			if(n.getNode(2) != null){
+				System.out.println("Visited additive expression");
+				//System.out.println(n.getNode(0));
+				StringTokenizer toke = new StringTokenizer(n.getNode(0).toString(), "(\"\\");
+				String type1 = toke.nextToken();
+				System.out.println("Type1: " + type1);
+				StringTokenizer toke2 = new StringTokenizer(n.getNode(2).toString(), "(\"\\");
+				String type2 = toke2.nextToken();
 
-			if(type1.equals("StringLiteral" ) || type2.equals("StringLiteral" )) {
-				System.out.println("FUCK YOU " + n.getString(1));
-				if(n.getString(1).equals("+")) {
-					//n.set(1, "<<");
-					System.out.println("FUCK YOU CHICKENSHIT" + n.getString(1));
+				System.out.println("Type2: " + type2);
+				//n.set(1, null);
+				
+				if(type1.equals("StringLiteral" ) && type2.equals("StringLiteral" )) {
+					String result = ""; 
+					
+					result = "\"" + toke.nextToken() + toke2.nextToken() + "\""; 
+					n.set(1, null);
+					n.set(2, null);
+					n.getNode(0).set(0, result);
+				}
+				else if(type1.equals("AdditiveExpression")) {
+					String result = "";
+					toke = new StringTokenizer(n.getNode(0).getNode(0).get(0).toString(), "(\"\\");
+					toke2 = new StringTokenizer(n.getNode(0).getNode(2).get(0).toString(), "(\"\\");
+					StringTokenizer toke3 = new StringTokenizer(n.getNode(2).get(0).toString(), "(\"\\");
+					result ="_rt::literal(\"" + toke.nextToken() + toke2.nextToken() + toke3.nextToken() + "\")";
+					System.out.println("blarg " + result);
+					n.set(1, null);
+					n.set(2, null);
+					n.set(0, null);
+					n.set(0, result);
+
 				}
 			}
 		}
@@ -717,7 +735,7 @@ public class LeafTransplant extends Visitor implements CPPUtil {
 					
 			// Can't add Type to Declarators, Declarator, 
 			// or ArrayInitializer as fixed num children
-			// FUCK YOU, 
+		
 					
 			// Does this remove Type node from FieldDeclaration?
 					

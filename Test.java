@@ -129,7 +129,7 @@ public class Test {
     test++;
 
     // -----------------------------------------------------------------------
-
+	
     if ((R1 != null) && (R1 != R2) && (R1 != R3) && (R1 != R4)) {
       System.out.println("PASS Object.<init>()");
       success++;
@@ -137,8 +137,8 @@ public class Test {
       System.out.println("FAIL Object.<init>()");
     }
     test++;
-
-    // -----------------------------------------------------------------------
+/*
+    //h -----------------------------------------------------------------------
 
     r = new Rest();
     o = r.m1();
@@ -1002,9 +1002,11 @@ public class Test {
     test++;
 
     // -----------------------------------------------------------------------
-
+	
+	
     System.out.println();
     System.out.println(success + " out of " + test + " tests have passed.");
+*/
   }
 
 }
