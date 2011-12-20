@@ -155,28 +155,7 @@ public class Translator extends xtc.util.Tool {
 	    // trees = depResolver.trimDependencies(clp, trees);
 	    if(DEBUG) 
 		runtime.console().pln("--- Finished trimming dependencies").flush();
-	    //-----------------------------------------------------------
-			
-			
-	    /**	
-			 
-	     //FIXME: SymTable test; remove later
-	     System.out.println("\nMESSING WITH THE SYMBOL TABLE\n");
-	     TranslatorSymbolTable tst = new TranslatorSymbolTable("Global");
-	     System.out.println("Symbol identifier value : " + tst.getType("Global"));
-	     System.out.println("Mangler:");
-	     System.out.println(tst.symTable.toNameSpace("WheresMyCar", "Dude"));
-	     System.out.println("UnMangler:");
-	     //stem.out.println(tst.symTable.fromNameSpace("Dude(WheresMyCar)"));
-	     //find all variable names and their types
-	     tst.addSymbols(trees[0]);
-	     tst.addSymbols(trees[1]);
-			 
-	     System.out.println("\nDONE MESSING WITH THE SYMBOL TABLE\n");
-			 
-	    **/ 
-			
-			
+	    //-----------------------------------------------------------					
 	    if(DEBUG) 
 		runtime.console().pln("--- Begin cpp translation").flush();
 	    // Create a translator to output a cpp tree for each java ast
@@ -192,16 +171,27 @@ public class Translator extends xtc.util.Tool {
 		    returned[i] = translator.getCPPTree();
 					
 		    if(DEBUG) 
-			runtime.console().pln("--- CPP AST #" + (i+1));
+			//			runtime.console().pln("--- CPP AST #" + (i+1));
 		    if(DEBUG) 
-			runtime.console().format(returned[i]).pln().flush();
+			//			runtime.console().format(returned[i]).pln().flush();
 		    if(DEBUG) 
 			runtime.console().pln("\t-----------------------").flush();
 		}
 	    }
 			
 	    runtime.console().pln("--- Finish cpp translation").flush();
-			
+
+	    runtime.console().pln("--- Begin combining AST tress").flush();
+
+	    // Assume the main method is in the first file
+	    GNode f  = translator.combine(returned[0], returned[1]);
+	    runtime.console().format(f).pln().flush();
+	    // Don't forget to change calling of Printer on just final.
+
+	    runtime.console().pln("--- Finish combining AST tress").flush();
+
+	
+
 	    runtime.console().pln("--- Begin writing CPP file(s)").flush();
 			
 	    // Run CPP printer on each CPP Tree and output to Code.cpp
@@ -218,13 +208,17 @@ public class Translator extends xtc.util.Tool {
 			    GNode root = GNode.cast(returned[i]);
 			    // Since we run from xtc, outputs to xtc/output/
 			    String fileName = "output/";
-			    fileName += root.getString(root.size() - 1);
-			    fileName += ".cc";
-						
+			    //			    fileName += root.getString(root.size() - 1);
+			    //			    fileName += ".cc";
+			
+			    fileName = "Test.cc";
+			
 			    PrintWriter fstream = new PrintWriter(fileName);
 			    Printer cppCode = new Printer(fstream);
 						
-			    new CPPPrinter( clp, cppCode ).dispatch(returned[i]); 
+			    //			    new CPPPrinter( clp, cppCode ).dispatch(returned[i]); 
+
+			    new CPPPrinter( clp, cppCode ).dispatch(f); 
 			    cppCode.flush();
 			    if(DEBUG) runtime.console().pln("--- Wrote " 
 							    + fileName);

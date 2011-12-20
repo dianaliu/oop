@@ -986,6 +986,99 @@ public class LeafTransplant extends Visitor implements CPPUtil {
     // ------------------------------------------
     
     public GNode getCPPTree() { return cppTree; }
+
+
+    // ------------------------------------------
+    // ------- For Test.java & Rest.java  -------
+    // ------------------------------------------
+
+
+    GNode f = GNode.create("TranslationUnits");
+    boolean isMain = false;
+    int i = 0;
+    public GNode combine(GNode test, GNode rest) {
+
+	// Take bits from r and put into t
+	GNode t = test;
+	GNode r = rest; 
+
+	GNode tHead = (GNode) t.getNode(0);
+	GNode rHead = (GNode) r.getNode(0);
+
+
+	// Under HeaderDeclaration.0 = ForwardDeclarations which has
+	// each of t and r's Declaration0 nodes.
+	GNode forwardDeclarations = GNode.create("ForwardDeclarations");
+	forwardDeclarations.addNode(tHead.getNode(0));
+	forwardDeclarations.addNode(rHead.getNode(0));
+	tHead.set(0, forwardDeclarations);
+	
+
+	// move r's data layout - __vtable (the end of the headerDeclaration)
+	// so two headerDeclarations, but one t has more struct decls
+	
+	
+	// Clear out r's forward declarations and typedefs
+	// Move the rest after t's HeaderDeclaration
+	rHead.set(0, null);
+	tHead.add(rHead);
+
+	f.addNode(tHead); // Make the combined Header
+	
+	// Will need to de-dupe in CPPPrinter?
+
+	// FIX THIS: Can't seem to find the right node.
+	GNode bothPTs = GNode.create("BothPrimitiveTYPES");
+	bothPTs.add(t.getNode(1));
+	bothPTs.add(r.getNode(1));
+	
+	f.addNode(bothPTs);
+
+	// Will need to de-dupe in CPPPrinter?
+	GNode bothATS = GNode.create("bothArrayTemplates");
+	bothATS.add(t.getNode(2));
+	f.addNode(bothATS);
+
+	// Remove main method from Rest
+
+	new Visitor() {
+
+	    public void visitClassBody(GNode n) {
+		visit(n);
+		if(isMain) {
+		    n.set(i+1, "heygurl");
+		    return;
+		}
+	    }
+
+	    public void visitMethodDeclaration(GNode n) {
+		
+		if("main".equals(n.getString(3))) isMain = true;
+		i++;
+	    }
+	    
+
+	    public void visit(GNode n) {
+		// Need to override visit to work for GNodes
+		for( Object o : n) {
+		    if (o instanceof Node) dispatch((GNode)o);
+		}
+	    }
+	    
+	}.dispatch(r);
+
+
+	// Add the class bodies
+	GNode cDs = GNode.create("ClassDeclarations");	
+	cDs.add(t.getNode(4));
+	cDs.add(r.getNode(4));
+	f.add(cDs);
+
+	
+	return f;
+    }
+    
+
     
 	
 }
