@@ -45,7 +45,7 @@ public class Test {
 
 
 
-    // ! Putting static methods in vtables anyway, lol
+
   public static Object m2() {
     return R3;
   }
@@ -154,7 +154,6 @@ public class Test {
   public static void main(String[] args) {
     short n = 1;
     Test t;
-    // lol
     //    Rest r;
     Object o = null;
 
