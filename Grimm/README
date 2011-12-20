@@ -1,0 +1,3 @@
+Place final.jar, Grimm.sh, and Test.java in xtc/
+
+source Final.sh Test.java

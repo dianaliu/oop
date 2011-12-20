@@ -16,7 +16,13 @@
  * Foundation, 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,
  * USA.
  */
-package xtc.oop;
+
+ package xtc.oop;
+
+
+
+// COMMENTED OUT VERSION 
+
 
 public class Test {
 
@@ -25,16 +31,21 @@ public class Test {
   public static final Object R3 = new Object();
   public static final Object R4 = new Object();
 
+
   public int count;
 
   public Test() {
     count = 0;
   }
 
+    /**
   public Object m1() {
     return R1;
   }
 
+
+
+    // ! Putting static methods in vtables anyway, lol
   public static Object m2() {
     return R3;
   }
@@ -44,23 +55,35 @@ public class Test {
     return this;
   }
 
+
   public Test m4() {
     count++;
     return this;
   }
 
+    **/ 
+    /**
   public Test m5(Test t) {
     return t.m3().m4();
   }
 
+
+    */ 
+
+    /**
   public Object m6(Test t) {
     return R1;
   }
+    */
 
+    /**
   public Object m6(Rest r) {
     return R2;
   }
 
+    **/ 
+
+    /**
   public Object m7(Object o) {
     return R3;
   }
@@ -72,27 +95,41 @@ public class Test {
   public Object m7(Test t) {
     return R1;
   }
+    **/
 
+    /**
   public Object m7(Rest r) {
     return R2;
   }
 
+    **/ 
+    /**
+
   public Object m8(Test t) {
     return R1;
   }
+    **/ 
 
+    /**
   public Object m8(Rest r) {
     return R2;
   }
+    **/ 
 
+    /**
   public Object m8(Test t1, Test t2) {
     return R3;
   }
+    **/
 
+    /**
   public Object m8(Rest r, Test t) {
     return R4;
   }
 
+    */
+
+    /**
   public Object m9(short n1) {
     return null;
   }
@@ -112,11 +149,13 @@ public class Test {
   public Object m10(long n1) {
     return null;
   }
+    **/
 
   public static void main(String[] args) {
     short n = 1;
     Test t;
-    Rest r;
+    // lol
+    //    Rest r;
     Object o = null;
 
     int test = 0;
@@ -129,6 +168,8 @@ public class Test {
     test++;
 
     // -----------------------------------------------------------------------
+  
+
 
     if ((R1 != null) && (R1 != R2) && (R1 != R3) && (R1 != R4)) {
       System.out.println("PASS Object.<init>()");
@@ -138,8 +179,9 @@ public class Test {
     }
     test++;
 
-    // -----------------------------------------------------------------------
 
+    // -----------------------------------------------------------------------
+  /**
     r = new Rest();
     o = r.m1();
 
@@ -150,6 +192,8 @@ public class Test {
       System.out.println("FAIL r.m1()");
     }
     test++;
+  **/
+    /**
 
     // -----------------------------------------------------------------------
 
@@ -210,6 +254,8 @@ public class Test {
 
     // -----------------------------------------------------------------------
 
+
+    // t was intialized to Rest
     o = t.m1();
 
     if (R2 == o) {
@@ -219,6 +265,7 @@ public class Test {
       System.out.println("FAIL t.m1()");
     }
     test++;
+
 
     // -----------------------------------------------------------------------
 
@@ -282,6 +329,7 @@ public class Test {
     }
     test++;
 
+
     // -----------------------------------------------------------------------
 
     t = new Test();
@@ -304,6 +352,7 @@ public class Test {
     }
     test++;
 
+ 
     // -----------------------------------------------------------------------
 
     s1 = t.toString();
@@ -316,6 +365,7 @@ public class Test {
     }
     test++;
 
+ 
     // -----------------------------------------------------------------------
 
     o = t.m1();
@@ -936,6 +986,9 @@ public class Test {
 
     // -----------------------------------------------------------------------
 
+    **/ 
+ 
+
     short[] a0 = new short[0];
 
     if (a0.length == 0) {
@@ -993,6 +1046,8 @@ public class Test {
 
     // -----------------------------------------------------------------------
 
+    /**
+
     if (a0.getClass().getName().equals("[S")) {
       System.out.println("PASS short[0].getClass().getName()");
       success++;
@@ -1000,6 +1055,9 @@ public class Test {
       System.out.println("FAIL short[0].getClass().getName()");
     }
     test++;
+    **/ 
+
+
 
     // -----------------------------------------------------------------------
 

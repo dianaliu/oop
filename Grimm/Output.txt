@@ -1,0 +1,9 @@
+PASS Test.main()
+PASS Object.<init>()
+PASS short[0].length
+PASS short[1].length
+PASS short[2].length
+PASS short[i] == 0
+PASS short[0] = (short)32768
+
+7 out of 7 tests have passed.
